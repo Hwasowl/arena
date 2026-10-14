@@ -1,6 +1,6 @@
 -- Shared tuning; all combat decisions are made by Combat.server.luau.
 return {
-    MaxEnergy = 100, EnergyRegen = 6, MaxHealth = 200,
+    MaxEnergy = 100, EnergyRegen = 5, MaxHealth = 200,
     -- Skills each character may request; the server rejects anything outside the player's kit.
     Kits = {
         Gojo = { "Blue", "Red", "Domain", "Dash" },
@@ -8,19 +8,19 @@ return {
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
         Levi = { "Anchor", "Reel", "Spin", "Burst" },
     },
-    Blue = { Cost = 18, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
-    Red = { Cost = 22, Cooldown = 7, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
+    Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
+    Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
     -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
     Hold = { Duration = 3 },
     Purple = { Windup = 1.2, Damage = 180, Speed = 105, Radius = 7, Range = 170 },
-    Domain = { Cost = 55, Cooldown = 28, Windup = 2, Duration = 7, Radius = 28, Tick = 0.5, Damage = 8 },
-    Dash = { Cost = 8, Cooldown = 2.5, Distance = 16 },
+    Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8 },
+    Dash = { Cost = 5, Cooldown = 2.5, Distance = 16 },
     -- Zenitsu: Breath grants Charges instant Thunderclaps (no windup, cost or cooldown) for ChargeWindow seconds.
     Thunderclap = { Cost = 18, Cooldown = 6, Windup = 2, InstantWindup = 0.05, Distance = 36, Width = 5, Damage = 70 },
     Breath = { Cost = 20, Cooldown = 14, Windup = 2, Charges = 3, ChargeWindow = 12 },
     -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
     -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.
-    FlameGod = { Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.25, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
+    FlameGod = { Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.45, RecoilDelay = 0.55, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
     -- Reze. Human form: only Dash and BombDevil. Pulling the choker pin transforms her with no time limit and heals
     -- Heal of max HP (never past full); Rampage and Kick then work, each costing HpCost of max HP (never lethal).
     -- R again is Detonation: Windup seconds later a huge blast goes off, it costs 12% HP, and she turns human again.

@@ -16,6 +16,8 @@ local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.P
 local blur=Instance.new("BlurEffect");blur.Size=0;blur.Parent=Lighting
 local state={energy=100,cooldowns={},blueUntil=0,charges=0,chargesUntil=0}
 local cast=nil
+local flameTurn=nil
+local flameViewYaw=0
 local holdState=nil
 local slideUntil=0
 local drawnUntil,fovKickUntil=0,0
@@ -142,19 +144,27 @@ local function dragon(from,to)
     if flat.Magnitude<.1 then flat=Vector3.new(0,0,-1) end
     flat=flat.Unit
     local side=flat:Cross(Vector3.yAxis)
-    local length=(to-from).Magnitude+34
-    local count=30
+    local pathLength=(to-from).Magnitude
+    local baseY=from.Y-2
+    local count=44
     local points={}
-    for i=0,count do
-        local s=i/count
-        points[i]=from+flat*length*s+side*(math.sin(s*math.pi*3)*4+3)+Vector3.new(0,-1.5+math.sin(s*math.pi*2)*1.5+math.max(0,s-.6)*28,0)
+    for i=0,30 do
+        local s=i/30
+        local horizontal=from+flat*pathLength*s+side*(math.sin(s*math.pi*3)*1.4+1.8)
+        points[i]=Vector3.new(horizontal.X,baseY+math.sin(s*math.pi*2)*.5,horizontal.Z)
     end
-    local grow=.3
+    -- Curl the tail back and upward at the end, matching the browser preview's dragon silhouette.
+    for i=31,count do
+        local t=(i-30)/14
+        points[i]=to+flat*(2.5*math.sin(t*math.pi)-math.min(12,pathLength*.45)*t)
+            +side*(1.8+2.5*math.sin(t*math.pi))+Vector3.new(0,baseY+5*math.sin(t*math.pi/2)-to.Y,0)
+    end
+    local grow=.45
     for i=1,count do
-        local a,b=points[i-1],points[i];local thick=.5+2*(i/count)
+        local a,b=points[i-1],points[i];local thick=.62
         local body=part(effects,"DragonBody",Vector3.new(thick,thick,(b-a).Magnitude+.4),C.Colors.Thunder,CFrame.lookAt((a+b)/2,b))
         body.Transparency=1
-        local core=part(effects,"DragonCore",Vector3.new(thick*.35,thick*.35,(b-a).Magnitude+.4),Color3.fromRGB(255,248,220),CFrame.lookAt((a+b)/2,b))
+        local core=part(effects,"DragonCore",Vector3.new(.2,.2,(b-a).Magnitude+.4),Color3.fromRGB(255,248,220),CFrame.lookAt((a+b)/2,b))
         core.Transparency=1
         task.delay(grow*i/count,function()
             body.Transparency=.2;core.Transparency=0
@@ -163,26 +173,36 @@ local function dragon(from,to)
         end)
         Debris:AddItem(body,grow+1.4);Debris:AddItem(core,grow+1.4)
     end
-    -- Head: skull, snout, open jaw, horns and eyes, aligned with the last body segment.
-    local tip=points[count];local head=CFrame.lookAt(tip,tip+(points[count]-points[count-1]).Unit)
+    -- Head: skull, snout, open jaw, horns and eyes, traveling along the growing body.
     local shape={
-        {Vector3.new(3,2.4,3.6),CFrame.identity},
-        {Vector3.new(2,1.4,3),CFrame.new(0,.1,-3)},
-        {Vector3.new(1.8,.5,3),CFrame.new(0,-1,-2.6)*CFrame.Angles(-.45,0,0)},
-        {Vector3.new(.35,.35,3.6),CFrame.new(-.9,1.4,1.6)*CFrame.Angles(.55,-.2,0)},
-        {Vector3.new(.35,.35,3.6),CFrame.new(.9,1.4,1.6)*CFrame.Angles(.55,.2,0)},
+        {Vector3.new(1.53,1.19,1.87),CFrame.identity},
+        {Vector3.new(1.02,.71,1.62),CFrame.new(0,.08,-1.53)},
+        {Vector3.new(.94,.28,1.53),CFrame.new(0,-.6,-1.28)*CFrame.Angles(-.45,0,0)},
+        {Vector3.new(.15,.15,1.87),CFrame.new(-.48,.77,.94)*CFrame.Angles(.55,-.2,0)},
+        {Vector3.new(.15,.15,1.87),CFrame.new(.48,.77,.94)*CFrame.Angles(.55,.2,0)},
     }
-    task.delay(grow,function()
-        for _,piece in shape do
-            local p=part(effects,"DragonHead",piece[1],C.Colors.Thunder,head*piece[2]);p.Transparency=.1
-            tween(p,1.2,{Transparency=1});Debris:AddItem(p,1.3)
+    local headParts={}
+    for _,piece in shape do table.insert(headParts,{part=part(effects,"DragonHead",piece[1],C.Colors.Thunder,CFrame.new()),offset=piece[2]}) end
+    for _,x in {-.48,.48} do
+        table.insert(headParts,{part=part(effects,"DragonEye",Vector3.one*.16,Color3.new(1,1,1),CFrame.new(),Enum.PartType.Ball),offset=CFrame.new(x,.37,-.77)})
+    end
+    for _,entry in headParts do entry.part.Transparency=1;Debris:AddItem(entry.part,1.8) end
+    local dragonBurst=false
+    temporary(1.7,function(age)
+        local progress=math.clamp(age/grow,0,1)
+        local along=progress*count
+        local index=math.min(math.floor(along),count-1)
+        local alpha=along-index
+        local point=points[index]:Lerp(points[index+1],alpha)
+        local tangent=(points[index+1]-points[index]).Unit
+        local head=CFrame.lookAt(point,point+tangent)
+        local fade=age<grow and 0 or math.clamp((age-grow)/1.2,0,1)
+        for _,entry in headParts do
+            entry.part.CFrame=head*entry.offset
+            entry.part.Transparency=fade
         end
-        for _,x in {-.8,.8} do
-            local eye=part(effects,"DragonEye",Vector3.one*.45,Color3.new(1,1,1),head*CFrame.new(x,.7,-1.7),Enum.PartType.Ball)
-            tween(eye,1.2,{Transparency=1});Debris:AddItem(eye,1.3)
-        end
-        burst(tip,C.Colors.Thunder,10)
-    end)
+        if age>=grow and not dragonBurst then dragonBurst=true;burst(points[count],C.Colors.Thunder,10) end
+    end,function() for _,entry in headParts do if entry.part.Parent then entry.part:Destroy() end end end)
 end
 
 -- Viewmodel pieces are posed every frame relative to the camera; sizes scale per character.
@@ -400,7 +420,16 @@ event.OnClientEvent:Connect(function(kind,data)
         dragon(data.from,data.to)
         bolt(data.from-Vector3.new(0,2.4,0),data.to-Vector3.new(0,2.4,0),Color3.fromRGB(255,248,220),.6,.5)
         burst(data.from,C.Colors.Thunder,8)
-        if data.owner==player.UserId then drawnUntil=time()+.7;fovKickUntil=time()+.18;blur.Size=24 end
+        if data.owner==player.UserId then
+            drawnUntil=time()+.8;blur.Size=18
+            local m=player.Character;local root=m and m:FindFirstChild("HumanoidRootPart")
+            local h=m and m:FindFirstChildOfClass("Humanoid")
+            if root and h then
+                flameTurn={start=time(),root=root,humanoid=h,base=root.CFrame.Rotation,autoRotate=h.AutoRotate,
+                    fromYaw=flameViewYaw,toYaw=math.abs(flameViewYaw)<math.pi/2 and math.pi or 0}
+                h.AutoRotate=false
+            end
+        end
     elseif kind=="BombDevil" then
         -- The head goes off: a huge blast for everyone; for Reze herself the world cuts to black and slowly returns.
         blast(data.position,14)
@@ -751,6 +780,29 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if h then h.AutoRotate=not thirdPerson end
     end
     if kickSwing>=0 then camera.CFrame*=CFrame.Angles(0,kickYaw,kickRoll) end
+    if flameTurn then
+        local turn=flameTurn
+        if not (turn.root.Parent and turn.humanoid.Parent) then
+            flameTurn=nil
+        else
+            local elapsed=n-turn.start
+            local amount=smoothstep((elapsed-.08)/.37)
+            flameViewYaw=turn.fromYaw+(turn.toYaw-turn.fromYaw)*amount
+            turn.root.CFrame=CFrame.new(turn.root.Position)*turn.base*CFrame.Angles(0,math.pi*amount,0)
+            turn.humanoid.AutoRotate=false
+            desiredFov=math.max(desiredFov,90-18*amount)
+            blur.Size=18*(1-amount)
+            if elapsed>=.45 then
+                flameViewYaw=turn.toYaw
+                turn.root.CFrame=CFrame.new(turn.root.Position)*turn.base*CFrame.Angles(0,math.pi,0)
+                turn.humanoid.AutoRotate=turn.autoRotate
+                flameTurn=nil
+            end
+        end
+    end
+    if flameViewYaw~=0 then
+        camera.CFrame=CFrame.new(camera.CFrame.Position)*CFrame.fromAxisAngle(Vector3.yAxis,flameViewYaw)*camera.CFrame.Rotation
+    end
     -- Skid after a Rampage that hit nothing: drop low and recover.
     if n<slideUntil then lean=math.max(lean,.9*math.clamp((slideUntil-n)/.55,0,1)) end
     -- Hold: Blue raises the right arm, Red the left, with the technique gathering in the palm.
@@ -914,7 +966,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
 end)
 player.CharacterAdded:Connect(function()
     if cast then for _,o in cast.orbs do o:Destroy() end end
-    cast=nil;blur.Size=0;drawnUntil=0;blackout.BackgroundTransparency=1
+    if flameTurn and flameTurn.humanoid.Parent then flameTurn.humanoid.AutoRotate=flameTurn.autoRotate end
+    cast=nil;flameTurn=nil;flameViewYaw=0;blur.Size=0;drawnUntil=0;blackout.BackgroundTransparency=1
 end)
 
 -- Levi's flight. Players own their own physics, so the pull is applied here; the server decides when it starts, when

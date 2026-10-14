@@ -168,10 +168,13 @@ local function perform(p,s,m,h,r,kind,direction,instant)
             task.delay(cfg.HitDelay,function()
                 for _,t in victims do damage(p,t,cfg.Damage) end
             end)
-            -- Recoil: the legs give out. Self-damage never kills.
-            if h.Health>1 then h.Health=math.max(1,h.Health-cfg.SelfDamage) end
-            setTimed(m,h,"SlowedUntil",cfg.SlowDuration)
-            fx:FireClient(p,"Recoil",{damage=cfg.SelfDamage,duration=cfg.SlowDuration})
+            -- The cut lands after the turn; recoil follows just after the user sees the result.
+            task.delay(cfg.RecoilDelay,function()
+                if p.Character~=m or not m.Parent or not h.Parent or h.Health<=0 then return end
+                if h.Health>1 then h.Health=math.max(1,h.Health-cfg.SelfDamage) end
+                setTimed(m,h,"SlowedUntil",cfg.SlowDuration)
+                fx:FireClient(p,"Recoil",{damage=cfg.SelfDamage,duration=cfg.SlowDuration})
+            end)
         end)
     elseif kind=="BombDevil" then
         local cfg=C.BombDevil
