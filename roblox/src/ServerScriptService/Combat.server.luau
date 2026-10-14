@@ -29,7 +29,7 @@ local function targets(exclude)
     return out
 end
 local function sendState(p,s)
-    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
+    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,anchorUntil=s.anchor and s.anchor.untilTime or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
 end
 local function validVector(v)
     return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
@@ -238,6 +238,70 @@ local function perform(p,s,m,h,r,kind,direction,instant)
                 end
             end)
         end)
+    elseif kind=="Anchor" then
+        local cfg=C.Anchor
+        -- The wire is shot along the crosshair. Level geometry is found with a raycast (floors never hold); enemies are
+        -- found by how close the ray passes to them, because training rigs are not collidable. The nearer of the two wins.
+        local origin=r.Position+Vector3.new(0,1.5,0)
+        local params=rayParams(m);params.RespectCanCollide=true
+        local world=workspace:Raycast(origin,direction*cfg.Range,params)
+        local limit=world and world.Distance or cfg.Range
+        local point,distance,victim
+        if world and world.Normal.Y<.85 then point=world.Position;distance=world.Distance end
+        for _,t in targets(m) do
+            local to=t.r.Position+Vector3.new(0,.5,0)-origin
+            local along=to:Dot(direction)
+            if along>0 and along<=limit and (distance==nil or along<distance) and (to-direction*along).Magnitude<=3 then
+                point=t.r.Position;distance=along;victim=t
+            end
+        end
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        delayed(p,s,m,cfg.Windup,function()
+            if point then
+                s.anchor={point=point,victim=victim,untilTime=clock()+cfg.Duration}
+            else
+                -- Nothing to hold: the gas is gone and the next attempt has to wait.
+                s.cooldowns.Anchor=clock()+cfg.MissCooldown
+            end
+            fx:FireAllClients("Anchor",{owner=p.UserId,from=origin,point=point or origin+direction*cfg.Range,hit=point~=nil,speed=cfg.WireSpeed})
+            sendState(p,s)
+        end)
+    elseif kind=="Reel" then
+        local cfg=C.Reel
+        local a=s.anchor
+        local distance=(a.point-r.Position).Magnitude
+        local travel=math.max(.3,(distance-cfg.StopDistance)/(cfg.Speed*.82))
+        local untilTime=n+math.min(cfg.MaxTime,travel+.4)
+        s.reel={point=a.point,victim=a.victim,untilTime=untilTime}
+        -- The Spin window: from the first pull until Grace seconds after the flight ends.
+        s.comboUntil=untilTime+C.Spin.Grace
+        fx:FireAllClients("Reel",{owner=p.UserId,point=a.point,speed=cfg.Speed,ramp=cfg.Ramp,stop=cfg.StopDistance,maxTime=cfg.MaxTime})
+    elseif kind=="Spin" then
+        local cfg=C.Spin
+        -- The wire is let go; the client keeps the flight's momentum through the whole turn.
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        s.busyUntil=n+windup+cfg.Rotation+cfg.Recovery
+        delayed(p,s,m,windup,function()
+            fx:FireAllClients("Spin",{owner=p.UserId,position=r.Position,radius=cfg.Radius,rotation=cfg.Rotation})
+        end)
+        delayed(p,s,m,windup+cfg.Rotation*.9,function()
+            local center=r.Position
+            local struck=0
+            for _,t in targets(m) do
+                if (t.r.Position-center).Magnitude<=cfg.Radius then
+                    struck+=1
+                    damage(p,t,cfg.Damage);launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
+                end
+            end
+            fx:FireAllClients("SpinHit",{owner=p.UserId,position=center,radius=cfg.Radius,struck=struck})
+            -- Landing stagger: all that spinning leaves the user rooted for a moment.
+            setTimed(m,h,"RootedUntil",cfg.Recovery)
+        end)
+    elseif kind=="Burst" then
+        local cfg=C.Burst
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        fx:FireAllClients("Burst",{owner=p.UserId,position=r.Position,direction=direction})
+        fx:FireClient(p,"Impulse",{velocity=direction*cfg.Impulse+Vector3.new(0,cfg.Impulse*cfg.Lift,0)})
     elseif kind=="Kick" then
         local cfg=C.Kick
         -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
@@ -291,6 +355,9 @@ remote.OnServerEvent:Connect(function(p,skill,aim)
     if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    -- Levi: Reel needs a held anchor, and Spin only works while flying on one (the window Reel opens).
+    if skill=="Reel" and not (s.anchor and s.anchor.untilTime>n) then return end
+    if skill=="Spin" and (s.comboUntil or 0)<=n then return end
     local cfg=C[skill]
     local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
     if instant then
@@ -325,7 +392,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;cancelBlue(p,s)
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
 end)
@@ -333,7 +400,31 @@ local sync=0
 RunService.Heartbeat:Connect(function(dt)
     local n=clock();sync+=dt
     for p,s in states do
-        s.energy=math.min(C.MaxEnergy,s.energy+C.EnergyRegen*dt)
+        local regen=C.EnergyRegen
+        if kitOf(p)=="Levi" then
+            -- Gas refills much faster on solid ground than in the air.
+            local _,ch,cr=character(p)
+            if ch and ch.FloorMaterial~=Enum.Material.Air then regen*=C.GasGroundRegen end
+            local reel=s.reel
+            if reel and cr then
+                local distance=(reel.point-cr.Position).Magnitude
+                if distance<=C.Reel.StopDistance+2 or n>=reel.untilTime then
+                    s.reel=nil;s.anchor=nil;s.comboUntil=n+C.Spin.Grace
+                    local arrived=distance<=C.Reel.StopDistance+3
+                    local victim=reel.victim
+                    if arrived and victim and victim.m.Parent and victim.h.Health>0 and (victim.r.Position-cr.Position).Magnitude<=C.Reel.ArrivalRadius then
+                        damage(p,victim,C.Reel.ArrivalDamage);launch(victim,outward(cr.Position,victim,cr.CFrame.LookVector)*30+Vector3.new(0,28,0))
+                    end
+                    fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=arrived,position=cr.Position})
+                    sendState(p,s)
+                end
+            elseif reel then s.reel=nil end
+            if s.anchor and not s.reel and n>s.anchor.untilTime then
+                s.anchor=nil;fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=false})
+                sendState(p,s)
+            end
+        end
+        s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
         if sync>=.15 then sendState(p,s) end
     end
     if sync>=.15 then sync=0 end
@@ -410,9 +501,9 @@ end)
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
     local function reset()
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;cancelBlue(p,s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() s.generation+=1;s.hold=nil;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() s.generation+=1;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

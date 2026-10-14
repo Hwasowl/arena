@@ -14,13 +14,14 @@ const camera = new T.PerspectiveCamera(66,innerWidth/innerHeight,.04,220); scene
 const basePos = new T.Vector3(0,2.1,13); camera.position.copy(basePos);
 let yaw=0,pitch=-.015,time=0,cast=null,blueUntil=0,blueOrb=null,domain=null,damageTotal=0,energy=100;
 let muted=true,audio=null,comfort=false,toastUntil=0,demoStart=-1,demoStage=0,dragging=false,lastPointer=null;
+let anchor=null,reel=null,wire=null,spinUntil=0,rootUntil=0,spin3p=false,landDip=0,reelFilter=false;
 let char='gojo',charges=0,chargesUntil=0,hp=200,slowUntil=0,devilUntil=0,devilShown=false,hold=null,kickCombo=null,hitstopUntil=0;
 const keys = new Set(), effects=[], targets=[], particles=[], popups=[], timers=[], trails=[];
-const cooldowns={blue:0,red:0,domain:0,dash:0,breath:0,thunder:0,god:0,rampage:0,kick:0,detonate:0,devil:0}; const durations={blue:5,red:6,domain:15,dash:2.5,breath:14,thunder:6,god:25,rampage:5,kick:4,detonate:1,devil:20};
-const costs={blue:15,red:20,domain:45,dash:5,breath:20,thunder:18,god:50,rampage:0,kick:0,detonate:0,devil:0};
+const cooldowns={blue:0,red:0,domain:0,dash:0,breath:0,thunder:0,god:0,rampage:0,kick:0,detonate:0,devil:0,anchor:0,reel:0,spin:0,burst:0}; const durations={blue:5,red:6,domain:15,dash:2.5,breath:14,thunder:6,god:25,rampage:5,kick:4,detonate:1,devil:20,anchor:1.5,reel:.6,spin:8,burst:2.5};
+const costs={blue:15,red:20,domain:45,dash:5,breath:20,thunder:18,god:50,rampage:0,kick:0,detonate:0,devil:0,anchor:10,reel:15,spin:30,burst:10};
 // Reze pays in health instead of energy: a fraction of max HP per use, never lethal.
 const hpCosts={rampage:.03,kick:.03,detonate:.12};
-const colors={blue:0x36adff,red:0xff365d,purple:0xa04dff,domain:0x94ddff,thunder:0xffd23f,bomb:0xff7a2e,fire:0xffd08a};
+const colors={blue:0x36adff,red:0xff365d,purple:0xa04dff,domain:0x94ddff,thunder:0xffd23f,bomb:0xff7a2e,fire:0xffd08a,gas:0xb0e2c8};
 const SKILLS={
   blue:{name:'아오',type:'인력 / 3초 대기',icon:'orb-icon',glyph:'',accent:'#64cfff'},
   red:{name:'아카',type:'척력 / 3초 대기',icon:'burst-icon',glyph:'✦',accent:'#ff637d'},
@@ -32,12 +33,17 @@ const SKILLS={
   rampage:{name:'폭주대시',type:'폭발 돌진 / 화약',icon:'rampage-icon',glyph:'✸',accent:'#ff8a3d'},
   kick:{name:'폭발 킥',type:'단독 · 폭주 직후 연계',icon:'bomb-icon',glyph:'✺',accent:'#ffa25a'},
   detonate:{name:'대폭발',type:'4초 뒤 광역 · 인간 복귀',icon:'devil-icon',glyph:'爆',accent:'#ff3b1e'},
-  devil:{name:'폭탄의 악마',type:'핀 / 변신 · 무제한',icon:'devil-icon',glyph:'爆',accent:'#ff5a2e'}
+  devil:{name:'폭탄의 악마',type:'핀 / 변신 · 무제한',icon:'devil-icon',glyph:'爆',accent:'#ff5a2e'},
+  anchor:{name:'앵커',type:'십자선 조준 / 와이어',icon:'anchor-icon',glyph:'⌖',accent:'#b0e2c8'},
+  reel:{name:'당기기',type:'앵커 쪽으로 비행',icon:'reel-icon',glyph:'≫',accent:'#b0e2c8'},
+  spin:{name:'회전 베기',type:'비행 중에만 · 착지 경직',icon:'spin-icon',glyph:'⟲',accent:'#e8fff0'},
+  burst:{name:'가스 분사',type:'와이어 해제 / 가속',icon:'gas-icon',glyph:'✺',accent:'#c8e7d8'}
 };
 const CHARS={
   gojo:{name:'고죠 사토루',kanji:'五条 悟',seal:'悟',eyebrow:'CHARACTER 01 / LIMITLESS',desc:'공간을 지배하는 힘.<br>아오·아카는 팔을 든 채 3초 대기. 그 안에 다른 쪽을 쓰면 무라사키.',hud:'GOJO',energy:'呪力 / CURSED ENERGY',hint:'<kbd>Q</kbd>+<kbd>E</kbd> 3초 안에 합치면 무라사키 · 같은 키 다시 = 즉시 발사',demoToast:'아오+아카 → 무라사키 → 아오 단독 → 아카 단독 → 영역전개 자동 시연',slots:{q:'blue',e:'red',r:'domain',shift:'dash'},demo:[[.6,'blue'],[1.8,'red'],[6,'blue'],[6.8,'blue'],[8.2,'red'],[9,'red'],[10.5,'domain'],[20,'dash']],demoEnd:21.5},
   zenitsu:{name:'아가츠마 젠이츠',kanji:'我妻 善逸',seal:'善',eyebrow:'CHARACTER 02 / THUNDER BREATHING',desc:'번개의 호흡, 단 하나의 형을 극한까지.<br>전집중 호흡 뒤 벽력일섬은 즉시 발동됩니다.',hud:'ZENITSU',energy:'呼吸 / BREATH',hint:'<kbd>Q → E</kbd> 즉시 벽력일섬 ×3',demoToast:'벽력일섬 → 전집중 호흡 → 즉시 3연속 → 화뢰신 자동 시연',slots:{q:'breath',e:'thunder',r:'god',shift:'dash'},demo:[[.5,'thunder'],[3.6,'breath'],[5.9,'thunder'],[6.7,'thunder'],[7.5,'thunder'],[8.9,'god'],[14,'dash']],demoEnd:15.5,aimDemo:true},
-  reze:{name:'레제',kanji:'レゼ',seal:'レ',eyebrow:'CHARACTER 03 / BOMB DEVIL',desc:'평소엔 대시 하나뿐.<br>쵸커의 핀을 당기면 폭탄의 악마가 깨어납니다.',hud:'REZE',energy:'火薬 / GUNPOWDER',hint:'<kbd>R</kbd> 변신(무제한) · <kbd>Q</kbd> 후 바로 <kbd>E</kbd> = 연계 킥 · <kbd>R</kbd> 다시 = 대폭발',demoToast:'변신 → 폭주대시 → 연계 킥 → 단독 킥 → 대폭발 자동 시연',slots:{q:'rampage',e:'kick',r:'devil',shift:'dash'},demo:[[.5,'devil'],[3.8,'rampage'],[4.55,'kick'],[6.4,'kick'],[8.2,'detonate'],[15,'dash']],demoEnd:16,aimDemo:true,demoPos:[0,2.1,-1]}
+  reze:{name:'레제',kanji:'レゼ',seal:'レ',eyebrow:'CHARACTER 03 / BOMB DEVIL',desc:'평소엔 대시 하나뿐.<br>쵸커의 핀을 당기면 폭탄의 악마가 깨어납니다.',hud:'REZE',energy:'火薬 / GUNPOWDER',hint:'<kbd>R</kbd> 변신(무제한) · <kbd>Q</kbd> 후 바로 <kbd>E</kbd> = 연계 킥 · <kbd>R</kbd> 다시 = 대폭발',demoToast:'변신 → 폭주대시 → 연계 킥 → 단독 킥 → 대폭발 자동 시연',slots:{q:'rampage',e:'kick',r:'devil',shift:'dash'},demo:[[.5,'devil'],[3.8,'rampage'],[4.55,'kick'],[6.4,'kick'],[8.2,'detonate'],[15,'dash']],demoEnd:16,aimDemo:true,demoPos:[0,2.1,-1]},
+  levi:{name:'리바이 아커만',kanji:'リヴァイ',seal:'兵',eyebrow:'CHARACTER 04 / ODM GEAR',desc:'앵커를 걸고, 날아가고, 한 바퀴 돈다.<br>회전 베기는 와이어로 날아가는 동안에만.',hud:'LEVI',energy:'ガス / ODM GAS',hint:'<kbd>Q</kbd> 앵커 → <kbd>E</kbd> 당기기 → 비행 중 <kbd>R</kbd> 회전 베기 · <kbd>SHIFT</kbd> 가스 분사',demoToast:'앵커 → 당기기 → 회전 베기 → 기둥에 앵커 → 가스 분사 자동 시연',slots:{q:'anchor',e:'reel',r:'spin',shift:'burst'},demo:[[.4,'anchor',[0,1.6,-10]],[1.25,'reel'],[1.6,'spin'],[3.7,'anchor',[0,7.5,-21.5]],[4.5,'reel'],[6.4,'burst',[-10,6,-2]]],demoEnd:10}
 };
 const SLOTS=['q','e','r','shift'];
 const hemi=new T.HemisphereLight(0xc2e5ff,0x1b263e,2.5); scene.add(hemi);
@@ -68,6 +74,11 @@ for(let i=0;i<10;i++){const a=i*Math.PI*2/10;const x=Math.sin(a)*31,z=Math.cos(a
 // Torii-like gate: restrained geometry instead of imported unverified models.
 for(const x of [-10,10]){box([1.4,11,1.4],[x,5.5,-29],dark);box([2.2,.55,2.2],[x,.25,-29],stone);box([.12,8,.08],[x-.72,5,-28.2],glowMat(0x72b1d4));}
 box([26,.9,2.1],[0,11,-29],dark);box([23,.5,1.4],[0,8.8,-29],trim);box([3.3,2.1,.35],[0,9.7,-27.9],dark);
+// Levi's anchors: pillars and low walls to swing between (same layout as roblox/.../Arena.server.luau, scaled for studs).
+const obstacles=[],anchorMeshes=[];
+function obstacle(x,z,w,d,h,lit){const b=box([w,h,d],[x,h/2,z],lit?stone:dark);const cap=box([w+.4,.3,d+.4],[x,h-.15,z],trim);anchorMeshes.push(b,cap);obstacles.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,h});if(lit){box([.08,h*.7,w*.35],[x,h*.45,z+d/2+.02],glowMat(0x71ceee));glow(0x53bbff,3).position.set(x,h*.6,z+d/2+.4);}}
+for(const [x,z,w,h] of [[-13,-4,2.2,11],[13,-6,2.2,13],[-17,-17,2.4,9],[18,-14,2.4,10],[0,-23,2.6,14],[-10,8,2,8],[11,9,2,9]])obstacle(x,z,w,w,h,true);
+obstacle(-6,1,10,.8,5);obstacle(7,-1.5,.8,9,5);
 for(let i=0;i<45;i++){const a=Math.random()*Math.PI*2,r=48+Math.random()*50,h=6+Math.random()*30;const b=box([3+Math.random()*6,h,3+Math.random()*6],[Math.sin(a)*r,h/2-10,Math.cos(a)*r],mat(0x101d2c));if(i%3===0)box([.08,h*.7,.09],[b.position.x+2,b.position.y,b.position.z+3],glowMat(0x36688c));}
 const starGeo=new T.BufferGeometry(), starPos=[];for(let i=0;i<850;i++){const v=new T.Vector3(Math.random()-.5,Math.random()*.6,Math.random()-.5).normalize().multiplyScalar(120);starPos.push(v.x,v.y,v.z);}
 starGeo.setAttribute('position',new T.Float32BufferAttribute(starPos,3));scene.add(new T.Points(starGeo,new T.PointsMaterial({color:0xb4d9ff,size:.12,transparent:true,opacity:.7})));
@@ -79,7 +90,11 @@ function makeTarget(x,z,index){const g=new T.Group();g.position.set(x,0,z);scene
 makeTarget(0,-10,1);makeTarget(-7,-15,2);makeTarget(8,-18,3);
 
 // Local view arms are independent from the world-body pose, as in an FPS viewmodel.
-function makeHand(side){const g=new T.Group();camera.add(g);const localSkin=skin.clone();localSkin.depthTest=false;const sleeve=cloth.clone();sleeve.depthTest=false;const fore=mesh(new T.CylinderGeometry(.105,.13,.55,8),sleeve,g);fore.position.set(0,-.31,.065);fore.rotation.x=.2;const cuff=mesh(new T.CylinderGeometry(.112,.112,.07,12),sleeve,g);cuff.position.y=-.075;const palm=box([.17,.17,.085],[0,.025,0],localSkin,g);const fuse=new T.Group();g.add(fuse);const cord=mesh(new T.CylinderGeometry(.012,.012,.3,5),new T.MeshBasicMaterial({color:0x4a3626,depthTest:false}),fuse);cord.position.set(side*.1,-.16,.1);cord.rotation.set(.5,0,side*.6);const ember=glow(colors.bomb,.12,fuse);ember.material.depthTest=false;ember.position.set(side*.19,-.28,.17);fuse.visible=false;g.traverse(o=>{o.renderOrder=102;o.frustumCulled=false;o.castShadow=false;});return {g,skin:localSkin,sleeve,side,fuse,ember};}
+function makeHand(side){const g=new T.Group();camera.add(g);const localSkin=skin.clone();localSkin.depthTest=false;const sleeve=cloth.clone();sleeve.depthTest=false;const fore=mesh(new T.CylinderGeometry(.105,.13,.55,8),sleeve,g);fore.position.set(0,-.31,.065);fore.rotation.x=.2;const cuff=mesh(new T.CylinderGeometry(.112,.112,.07,12),sleeve,g);cuff.position.y=-.075;const palm=box([.17,.17,.085],[0,.025,0],localSkin,g);const fuse=new T.Group();g.add(fuse);const cord=mesh(new T.CylinderGeometry(.012,.012,.3,5),new T.MeshBasicMaterial({color:0x4a3626,depthTest:false}),fuse);cord.position.set(side*.1,-.16,.1);cord.rotation.set(.5,0,side*.6);const ember=glow(colors.bomb,.12,fuse);ember.material.depthTest=false;ember.position.set(side*.19,-.28,.17);fuse.visible=false;
+// Levi's blades: gripped in the fist and pointing forward and a little up so that they stay in view.
+const blade=new T.Group();g.add(blade);blade.position.set(0,.05,-.05);blade.rotation.x=.5;blade.visible=false;
+{const bm=(c,r,m)=>{const x=mat(c,r,m);x.depthTest=false;return x;};box([.05,.055,.26],[0,0,.02],bm(0x22252a,.6,.2),blade);box([.13,.03,.04],[0,0,-.13],bm(0x78808a,.4,.8),blade);box([.012,.11,.55],[0,0,-.4],bm(0xd6dee6,.15,.95),blade);const edge=box([.016,.012,.53],[0,-.05,-.4],glowMat(colors.gas),blade);edge.material.depthTest=false;}
+g.traverse(o=>{o.renderOrder=102;o.frustumCulled=false;o.castShadow=false;});return {g,skin:localSkin,sleeve,side,fuse,ember,blade};}
 const left=makeHand(-1),right=makeHand(1);
 // Reze's choker, shown only during the pull: the body-fixed rig follows position and yaw (not pitch), so lowering
 // the chin brings the black band and its pin ring into the bottom of the view. The ring sits on her right side.
@@ -159,8 +174,8 @@ shockwave(pos.clone().setY(Math.max(.1,pos.y-radius*.5)),colors.bomb,radius*2.2)
 function later(delay,fn){timers.push({at:time+delay,fn});}
 // Knockback: targets fly on a simple ballistic arc, tumble, then walk back to their post.
 function launch(t,velocity){if(t.hp<=0)return;t.vel=velocity.clone();}
-function sound(type){if(muted||!audio)return;const ctx=audio,t=ctx.currentTime;const gain=ctx.createGain();gain.connect(ctx.destination);gain.gain.setValueAtTime(.0001,t);let duration=.7,freq=100;const osc=ctx.createOscillator();osc.connect(gain);osc.type='sine';if(type==='snap'){duration=.09;freq=1100;osc.type='triangle';}if(type==='blue'){duration=1.5;freq=150;}if(type==='purple'){duration=1.3;freq=75;osc.type='sawtooth';}if(type==='domain'){duration=2.6;freq=46;}if(type==='dash'){duration=.2;freq=350;}if(type==='thunder'){duration=.9;freq=70;osc.type='sawtooth';}if(type==='crack'){duration=.22;freq=900;osc.type='square';}if(type==='sheath'){duration=.35;freq=2400;osc.type='triangle';}if(type==='breath'){duration=1.8;freq=110;}if(type==='boom'){duration=1.1;freq=60;osc.type='sawtooth';}if(type==='pin'){duration=.6;freq=3400;osc.type='sine';}if(type==='fizz'){duration=.35;freq=5200;osc.type='sine';}
-osc.frequency.setValueAtTime(freq,t);osc.frequency.exponentialRampToValueAtTime(type==='pin'?freq*.97:freq*.28,t+duration);if(type==='pin'){const o2=ctx.createOscillator();o2.frequency.value=freq*2.76;o2.connect(gain);o2.start(t);o2.stop(t+duration*.5);}gain.gain.exponentialRampToValueAtTime(type==='snap'||type==='sheath'||type==='pin'?.09:type==='boom'?.06:.035,t+.015);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);osc.start(t);osc.stop(t+duration);if(['snap','purple','dash','thunder','crack','boom','fizz'].includes(type)){const buffer=ctx.createBuffer(1,ctx.sampleRate*.25,ctx.sampleRate);const arr=buffer.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*(1-i/arr.length);const noise=ctx.createBufferSource();noise.buffer=buffer;const ng=ctx.createGain();ng.gain.value=type==='boom'?.22:type==='purple'||type==='thunder'?.13:.05;noise.connect(ng);ng.connect(ctx.destination);noise.start();}}
+function sound(type){if(muted||!audio)return;const ctx=audio,t=ctx.currentTime;const gain=ctx.createGain();gain.connect(ctx.destination);gain.gain.setValueAtTime(.0001,t);let duration=.7,freq=100;const osc=ctx.createOscillator();osc.connect(gain);osc.type='sine';if(type==='snap'){duration=.09;freq=1100;osc.type='triangle';}if(type==='blue'){duration=1.5;freq=150;}if(type==='purple'){duration=1.3;freq=75;osc.type='sawtooth';}if(type==='domain'){duration=2.6;freq=46;}if(type==='dash'){duration=.2;freq=350;}if(type==='thunder'){duration=.9;freq=70;osc.type='sawtooth';}if(type==='crack'){duration=.22;freq=900;osc.type='square';}if(type==='sheath'){duration=.35;freq=2400;osc.type='triangle';}if(type==='breath'){duration=1.8;freq=110;}if(type==='boom'){duration=1.1;freq=60;osc.type='sawtooth';}if(type==='pin'){duration=.6;freq=3400;osc.type='sine';}if(type==='fizz'){duration=.35;freq=5200;osc.type='sine';}if(type==='anchor'){duration=.14;freq=2600;osc.type='triangle';}if(type==='gas'){duration=.55;freq=220;osc.type='sawtooth';}if(type==='slash'){duration=.4;freq=1100;osc.type='sawtooth';}
+osc.frequency.setValueAtTime(freq,t);osc.frequency.exponentialRampToValueAtTime(type==='pin'?freq*.97:freq*.28,t+duration);if(type==='pin'){const o2=ctx.createOscillator();o2.frequency.value=freq*2.76;o2.connect(gain);o2.start(t);o2.stop(t+duration*.5);}gain.gain.exponentialRampToValueAtTime(type==='snap'||type==='sheath'||type==='pin'||type==='anchor'?.09:type==='boom'?.06:.035,t+.015);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);osc.start(t);osc.stop(t+duration);if(['snap','purple','dash','thunder','crack','boom','fizz','anchor','gas','slash'].includes(type)){const buffer=ctx.createBuffer(1,ctx.sampleRate*.25,ctx.sampleRate);const arr=buffer.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*(1-i/arr.length);const noise=ctx.createBufferSource();noise.buffer=buffer;const ng=ctx.createGain();ng.gain.value=type==='boom'?.22:type==='purple'||type==='thunder'?.13:.05;noise.connect(ng);ng.connect(ctx.destination);noise.start();}}
 function flash(color,power=.25){$('flash').style.background=color;let o={p:power};effects.push({object:null,born:time,life:.25,update:(_,t)=>$('flash').style.opacity=(1-t)*o.p});}
 function toast(message){$('statusToast').textContent=message;toastUntil=time+2.4;}
 function title(kicker,name,desc,color){$('castKicker').textContent=kicker;$('castName').textContent=name;$('castDescription').textContent=desc;$('castTitle').style.setProperty('--accent',color);$('castTitle').classList.add('active');}
@@ -171,6 +186,10 @@ function slotType(slot){let t=CHARS[char].slots[slot];if(char==='reze'&&slot==='
 function startSkill(type,fromDemo=false){if(!fromDemo){demoStart=-1;$('demo').classList.remove('active');}const word=char==='gojo'?'술식':'기술';
 if((type==='rampage'||type==='kick'||type==='detonate')&&time>=devilUntil){toast('변신 후 사용 가능 · R 폭탄의 악마');return false;}
 if(type==='devil'&&time<devilUntil){toast('이미 폭탄의 악마 상태예요');return false;}
+if(type==='reel'&&!anchor){toast('앵커를 먼저 걸어주세요 · Q (십자선 조준)');return false;}
+if(type==='spin'&&!spinReady()){toast('회전 베기는 앵커로 날아가는 중에만 · E 당기기');return false;}
+if(type==='anchor'&&reel){toast('비행 중에는 새 앵커를 걸 수 없어요 · SHIFT로 와이어 해제');return false;}
+if(type==='reel'&&reel){return false;}
 // Gojo: Blue and Red are held with an arm raised for up to 3s. Using the other one during the hold fuses both into
 // Purple; using the same one again releases it at once; otherwise it releases by itself when the hold runs out.
 if(hold&&(type==='blue'||type==='red')){if(cast){toast('현재 '+word+'이 끝난 뒤 사용할 수 있어요');return false;}
@@ -181,12 +200,13 @@ if(cast&&type==='kick'&&cast.type==='rampage'&&cast.flags.go&&time-cast.start>=c
 if(cast){toast('현재 '+word+'이 끝난 뒤 사용할 수 있어요');return false;}
 if(type==='dash'&&time<slowUntil){toast('다리 반동 · 대시 불가 '+(slowUntil-time).toFixed(1)+'초');return false;}
 const instant=type==='thunder'&&charges>0&&chargesUntil>time;
-if(instant)charges--;else{if(cooldowns[type]>time){toast(word+' 회복 중 · '+(cooldowns[type]-time).toFixed(1)+'초');return false;}if(energy<costs[type]){toast(char==='gojo'?'주력이 회복될 때까지 잠시 기다려주세요':'호흡을 가다듬는 중이에요');return false;}energy-=costs[type];cooldowns[type]=time+durations[type];}
+if(instant)charges--;else{if(cooldowns[type]>time){toast(word+' 회복 중 · '+(cooldowns[type]-time).toFixed(1)+'초');return false;}if(energy<costs[type]){toast(char==='gojo'?'주력이 회복될 때까지 잠시 기다려주세요':char==='levi'?'가스가 부족해요 · 지상에서 빠르게 회복':'호흡을 가다듬는 중이에요');return false;}energy-=costs[type];cooldowns[type]=time+durations[type];}
 if(hpCosts[type])hp=Math.max(1,hp-200*hpCosts[type]);
 if(type==='blue'||type==='red'){hold={kind:type,start:time};const blue=type==='blue';title(blue?'CURSED TECHNIQUE · LAPSE':'CURSED TECHNIQUE · REVERSAL',(blue?'아오':'아카')+' · 대기','3초 안에 '+(blue?'E 아카':'Q 아오')+' → 무라사키 · '+(blue?'Q':'E')+' 다시 → 즉시 발사',blue?'#67ceff':'#ff7590');sound('snap');return true;}
+if(type==='reel')return doReel();if(type==='burst')return doBurst();
 return beginCast(type,instant);}
 function endHold(){hold=null;holdGlow.visible=false;for(const h of [left,right])h.skin.emissive.set(0x000000);}
-function beginCast(skill,instant){const windup=skill==='thunder'&&!instant?2:skill==='god'?.8:skill==='devil'?1:skill==='rampage'?.12:skill==='kick'?.38:skill==='detonate'?4:0;cast={type:skill,start:time,windup,duration:{blue:1.3,red:1,purple:1.7,domain:2.4,dash:.28,breath:2,thunder:windup+.6,god:windup+1.4,devil:windup+2,rampage:windup+.75,kick:windup+.5,detonate:windup+1.6}[skill],flags:{},direction:new T.Vector3(0,0,-1).applyEuler(new T.Euler(pitch,yaw,0,'YXZ')),point:aimPoint(19)};
+function beginCast(skill,instant){const windup=skill==='thunder'&&!instant?2:skill==='god'?.8:skill==='devil'?1:skill==='rampage'?.12:skill==='kick'?.38:skill==='detonate'?4:skill==='anchor'?.2:skill==='spin'?.25:0;cast={type:skill,start:time,windup,duration:{blue:1.3,red:1,purple:1.7,domain:2.4,dash:.28,breath:2,thunder:windup+.6,god:windup+1.4,devil:windup+2,rampage:windup+.75,kick:windup+.5,detonate:windup+1.6,anchor:.45,spin:windup+.45+.7}[skill],flags:{},direction:new T.Vector3(0,0,-1).applyEuler(new T.Euler(pitch,yaw,0,'YXZ')),point:aimPoint(19)};
 if(skill==='thunder'){title('雷の呼吸 · 壱ノ型','벽력일섬',instant?'전집중 · 즉시 발동 · 남은 '+charges+'회':'자세를 낮추고 2초 뒤 돌진 · 경로 위 모든 표적 피해','#ffd23f');if(instant)sound('crack');}
 if(skill==='breath'){title('全集中の呼吸','전집중 호흡','2초 집중 · 낙뢰 · 이후 벽력일섬 3회 즉시 발동','#ffe27a');sound('breath');}
 if(skill==='god'){title('雷の呼吸 · 漆ノ型','화뢰신 · 火雷神','벽력일섬의 10배 속도 · 뇌룡 발도 · 사용 후 반동','#ffb347');sound('breath');}
@@ -198,6 +218,7 @@ if(skill==='devil'){title('レゼ','쵸커의 핀','핀을 당긴다 · 머리�
 if(skill==='rampage'){title('BOMB DEVIL','폭주대시','발밑 폭발로 돌진 · 경로의 적을 띄움 · 화약은 1초 뒤 폭발','#ff8a3d');}
 if(skill==='kick'){cast.combo=!!(kickCombo&&kickCombo.until>time);cast.dir=cast.combo?kickCombo.dir.clone():null;kickCombo=null;title('BOMB DEVIL',cast.combo?'폭주 연계 · 폭발 킥':'폭발 킥',cast.combo?'폭주대시 방향 그대로 날아가 차 터뜨림':'눈앞을 차서 터뜨림 · 폭주대시 직후엔 연계','#ffa25a');}
 if(skill==='detonate'){title('BOMB DEVIL','대폭발','4초 뒤 광역 폭발 · 체력 12% 소모 · 끝나면 인간','#ff3b1e');sound('breath');}
+if(skill==='spin'){title('立体機動','회전 베기','날아가는 중 한 바퀴 · 착지 경직 0.7초','#b0e2c8');reel=null;anchor=null;wire=null;spinUntil=0;leviVel.multiplyScalar(.5);}
 if(skill==='dash'){sound('dash');}return true;}
 function projectile(color,radius,damage,speed,start,direction){const p=orb(color,radius);p.position.copy(start);const damaged=new Set();effect(p,1.6,(o,u,dt)=>{const old=o.position.clone();o.position.addScaledVector(direction,speed*dt);o.rotation.z+=dt*3;const segment=new T.Line3(old,o.position);for(const target of targets){if(damaged.has(target)||target.hp<=0)continue;const p2=target.g.position.clone().add(new T.Vector3(0,1.5,0));if(segment.closestPointToPoint(p2,true,new T.Vector3()).distanceTo(p2)<radius+1.2){damaged.add(target);hit(target,damage,color===colors.purple?'#c5a0ff':'#ff8da4');shockwave(p2,color,4);}}if(Math.random()<.75)burst(o.position,color,2,1);});}
 function createDomain(center){center.y=0;const group=new T.Group();scene.add(group);group.position.copy(center);const shader=new T.ShaderMaterial({uniforms:{t:{value:0},opacity:{value:0}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 vP;uniform float t;uniform float opacity;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec3 n=normalize(vP);vec2 uv=vec2(atan(n.z,n.x),asin(n.y));vec2 cell=floor(uv*160.);float stars=pow(hash(cell),110.);float lanes=pow(max(0.,sin(uv.x*32.+sin(uv.y*3.+t*.25))),18.);float curtain=lanes*(.1+.9*pow(max(0.,sin(uv.y*3.+t*.5)),4.));vec3 col=vec3(.008,.018,.038)+stars*vec3(.65,.8,1.)+curtain*vec3(.045,.12,.23);gl_FragColor=vec4(col,opacity);}`,transparent:true,side:T.BackSide,depthWrite:false});const dome=mesh(new T.SphereGeometry(26,64,32),shader,group);dome.position.y=1.5;const rings=[];for(let i=0;i<5;i++){const r=ring(7+i*4,0x88c6ff,new T.Vector3(0,.12+i*.025,0),.028,group);rings.push(r);}for(let i=0;i<32;i++){const a=i*Math.PI/16;const beam=box([.025,22,.025],[Math.sin(a)*25,8,Math.cos(a)*25],glowMat(0x77baff),group);beam.material.opacity=.32;}
@@ -302,35 +323,210 @@ if(c.type==='detonate'){const w=c.windup;
     for(const t of targets){if(t.hp<=0)continue;const d=t.g.position.clone().sub(at).setY(0),dist=d.length();if(dist<R){const power=1-.55*dist/R;hit(t,170,'#ffb27a');launch(t,(dist>.1?d.normalize():flatForward()).multiplyScalar(26*power).setY(14*power));}}
     // Back to human; the transformation can be used again after 20 seconds.
     devilUntil=0;cooldowns.devil=time+20;toast('인간으로 돌아온다 · 폭탄의 악마 재사용 20초');}}
+if(c.type==='anchor'){const k=ease(a/.2);left.g.position.set(-.5,-.62+.12*k,-.7);left.g.rotation.set(.5*k,.3,-.5);right.g.position.set(.5,-.62+.12*k,-.7);right.g.rotation.set(.5*k,-.3,.5);camera.fov=70;
+  if(a>=.2&&!c.flags.fire){c.flags.fire=true;fireAnchor(c.direction);}camera.rotation.x+=.04*Math.sin(clamp((a-.2)/.18,0,1)*Math.PI);}
+if(c.type==='spin')updateSpin(c,a);
 if(a>=c.duration){boot.visible=false;if(c.ring)dispose(c.ring);if(c.type==='devil'){$('blackout').style.opacity=0;pin.visible=false;choker.visible=false;}if(c.orbs)for(const o of c.orbs)dispose(o);if(c.merged)dispose(c.merged);cast=null;$('castTitle').classList.remove('active');$('scene').style.filter='';}}
-function reset(){if(cast?.ring)dispose(cast.ring);boot.visible=false;kickCombo=null;cast?.orbs?.forEach(dispose);if(cast?.merged)dispose(cast.merged);cast=null;if(blueOrb)dispose(blueOrb);blueOrb=null;blueUntil=0;charges=0;chargesUntil=0;hp=200;slowUntil=0;hold=null;holdGlow.visible=false;devilUntil=0;for(const tr of trails)tr.grains.forEach(dispose);trails.length=0;timers.length=0;pin.visible=false;choker.visible=false;$('blackout').style.opacity=0;if(domain)dispose(domain.group);domain=null;for(const fx of effects)if(fx.object)dispose(fx.object);effects.length=0;for(const p of particles)dispose(p.object);particles.length=0;for(const p of popups)p.el.remove();popups.length=0;Object.keys(cooldowns).forEach(k=>cooldowns[k]=0);energy=100;damageTotal=0;$('totalDamage').textContent='0';for(const t of targets){t.hp=t.max;t.g.visible=true;t.g.position.copy(t.home);t.bar.scale.x=1;t.bar.position.x=0;t.locked=false;t.respawn=0;t.vel=null;t.landed=0;t.g.rotation.x=0;}basePos.set(0,2.1,13);yaw=0;pitch=-.015;$('castTitle').classList.remove('active');$('scene').style.filter='';$('flash').style.opacity=0;updateTargetCount();}
+function reset(){if(cast?.ring)dispose(cast.ring);boot.visible=false;kickCombo=null;cast?.orbs?.forEach(dispose);if(cast?.merged)dispose(cast.merged);cast=null;if(blueOrb)dispose(blueOrb);blueOrb=null;blueUntil=0;charges=0;chargesUntil=0;hp=200;slowUntil=0;hold=null;holdGlow.visible=false;devilUntil=0;for(const tr of trails)tr.grains.forEach(dispose);trails.length=0;timers.length=0;pin.visible=false;choker.visible=false;$('blackout').style.opacity=0;if(domain)dispose(domain.group);domain=null;for(const fx of effects)if(fx.object)dispose(fx.object);effects.length=0;for(const p of particles)dispose(p.object);particles.length=0;for(const p of popups)p.el.remove();popups.length=0;Object.keys(cooldowns).forEach(k=>cooldowns[k]=0);energy=100;damageTotal=0;$('totalDamage').textContent='0';for(const t of targets){t.hp=t.max;t.g.visible=true;t.g.position.copy(t.home);t.bar.scale.x=1;t.bar.position.x=0;t.locked=false;t.respawn=0;t.vel=null;t.landed=0;t.g.rotation.x=0;}anchor=null;reel=null;wire=null;spinUntil=0;rootUntil=0;leviVel.set(0,0,0);landDip=0;basePos.set(0,2.1,13);yaw=0;pitch=-.015;$('castTitle').classList.remove('active');$('scene').style.filter='';$('flash').style.opacity=0;updateTargetCount();}
 
 function setCharacter(next){if(!CHARS[next])return;if(cast){toast('현재 기술이 끝난 뒤 바꿀 수 있어요');return;}demoStart=-1;$('demo').classList.remove('active');char=next;reset();const C=CHARS[char];
 document.body.dataset.char=char;document.title='INFINITY / '+C.name+' · Skill Lab';$('charEyebrow').textContent=C.eyebrow;$('charName').innerHTML=C.name+'<span>'+C.kanji+'</span>';$('charDesc').innerHTML=C.desc;$('seal').textContent=C.seal;$('hudName').textContent=C.hud;$('energyLabel').textContent=C.energy;$('comboHint').innerHTML=C.hint;
 for(const slot of SLOTS){const s=SKILLS[C.slots[slot]],b=$(slot+'Btn'),icon=b.querySelector('.skill-icon');b.style.setProperty('--accent',s.accent);icon.className='skill-icon '+s.icon;icon.textContent=s.glyph;b.querySelector('strong').textContent=s.name;b.querySelector('.skill-type').textContent=s.type;b.classList.remove('combo','locked');b.dataset.skill='';}
 for(const b of document.querySelectorAll('.char-switch button'))b.classList.toggle('active',b.dataset.pick===char);
-sword.g.visible=sword.hilt.visible=char==='zenitsu';devilShown=null;}
+sword.g.visible=sword.hilt.visible=char==='zenitsu';for(const h of [left,right])h.blade.visible=char==='levi';$('comboKey').textContent=char==='levi'?'R':'E';$('comboText').textContent=char==='levi'?' 회전 베기!':' 연계 킥!';$('comboPrompt').classList.remove('on');devilShown=null;}
 // Sleeves and Bomb Devil extras follow the character and transformation.
-function applyLook(){const devil=char==='reze'&&time<devilUntil;if(devil===devilShown)return;const was=devilShown;devilShown=devil;document.body.classList.toggle('devil',devil);devilHair.visible=devil;for(const h of [left,right]){h.fuse.visible=devil;h.sleeve.color.setHex(char==='zenitsu'?0xe0a526:char==='reze'?(devil?0x2a2628:0xe2bcaa):0x0c1323);}
+function applyLook(){const devil=char==='reze'&&time<devilUntil;if(devil===devilShown)return;const was=devilShown;devilShown=devil;document.body.classList.toggle('devil',devil);devilHair.visible=devil;for(const h of [left,right]){h.fuse.visible=devil;h.sleeve.color.setHex(char==='zenitsu'?0xe0a526:char==='levi'?0xdedbd0:char==='reze'?(devil?0x2a2628:0xe2bcaa):0x0c1323);}
 if(char==='reze'){$('seal').textContent=devil?'爆':'レ';$('hudName').textContent=devil?'BOMB DEVIL':'REZE';if(!devil&&was===true)toast('변신 해제 · 궁극기 재사용 대기');}}
 function faceNearestTarget(){const alive=targets.filter(t=>t.hp>0&&t.g.position.distanceTo(basePos.clone().setY(0))>3);if(!alive.length)return;alive.sort((x,y)=>x.g.position.distanceTo(basePos)-y.g.position.distanceTo(basePos));const d=alive[0].g.position.clone().sub(basePos);yaw=Math.atan2(-d.x,-d.z);pitch=-.015;}
 for(const slot of SLOTS)$(slot+'Btn').addEventListener('click',()=>startSkill(slotType(slot)));
 for(const b of document.querySelectorAll('.char-switch button'))b.onclick=()=>{setCharacter(b.dataset.pick);toast(CHARS[char].name+' 선택');};
 $('reset').onclick=()=>{demoStart=-1;$('demo').classList.remove('active');reset();toast('표적과 쿨타임을 초기화했습니다');};
 $('demo').onclick=()=>{if(demoStart>=0){demoStart=-1;$('demo').classList.remove('active');return;}reset();if(CHARS[char].demoPos)basePos.set(...CHARS[char].demoPos);demoStart=time;demoStage=0;$('demo').classList.add('active');toast(CHARS[char].demoToast);};
+$('spin3p').onclick=()=>{spin3p=!spin3p;$('spin3p').textContent='회전 시점: '+(spin3p?'3인칭':'1인칭');};
 $('sound').onclick=()=>{muted=!muted;if(!muted){audio??=new (window.AudioContext||window.webkitAudioContext)();audio.resume();sound('snap');}$('sound').textContent=muted?'소리 OFF':'소리 ON';};
 $('settings').onclick=()=>{comfort=!comfort;$('settings').textContent=comfort?'연출: 저자극':'연출: 기본';if(comfort)$('scene').style.filter='';};
-window.addEventListener('keydown',e=>{if(e.repeat)return;keys.add(e.code);const pick={Digit1:'gojo',Digit2:'zenitsu',Digit3:'reze'}[e.code];if(pick){setCharacter(pick);return;}const slot={KeyQ:'q',KeyE:'e',KeyR:'r',ShiftLeft:'shift',ShiftRight:'shift'}[e.code];if(slot){e.preventDefault();startSkill(slotType(slot));}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();dragging=false;});
+window.addEventListener('keydown',e=>{if(e.repeat)return;keys.add(e.code);const pick={Digit1:'gojo',Digit2:'zenitsu',Digit3:'reze',Digit4:'levi'}[e.code];if(pick){setCharacter(pick);return;}const slot={KeyQ:'q',KeyE:'e',KeyR:'r',ShiftLeft:'shift',ShiftRight:'shift'}[e.code];if(slot){e.preventDefault();startSkill(slotType(slot));}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();dragging=false;});
 $('scene').addEventListener('pointerdown',e=>{dragging=true;lastPointer={x:e.clientX,y:e.clientY};$('scene').setPointerCapture(e.pointerId);});
 $('scene').addEventListener('pointermove',e=>{if(!dragging)return;yaw-=(e.clientX-lastPointer.x)*.003;pitch=clamp(pitch-(e.clientY-lastPointer.y)*.003,-1.1,1.1);lastPointer={x:e.clientX,y:e.clientY};});$('scene').addEventListener('pointerup',()=>dragging=false);
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+// ================================ Levi: ODM gear ================================
+// Q fires two wires along the crosshair (pillars, walls and enemies hold; the floor never does). E reels the user in.
+// R is a spinning slash that only works during that flight and the quarter second after it. SHIFT cuts the wire and bursts away.
+const leviVel=new T.Vector3();
+const REEL_SPEED=34,STOP=2.2,ANCHOR_RANGE=42,GRAV=22,EYE=1.7;
+const raycaster=new T.Raycaster();
+const wireMat=new T.MeshBasicMaterial({color:0xdfe8ee});
+const wireA=new T.Mesh(new T.CylinderGeometry(1,1,1,5),wireMat),wireB=new T.Mesh(new T.CylinderGeometry(1,1,1,5),wireMat);
+const wireHead=new T.Mesh(new T.SphereGeometry(.13,10,8),new T.MeshBasicMaterial({color:0xf2f8fb}));
+for(const o of [wireA,wireB,wireHead]){o.visible=false;o.frustumCulled=false;scene.add(o);}
+// Third-person stand-in used only if the spin is switched to a pulled-back camera.
+const avatar3p=new T.Group();scene.add(avatar3p);avatar3p.visible=false;
+{const white=mat(0xe6e3d6,.7,.05),green=mat(0x3d5a44,.8,0),steel=mat(0xd6dee6,.2,.9);box([.9,1.2,.45],[0,1.25,0],white,avatar3p);box([1.0,.9,.1],[0,1.25,.28],green,avatar3p);const hd=mesh(new T.SphereGeometry(.28,12,10),skin,avatar3p);hd.position.y=2.1;box([.34,.9,.38],[-.22,.45,0],dark,avatar3p);box([.34,.9,.38],[.22,.45,0],dark,avatar3p);
+ for(const x of [-.7,.7]){box([.25,.85,.3],[x,1.4,-.1],white,avatar3p);const b=box([.03,.1,1.0],[x,1.25,-.75],steel,avatar3p);b.rotation.x=.35;}}
+
+function moveScale(){if(char!=='levi')return 1;if(reel||time<rootUntil)return 0;return basePos.y>2.15?.45:1;}
+function spinReady(){return char==='levi'&&time<spinUntil&&cooldowns.spin<=time;}
+function aimAt(p){const d=p.clone().sub(basePos);yaw=Math.atan2(-d.x,-d.z);pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));}
+function aimDir(){return new T.Vector3(0,0,-1).applyEuler(new T.Euler(pitch,yaw,0,'YXZ'));}
+
+// Nearest thing the crosshair can hold. Returns {point,target,distance} or null.
+function anchorRay(dir){
+  raycaster.set(basePos,dir);raycaster.far=ANCHOR_RANGE;
+  const objects=[...anchorMeshes];for(const t of targets)if(t.hp>0&&t.g.visible)t.g.traverse(o=>{if(o.isMesh)objects.push(o);});
+  for(const h of raycaster.intersectObjects(objects,false)){
+    if(h.point.y<.3)continue;
+    const target=targets.find(t=>{for(let p=h.object;p;p=p.parent)if(p===t.g)return true;return false;})||null;
+    return {point:h.point.clone(),target,distance:h.distance};
+  }
+  return null;
+}
+function fireAnchor(dir){
+  const origin=basePos.clone(),found=anchorRay(dir);
+  wire=null;anchor=null;
+  if(found){
+    const travel=Math.max(.05,found.distance/150);
+    anchor={point:found.point,target:found.target,until:time+7};
+    wire={point:found.point,fired:time,travel,hit:true};
+    later(travel,()=>{if(wire&&wire.point===found.point){sound('anchor');burst(found.point,colors.gas,18,5);shockwave(found.point,colors.gas,1.6);}});
+  }else{
+    const point=origin.clone().addScaledVector(dir,ANCHOR_RANGE);
+    wire={point,fired:time,travel:ANCHOR_RANGE/150,hit:false};
+    cooldowns.anchor=Math.max(cooldowns.anchor,time+3.5);
+    toast('앵커가 닿지 않았어요 · 가스 낭비 · 재사용 3.5초');
+  }
+  sound('slash');
+}
+function doReel(){
+  const dist=anchor.point.distanceTo(basePos),est=Math.max(.3,(dist-STOP)/(REEL_SPEED*.82)),until=time+Math.min(2.2,est+.4);
+  reel={start:time,until};spinUntil=until+.25;sound('gas');
+  return true;
+}
+function endReel(arrived){
+  const target=anchor&&anchor.target;
+  reel=null;anchor=null;wire=null;spinUntil=time+.25;
+  if(anchor)burst(anchor.point,colors.gas,10,3);
+  if(arrived&&target&&target.hp>0&&basePos.distanceTo(target.g.position.clone().setY(1.5))<3.6){
+    hit(target,30,'#dfffe8');launch(target,leviVel.clone().normalize().multiplyScalar(10).setY(9));shockwave(target.g.position.clone().setY(1.2),colors.gas,3);
+  }
+  leviVel.multiplyScalar(.45);
+}
+function doBurst(){
+  const d=aimDir();reel=null;anchor=null;wire=null;spinUntil=0;
+  leviVel.copy(d).multiplyScalar(30);leviVel.y+=4.5;
+  camera.fov=90;sound('gas');shockwave(basePos.clone().setY(Math.max(.1,basePos.y-1.7)),colors.gas,3);burst(basePos.clone(),colors.gas,25,6);
+  return true;
+}
+function groundAt(x,z){let g=2.1;for(const o of obstacles){if(x>o.x0-.4&&x<o.x1+.4&&z>o.z0-.4&&z<o.z1+.4&&basePos.y>=o.h+EYE-.35)g=Math.max(g,o.h+EYE);}return g;}
+function leviStep(dt){
+  if(anchor&&!reel&&time>anchor.until){anchor=null;wire=null;toast('앵커가 풀렸어요');}
+  if(reel){
+    if(anchor.target&&anchor.target.hp>0)anchor.point.copy(anchor.target.g.position).setY(2);
+    const to=anchor.point.clone().sub(basePos),dist=to.length(),age=time-reel.start;
+    if(dist<=STOP||time>reel.until)endReel(dist<=STOP+1);
+    else{leviVel.copy(to.normalize().multiplyScalar(REEL_SPEED*clamp(.25+.75*age/.28,.25,1)));basePos.addScaledVector(leviVel,dt);
+      if(Math.random()<dt*30)burst(basePos.clone().addScaledVector(leviVel.clone().normalize(),-1.5).add(new T.Vector3(0,-.6,0)),0xdff6ea,1,1);}
+  }else{
+    const gy=groundAt(basePos.x,basePos.z),spinning=cast&&cast.type==='spin',grounded=basePos.y<=gy+.001&&leviVel.y<=0;
+    if(!grounded||leviVel.lengthSq()>.01){
+      leviVel.y-=GRAV*(spinning?.4:1)*dt;basePos.addScaledVector(leviVel,dt);
+      const drag=spinning?.8:grounded?9:.35;leviVel.x*=Math.max(0,1-drag*dt);leviVel.z*=Math.max(0,1-drag*dt);
+      const g2=groundAt(basePos.x,basePos.z);
+      if(basePos.y<=g2&&leviVel.y<=0){const fall=-leviVel.y;basePos.y=g2;if(fall>9){landDip=Math.min(.35,fall*.012);smoke(basePos.clone().setY(g2-EYE+.2),1.2,.8);shockwave(basePos.clone().setY(g2-EYE+.1),0x8a9a90,2);}leviVel.y=0;}
+    }
+  }
+  // Pillars and walls are solid below their tops.
+  const R=.55;
+  for(const o of obstacles){
+    if(basePos.y-EYE>o.h-.35)continue;
+    const dx0=basePos.x-(o.x0-R),dx1=(o.x1+R)-basePos.x,dz0=basePos.z-(o.z0-R),dz1=(o.z1+R)-basePos.z;
+    if(dx0>0&&dx1>0&&dz0>0&&dz1>0){const m=Math.min(dx0,dx1,dz0,dz1);
+      if(m===dx0){basePos.x=o.x0-R;leviVel.x=Math.min(0,leviVel.x);}else if(m===dx1){basePos.x=o.x1+R;leviVel.x=Math.max(0,leviVel.x);}
+      else if(m===dz0){basePos.z=o.z0-R;leviVel.z=Math.min(0,leviVel.z);}else{basePos.z=o.z1+R;leviVel.z=Math.max(0,leviVel.z);}}
+  }
+  // Enemies are solid too: nobody flies through a training target.
+  for(const t of targets){if(t.hp<=0||!t.g.visible||basePos.y-EYE>3.2)continue;const dx=basePos.x-t.g.position.x,dz=basePos.z-t.g.position.z,d=Math.hypot(dx,dz);if(d<1.15){const k=d>.01?1.15/d:0;basePos.x=t.g.position.x+(d>.01?dx*k:1.15);basePos.z=t.g.position.z+(d>.01?dz*k:0);}}
+  if(basePos.y>32)basePos.y=32;
+}
+// Flying: fists taut ahead, the view tightens, streaks race past; holding an anchor: fists forward.
+function leviView(dt){
+  avatar3p.visible=false;left.g.visible=right.g.visible=true;
+  if(char!=='levi'){reelFilter=false;return;}
+  camera.position.y-=landDip;landDip=Math.max(0,landDip-dt*1.2);
+  if(reel){
+    const age=time-reel.start;camera.fov=Math.max(camera.fov,84+10*ease(age/.4));
+    left.g.position.set(-.4,-.3,-.7);left.g.rotation.set(.55,.35,-.5);right.g.position.set(.4,-.3,-.7);right.g.rotation.set(.55,-.35,.5);
+    camera.rotation.z+=Math.sin(time*9)*.008;
+    if(!comfort&&!cast){$('scene').style.filter='blur(1.1px)';reelFilter=true;}
+    const dir=leviVel.clone().normalize();
+    for(let i=0;i<2;i++){const f=new T.Mesh(new T.BoxGeometry(.012,.012,2.2),glowMat(0xeaf6ff));f.castShadow=false;f.position.copy(camera.position).addScaledVector(aimDir(),6+Math.random()*8).add(new T.Vector3((Math.random()-.5)*10,(Math.random()-.5)*5,(Math.random()-.5)*10));f.quaternion.setFromUnitVectors(FWD,dir.lengthSq()?dir:FWD);scene.add(f);effect(f,.2,(o,u)=>{o.material.opacity=(1-u)*.7;});}
+  }else{
+    if(reelFilter){reelFilter=false;if(!cast)$('scene').style.filter='';}
+    if(anchor&&!cast){left.g.position.set(-.45,-.42,-.78);left.g.rotation.set(.3,.3,-.4);right.g.position.set(.45,-.42,-.78);right.g.rotation.set(.3,-.3,.4);}
+  }
+}
+// One turn: coil to the right, a full revolution to the left with the view banking, the blades' arcs drawn behind.
+function updateSpin(c,a){
+  const W=.25,S=.45,lf=ease(a/W),sp=ease((a-W)/S),bank=Math.sin(sp*Math.PI);
+  if(a>=W&&!c.flags.go){
+    c.flags.go=true;sound('slash');flash('#dfffee',.22);
+    const lead=Math.atan2(-Math.cos(yaw),-Math.sin(yaw))+.7,count=16;
+    for(let k=0;k<2;k++)for(let i=0;i<=count;i++)later(i*S/count,()=>{
+      const ang=lead+k*Math.PI-ease(i/count)*(Math.PI*2+.7),center=basePos.clone().setY(basePos.y-.9);
+      const A=new T.Vector3(Math.cos(ang),0,Math.sin(ang)).multiplyScalar(5.2).add(center),B=new T.Vector3(Math.cos(ang-.5),0,Math.sin(ang-.5)).multiplyScalar(5.2).add(center);
+      const seg=new T.Mesh(new T.BoxGeometry(.28,.1,A.distanceTo(B)+.3),glowMat(colors.gas));seg.castShadow=false;seg.position.copy(A).add(B).multiplyScalar(.5);seg.lookAt(B);scene.add(seg);
+      effect(seg,.4,(o,u)=>{o.material.opacity=(1-u)*.9;o.scale.set(1-u*.8,1-u*.8,1);});
+    });
+  }
+  if(a>=W+S*.9&&!c.flags.hit){c.flags.hit=true;spinHit();}
+  const yawOff=-.7*lf+(Math.PI*2+.7)*sp,rollOff=-.32*bank+.05*lf*(1-sp),pitchOff=-.16*bank;
+  // Arms: blades coiled back right, then flung wide.
+  const lerp3=(p,q)=>p.map((v,i)=>mix(v,q[i],sp));
+  left.g.position.set(...lerp3([-.35,-.45,-.75],[-.8,-.3,-.6]));left.g.rotation.set(...lerp3([.35,.5,-.7],[.1,.9,-1.2]));
+  right.g.position.set(...lerp3([.65,-.4,-.55],[.8,-.3,-.6]));right.g.rotation.set(...lerp3([.2,-.8,.9],[.1,-.9,1.2]));
+  camera.fov=66+20*bank-4*lf*(1-sp);camera.position.y-=.3*lf*(1-sp);
+  if(!comfort)$('scene').style.filter=bank>.02?'blur('+bank*3+'px)':'';
+  if(spin3p){
+    // Pulled-back camera: the stand-in spins, the view stays put behind it.
+    avatar3p.visible=true;left.g.visible=right.g.visible=false;
+    avatar3p.position.set(basePos.x,basePos.y-EYE,basePos.z);avatar3p.rotation.y=yaw+yawOff+Math.PI;
+    camera.position.set(basePos.x+Math.sin(yaw)*8,basePos.y+1.4,basePos.z+Math.cos(yaw)*8);camera.lookAt(basePos.x,basePos.y-.2,basePos.z);
+  }else camera.rotation.set(pitch+pitchOff,yaw+yawOff,rollOff,'YXZ');
+}
+function spinHit(){
+  const R=7.5,center=basePos.clone();let n=0;
+  for(const t of targets){
+    if(t.hp<=0)continue;
+    const p2=t.g.position.clone().setY(1.5);
+    if(p2.distanceTo(center)<R){n++;const d=p2.clone().sub(center).setY(0);hit(t,110,'#dfffe8');launch(t,(d.length()>.1?d.normalize():flatForward()).multiplyScalar(18).setY(12));later(.03,()=>{shockwave(p2,colors.gas,4);burst(p2,colors.gas,25,8);});}
+  }
+  shockwave(center.clone().setY(Math.max(.15,center.y-EYE+.15)),colors.gas,R*1.1);burst(center.clone().setY(center.y-.7),colors.gas,40,9);
+  if(n){hitstopUntil=previous+130;flash('#e8fff0',.3);sound('slash');}
+  rootUntil=time+.7;toast(n?'회전 베기 · '+n+'명 적중 · 착지 경직':'회전 베기 · 허공 · 착지 경직');
+}
+function updateWire(){
+  if(!wire||char!=='levi'){wireA.visible=wireB.visible=wireHead.visible=false;return;}
+  const age=time-wire.fired;let e=clamp(age/wire.travel,0,1);
+  if(!wire.hit){e*=1-clamp((age-wire.travel)/.25,0,1);if(age>wire.travel+.3){wire=null;wireA.visible=wireB.visible=wireHead.visible=false;return;}}
+  camera.updateMatrixWorld(true);
+  const origins=[left.g.localToWorld(new T.Vector3(0,.1,-.1)),right.g.localToWorld(new T.Vector3(0,.1,-.1))];
+  const side=new T.Vector3().subVectors(wire.point,origins[0]).cross(UP);side.lengthSq()>1e-4?side.normalize():side.set(1,0,0);
+  [wireA,wireB].forEach((w,i)=>{
+    const from=origins[i],target=wire.point.clone().addScaledVector(side,(i?1:-1)*.45),tip=from.clone().lerp(target,e),dir=tip.clone().sub(from),len=Math.max(.05,dir.length());
+    w.position.copy(from).addScaledVector(dir,.5);w.quaternion.setFromUnitVectors(UP,dir.normalize());w.scale.set(.011,len,.011);w.visible=true;
+  });
+  wireHead.position.copy(origins[0]).lerp(wire.point,e);wireHead.visible=e>=1&&wire.hit;
+}
+// The crosshair turns green when the wire would hold.
+function updateCrosshair(){const lock=char==='levi'&&!reel&&!cast&&!!anchorRay(aimDir());$('crosshair').classList.toggle('lock',lock);}
 let previous=performance.now(),paused=false,stepping=false;
 function animate(now){if(!stepping)requestAnimationFrame(animate);if(paused&&!stepping)return;let dt=Math.min((now-previous)/1000,.05);previous=now;if(now<hitstopUntil)dt*=.06;time+=dt;
-const movement=new T.Vector3((keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),0,(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0));if(movement.lengthSq()){movement.normalize().applyAxisAngle(new T.Vector3(0,1,0),yaw);basePos.addScaledVector(movement,dt*(cast?2:6)*(time<slowUntil?.4:1));document.body.classList.add('moving');}else document.body.classList.remove('moving');if(Math.hypot(basePos.x,basePos.z)>29){const l=29/Math.hypot(basePos.x,basePos.z);basePos.x*=l;basePos.z*=l;}
+const movement=new T.Vector3((keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),0,(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0));if(movement.lengthSq()){movement.normalize().applyAxisAngle(new T.Vector3(0,1,0),yaw);basePos.addScaledVector(movement,dt*(cast?2:6)*(time<slowUntil?.4:1)*moveScale());document.body.classList.add('moving');}else document.body.classList.remove('moving');if(Math.hypot(basePos.x,basePos.z)>29){const l=29/Math.hypot(basePos.x,basePos.z);basePos.x*=l;basePos.z*=l;}
+if(char==='levi')leviStep(dt);
 camera.position.copy(basePos);camera.rotation.set(pitch,yaw,0,'YXZ');
 // Recoil after the seventh form: knees buckle, the view sags and limps until the slow wears off.
 if(time<slowUntil){const k=Math.min(1,(slowUntil-time)/.6);camera.position.y-=.28*k;camera.rotation.z=Math.sin(time*(movement.lengthSq()?7:2))*.025*k;}camera.fov=mix(camera.fov,66,dt*7);const bob=movement.lengthSq()?Math.sin(time*10)*.012:Math.sin(time*1.9)*.008;if(char!=='zenitsu'){pose(left,[-.38,-.48+bob,-.8],[.1,.2,-.3]);pose(right,[.38,-.42-bob,-.8],[.05,-.25,.3]);}else poseZen(bob);
-updateCast(dt);applyLook();
+leviView(dt);updateCast(dt);applyLook();
 // Hold: Blue raises the right arm, Red the left, with the technique gathering in the palm.
 if(hold){const blue=hold.kind==='blue',h=blue?right:left,side=blue?1:-1,u=time-hold.start,k=ease(u/.25);h.g.position.set(side*.3,-.42+.3*k,-.8+.06*k);h.g.rotation.set(.35*k,0,side*(.3-.22*k));h.skin.emissive.setHex(blue?0x0a3a5a:0x4a0a18);
   holdGlow.visible=true;holdGlow.material.color.setHex(blue?colors.blue:colors.red);holdGlow.position.copy(h.g.position).add(new T.Vector3(0,.16,0));holdGlow.scale.setScalar((.3+.15*k)*(1+Math.sin(time*14)*.08));
@@ -349,18 +545,20 @@ for(const t of targets){if(t.hp<=0&&time>=t.respawn){t.hp=t.max;t.g.visible=true
 for(let i=effects.length-1;i>=0;i--){const e=effects[i],age=(time-e.born)/e.life;if(age>=1){if(e.object)dispose(e.object);else $('flash').style.opacity=0;effects.splice(i,1);}else e.update?.(e.object,age,dt);}
 for(let i=particles.length-1;i>=0;i--){const p=particles[i],age=(time-p.born)/p.life;if(age>=1){dispose(p.object);particles.splice(i,1);}else{p.object.position.addScaledVector(p.v,dt);p.v.y-=dt*2;p.object.material.opacity=(1-age);}}
 for(let i=popups.length-1;i>=0;i--){const p=popups[i],a=time-p.born;if(a>1){p.el.remove();popups.splice(i,1);continue;}const v=p.pos.clone();v.y+=a*1.2;v.project(camera);p.el.style.left=(v.x*.5+.5)*innerWidth+'px';p.el.style.top=(-v.y*.5+.5)*innerHeight+'px';p.el.style.opacity=v.z>1?'0':1-a;}
-$('hpText').textContent=hp+' / 200';$('hpBar').style.width=hp/2+'%';const slow=slowUntil-time,devilLeft=char==='reze'?devilUntil-time:0;$('debuff').classList.toggle('on',slow>0||char==='reze');if(slow>0)$('debuff').textContent='반동 · 이동 속도 -60% · 대시 불가 '+slow.toFixed(1)+'초';else if(char==='reze')$('debuff').textContent=devilLeft>0?'폭탄의 악마 · 지속 무제한 · 기본 스킬 HP 3% · R 대폭발':cooldowns.devil>time?'인간 · 폭탄의 악마 재사용 '+(cooldowns.devil-time).toFixed(1)+'초':'변신 전 · R 폭탄의 악마 / SHIFT 대시만 가능';
-energy=Math.min(100,energy+dt*5);$('energyBar').style.width=energy+'%';$('energyText').textContent=Math.floor(energy)+'%';$('statusToast').style.opacity=time<toastUntil?1:0;
+$('hpText').textContent=hp+' / 200';$('hpBar').style.width=hp/2+'%';const slow=slowUntil-time,devilLeft=char==='reze'?devilUntil-time:0;$('debuff').classList.toggle('on',slow>0||char==='reze'||char==='levi');if(slow>0)$('debuff').textContent='반동 · 이동 속도 -60% · 대시 불가 '+slow.toFixed(1)+'초';else if(char==='levi')$('debuff').textContent=time<rootUntil?'착지 경직 · 이동 불가 '+(rootUntil-time).toFixed(1)+'초':anchor?'앵커 유지 '+Math.max(0,anchor.until-time).toFixed(1)+'초 · E 당기기':'ODM 가스 '+Math.floor(energy)+'% · 지상에서 빠르게 회복';else if(char==='reze')$('debuff').textContent=devilLeft>0?'폭탄의 악마 · 지속 무제한 · 기본 스킬 HP 3% · R 대폭발':cooldowns.devil>time?'인간 · 폭탄의 악마 재사용 '+(cooldowns.devil-time).toFixed(1)+'초':'변신 전 · R 폭탄의 악마 / SHIFT 대시만 가능';
+energy=Math.min(100,energy+dt*5*(char==='levi'&&basePos.y<=2.15?2.5:1));$('energyBar').style.width=energy+'%';$('energyText').textContent=Math.floor(energy)+'%';$('statusToast').style.opacity=time<toastUntil?1:0;
 const eBtn=$('eBtn'),eName=eBtn.querySelector('strong'),eHint=eBtn.querySelector('.skill-type');const charged=char==='zenitsu'&&charges>0&&chargesUntil>time;
 if(char==='gojo'){for(const [b,kind,base,baseHint] of [[$('qBtn'),'blue','아오','인력 / 3초 대기'],[eBtn,'red','아카','척력 / 3초 대기']]){const held=hold&&hold.kind===kind,fuse=hold&&hold.kind!==kind;b.classList.toggle('combo',!!fuse);b.querySelector('strong').textContent=fuse?'무라사키':held?base+' 발사':base;b.querySelector('.skill-type').textContent=held?'다시 눌러 즉시 · '+Math.max(0,3-(time-hold.start)).toFixed(1)+'초':fuse?'합쳐서 발사':baseHint;}}
 else if(char==='reze'){const kc=kickCombo&&kickCombo.until>time?kickCombo.until-time:0;eBtn.classList.toggle('combo',kc>0);eName.textContent=kc>0?'연계 킥':'폭발 킥';eHint.textContent=kc>0?'지금 · '+kc.toFixed(1)+'초':'단독 · 폭주 직후 연계';$('comboPrompt').classList.toggle('on',kc>0);$('comboPrompt').style.setProperty('--left',(kc/1.3*100)+'%');for(const slot of ['q','e'])$(slot+'Btn').classList.toggle('locked',time>=devilUntil);const rb=$('rBtn'),sk=SKILLS[slotType('r')];if(rb.dataset.skill!==slotType('r')){rb.dataset.skill=slotType('r');rb.style.setProperty('--accent',sk.accent);const ic=rb.querySelector('.skill-icon');ic.className='skill-icon '+sk.icon;ic.textContent=sk.glyph;rb.querySelector('strong').textContent=sk.name;rb.querySelector('.skill-type').textContent=sk.type;}}
+else if(char==='levi'){const ready=spinReady()&&cooldowns.spin<=time,left_=Math.max(0,spinUntil-time),rb=$('rBtn');rb.classList.toggle('combo',ready);rb.classList.toggle('dim',!spinReady());rb.querySelector('strong').textContent=ready?'회전 베기!':'회전 베기';rb.querySelector('.skill-type').textContent=ready?'지금 · '+left_.toFixed(1)+'초':'비행 중에만 · 착지 경직';eBtn.classList.toggle('locked',!anchor);eHint.textContent=anchor?'앵커 유지 · 비행 시작':'앵커 필요 (Q)';$('comboPrompt').classList.toggle('on',ready);$('comboPrompt').style.setProperty('--left',clamp(left_/1.1,0,1)*100+'%');}
 else{if(!charged)charges=0;eBtn.classList.toggle('combo',charged);eHint.textContent=charged?'즉시 ×'+charges+' · '+Math.ceil(chargesUntil-time)+'초':'돌진 / 베기';}
 for(const slot of SLOTS){const type=slotType(slot),remain=(type==='thunder'&&charged)?0:Math.max(0,cooldowns[type]-time,type==='dash'?slow:0),button=$(slot+'Btn');button.querySelector('.cooldown').style.height=remain/durations[type]*100+'%';button.querySelector('small').textContent=remain>0?remain.toFixed(1):'';}
-if(demoStart>=0){const a=time-demoStart,C=CHARS[char],schedule=C.demo;if(demoStage<schedule.length&&a>=schedule[demoStage][0]&&!cast){if(C.aimDemo)faceNearestTarget();startSkill(schedule[demoStage][1],true);demoStage++;}if(a>C.demoEnd&&demoStage>=schedule.length&&!cast){demoStart=-1;$('demo').classList.remove('active');toast('시연 완료 · Q / E / R 키로 직접 사용해보세요');}}
+if(demoStart>=0){const a=time-demoStart,C=CHARS[char],schedule=C.demo;if(demoStage<schedule.length&&a>=schedule[demoStage][0]&&!cast){if(C.aimDemo)faceNearestTarget();if(schedule[demoStage][2])aimAt(new T.Vector3(...schedule[demoStage][2]));startSkill(schedule[demoStage][1],true);demoStage++;}if(a>C.demoEnd&&demoStage>=schedule.length&&!cast){demoStart=-1;$('demo').classList.remove('active');toast('시연 완료 · Q / E / R 키로 직접 사용해보세요');}}
+updateWire();updateCrosshair();
 renderer.render(scene,camera);
 }
 {const q=new URLSearchParams(location.search).get('char');setCharacter(CHARS[q]?q:'gojo');}
 // #debug exposes manual stepping so effects can be inspected while the tab is hidden and rAF is paused.
-if(location.hash==='#debug')window.__lab={startSkill,setCharacter,faceNearestTarget,camera,targets,setYaw:v=>{yaw=v;},shot:()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/jpeg',.82);},pause:on=>{paused=on;previous=performance.now();},step:(n=1)=>{stepping=true;for(let i=0;i<n;i++)animate(previous+1000/60);stepping=false;}};
+if(location.hash==='#debug')window.__lab={startSkill,setCharacter,faceNearestTarget,camera,targets,aimAt,setSpin3p:v=>{spin3p=v;},state:()=>({anchor:anchor?{p:anchor.point.toArray().map(v=>+v.toFixed(1)),hasTarget:!!anchor.target}:null,reel:reel?{start:+reel.start.toFixed(2),until:+reel.until.toFixed(2)}:null,wire:wire?{hit:wire.hit}:null,spinUntil:+spinUntil.toFixed(2),rootUntil:+rootUntil.toFixed(2),time:+time.toFixed(2),pos:basePos.toArray().map(v=>+v.toFixed(1)),vel:leviVel.toArray().map(v=>+v.toFixed(1)),energy:Math.round(energy),hp,cast:cast?cast.type:null}),setYaw:v=>{yaw=v;},shot:()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/jpeg',.82);},pause:on=>{paused=on;previous=performance.now();},step:(n=1)=>{stepping=true;for(let i=0;i<n;i++)animate(previous+1000/60);stepping=false;}};
 requestAnimationFrame(animate);$('loading').style.opacity=0;setTimeout(()=>$('loading').remove(),650);
 // The initial scene stays controllable; auto demonstration is a deliberate user action.

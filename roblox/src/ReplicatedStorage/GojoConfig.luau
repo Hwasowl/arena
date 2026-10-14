@@ -6,6 +6,7 @@ return {
         Gojo = { "Blue", "Red", "Domain", "Dash" },
         Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
+        Levi = { "Anchor", "Reel", "Spin", "Burst" },
     },
     Blue = { Cost = 18, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 22, Cooldown = 7, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
@@ -32,5 +33,15 @@ return {
     -- Kick: a roundhouse. The right foot is raised for most of Windup, then whips right to left. Alone it goes off Reach studs in front of her; used within ComboWindow seconds of
     -- Rampage it continues the Rampage direction as a ComboDistance dash ending in a bigger blast.
     Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.38, Reach = 5, Radius = 6, Damage = 45, Knockback = 32, Lift = 28, ComboWindow = 1.3, ComboDistance = 18, Width = 4.5, ComboRadius = 8, ComboDamage = 85, ComboKnockback = 70, ComboLift = 36 },
-    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46) },
+    -- Levi (ODM gear). Energy is his gas: it refills GasGroundRegen times faster while standing on something.
+    -- Anchor: a ray from the crosshair; it holds on walls, pillars and enemies (never the floor). A miss wastes the gas
+    -- and locks Anchor for MissCooldown. Reel: pulls the user to the anchor, and opens the Spin window until Grace seconds
+    -- after the flight ends. Spin only works inside that window; afterwards the user is rooted for Recovery seconds.
+    -- Burst cuts the wire and throws the user along the aim. ThirdPerson pulls the camera out for the spin only.
+    GasGroundRegen = 2.5,
+    Anchor = { Cost = 10, Cooldown = 1.5, MissCooldown = 3.5, Windup = 0.2, Range = 140, Duration = 7, WireSpeed = 450 },
+    Reel = { Cost = 15, Cooldown = 0.6, Windup = 0.05, Speed = 110, Ramp = 0.28, MaxTime = 2.2, StopDistance = 5, ArrivalDamage = 30, ArrivalRadius = 9 },
+    Spin = { Cost = 30, Cooldown = 8, Windup = 0.25, Rotation = 0.45, Radius = 22, Damage = 110, Knockback = 70, Lift = 45, Recovery = 0.7, Grace = 0.25, Coast = 0.5, ThirdPerson = false },
+    Burst = { Cost = 10, Cooldown = 2.5, Windup = 0.05, Impulse = 95, Lift = 0.15 },
+    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46), Gas = Color3.fromRGB(176, 226, 200) },
 }

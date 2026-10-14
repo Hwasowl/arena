@@ -72,8 +72,26 @@ local function dummy(pos,index)
 end
 dummy(Vector3.new(0,3,-12),1);dummy(Vector3.new(-13,3,-20),2);dummy(Vector3.new(13,3,-26),3)
 
+-- Levi's anchors: pillars and low walls to swing between. Same layout as the browser preview (scaled up for studs).
+-- Anchors hold on any wall face or pillar side, so they are plain collidable parts; the floor itself never holds a wire.
+local stoneTrim=Color3.fromRGB(99,115,132)
+local function pillar(x,z,width,height)
+    local base=-.65
+    part("AnchorPillar",Vector3.new(width,height,width),CFrame.new(x,base+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorPillarCap",Vector3.new(width+.8,1,width+.8),CFrame.new(x,base+height-.5,z),stoneTrim,Enum.Material.Metal)
+    local inset=part("AnchorPillarLight",Vector3.new(.15,height*.7,width*.35),CFrame.new(x,base+height*.45,z+width/2+.02),cyan,Enum.Material.Neon)
+    inset.CanCollide=false;inset.CanQuery=false
+end
+local function wall(x,z,sizeX,sizeZ,height)
+    part("AnchorWall",Vector3.new(sizeX,height,sizeZ),CFrame.new(x,-.65+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorWallCap",Vector3.new(sizeX+.6,.8,sizeZ+.6),CFrame.new(x,-.65+height-.4,z),stoneTrim,Enum.Material.Metal)
+end
+for _,v in {{-26,-8,5,35},{26,-12,5,40},{-34,-34,5,30},{36,-28,5,34},{0,-46,6,45},{-20,16,4.5,26},{22,18,4.5,30}} do pillar(v[1],v[2],v[3],v[4]) end
+wall(-12,2,20,2,12);wall(14,-3,2,18,12)
+
 -- Only each character's signature piece is added; the rest of the player's own avatar is left untouched.
 -- Gojo: blindfold. Zenitsu: sheathed katana. Reze: choker, replaced by the Bomb Devil head while transformed.
+-- Levi: hip gas canisters and a white cravat.
 -- Parts tagged "Outfit" are rebuilt whenever the character or transformation changes.
 local function outfit(character,kind,fresh)
     local h=character:WaitForChild("Humanoid");h.MaxHealth=Config.MaxHealth
@@ -138,6 +156,13 @@ local function outfit(character,kind,fresh)
             attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
             attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
         end
+    elseif kind=="Levi" then
+        -- 3D-maneuver gear: a gas canister on each hip, and the white cravat at the throat.
+        for _,side in {-1,1} do
+            attach(root,"LeviCanister",Vector3.new(1.3,.55,.55),CFrame.new(side*1.1,-.55,.55)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(70,76,84),Enum.Material.Metal,Enum.PartType.Cylinder)
+            attach(root,"LeviCanisterCap",Vector3.new(.2,.62,.62),CFrame.new(side*1.1,.15,.55)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(176,226,200),Enum.Material.Neon,Enum.PartType.Cylinder)
+        end
+        attach(head,"LeviCravat",Vector3.new(.95,.5,.3),CFrame.new(0,neck+.04,-.52),Color3.fromRGB(240,238,230))
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end

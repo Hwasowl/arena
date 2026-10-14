@@ -31,6 +31,7 @@ return {
         Gojo = { "Blue", "Red", "Domain", "Dash" },
         Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
+        Levi = { "Anchor", "Reel", "Spin", "Burst" },
     },
     Blue = { Cost = 18, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 22, Cooldown = 7, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
@@ -57,7 +58,17 @@ return {
     -- Kick: a roundhouse. The right foot is raised for most of Windup, then whips right to left. Alone it goes off Reach studs in front of her; used within ComboWindow seconds of
     -- Rampage it continues the Rampage direction as a ComboDistance dash ending in a bigger blast.
     Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.38, Reach = 5, Radius = 6, Damage = 45, Knockback = 32, Lift = 28, ComboWindow = 1.3, ComboDistance = 18, Width = 4.5, ComboRadius = 8, ComboDamage = 85, ComboKnockback = 70, ComboLift = 36 },
-    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46) },
+    -- Levi (ODM gear). Energy is his gas: it refills GasGroundRegen times faster while standing on something.
+    -- Anchor: a ray from the crosshair; it holds on walls, pillars and enemies (never the floor). A miss wastes the gas
+    -- and locks Anchor for MissCooldown. Reel: pulls the user to the anchor, and opens the Spin window until Grace seconds
+    -- after the flight ends. Spin only works inside that window; afterwards the user is rooted for Recovery seconds.
+    -- Burst cuts the wire and throws the user along the aim. ThirdPerson pulls the camera out for the spin only.
+    GasGroundRegen = 2.5,
+    Anchor = { Cost = 10, Cooldown = 1.5, MissCooldown = 3.5, Windup = 0.2, Range = 140, Duration = 7, WireSpeed = 450 },
+    Reel = { Cost = 15, Cooldown = 0.6, Windup = 0.05, Speed = 110, Ramp = 0.28, MaxTime = 2.2, StopDistance = 5, ArrivalDamage = 30, ArrivalRadius = 9 },
+    Spin = { Cost = 30, Cooldown = 8, Windup = 0.25, Rotation = 0.45, Radius = 22, Damage = 110, Knockback = 70, Lift = 45, Recovery = 0.7, Grace = 0.25, Coast = 0.5, ThirdPerson = false },
+    Burst = { Cost = 10, Cooldown = 2.5, Windup = 0.05, Impulse = 95, Lift = 0.15 },
+    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46), Gas = Color3.fromRGB(176, 226, 200) },
 }
 ]]></string>
       </Properties>
@@ -145,8 +156,26 @@ local function dummy(pos,index)
 end
 dummy(Vector3.new(0,3,-12),1);dummy(Vector3.new(-13,3,-20),2);dummy(Vector3.new(13,3,-26),3)
 
+-- Levi's anchors: pillars and low walls to swing between. Same layout as the browser preview (scaled up for studs).
+-- Anchors hold on any wall face or pillar side, so they are plain collidable parts; the floor itself never holds a wire.
+local stoneTrim=Color3.fromRGB(99,115,132)
+local function pillar(x,z,width,height)
+    local base=-.65
+    part("AnchorPillar",Vector3.new(width,height,width),CFrame.new(x,base+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorPillarCap",Vector3.new(width+.8,1,width+.8),CFrame.new(x,base+height-.5,z),stoneTrim,Enum.Material.Metal)
+    local inset=part("AnchorPillarLight",Vector3.new(.15,height*.7,width*.35),CFrame.new(x,base+height*.45,z+width/2+.02),cyan,Enum.Material.Neon)
+    inset.CanCollide=false;inset.CanQuery=false
+end
+local function wall(x,z,sizeX,sizeZ,height)
+    part("AnchorWall",Vector3.new(sizeX,height,sizeZ),CFrame.new(x,-.65+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorWallCap",Vector3.new(sizeX+.6,.8,sizeZ+.6),CFrame.new(x,-.65+height-.4,z),stoneTrim,Enum.Material.Metal)
+end
+for _,v in {{-26,-8,5,35},{26,-12,5,40},{-34,-34,5,30},{36,-28,5,34},{0,-46,6,45},{-20,16,4.5,26},{22,18,4.5,30}} do pillar(v[1],v[2],v[3],v[4]) end
+wall(-12,2,20,2,12);wall(14,-3,2,18,12)
+
 -- Only each character's signature piece is added; the rest of the player's own avatar is left untouched.
 -- Gojo: blindfold. Zenitsu: sheathed katana. Reze: choker, replaced by the Bomb Devil head while transformed.
+-- Levi: hip gas canisters and a white cravat.
 -- Parts tagged "Outfit" are rebuilt whenever the character or transformation changes.
 local function outfit(character,kind,fresh)
     local h=character:WaitForChild("Humanoid");h.MaxHealth=Config.MaxHealth
@@ -211,6 +240,13 @@ local function outfit(character,kind,fresh)
             attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
             attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
         end
+    elseif kind=="Levi" then
+        -- 3D-maneuver gear: a gas canister on each hip, and the white cravat at the throat.
+        for _,side in {-1,1} do
+            attach(root,"LeviCanister",Vector3.new(1.3,.55,.55),CFrame.new(side*1.1,-.55,.55)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(70,76,84),Enum.Material.Metal,Enum.PartType.Cylinder)
+            attach(root,"LeviCanisterCap",Vector3.new(.2,.62,.62),CFrame.new(side*1.1,.15,.55)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(176,226,200),Enum.Material.Neon,Enum.PartType.Cylinder)
+        end
+        attach(head,"LeviCravat",Vector3.new(.95,.5,.3),CFrame.new(0,neck+.04,-.52),Color3.fromRGB(240,238,230))
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end
@@ -266,7 +302,7 @@ local function targets(exclude)
     return out
 end
 local function sendState(p,s)
-    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
+    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,anchorUntil=s.anchor and s.anchor.untilTime or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
 end
 local function validVector(v)
     return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
@@ -475,6 +511,70 @@ local function perform(p,s,m,h,r,kind,direction,instant)
                 end
             end)
         end)
+    elseif kind=="Anchor" then
+        local cfg=C.Anchor
+        -- The wire is shot along the crosshair. Level geometry is found with a raycast (floors never hold); enemies are
+        -- found by how close the ray passes to them, because training rigs are not collidable. The nearer of the two wins.
+        local origin=r.Position+Vector3.new(0,1.5,0)
+        local params=rayParams(m);params.RespectCanCollide=true
+        local world=workspace:Raycast(origin,direction*cfg.Range,params)
+        local limit=world and world.Distance or cfg.Range
+        local point,distance,victim
+        if world and world.Normal.Y<.85 then point=world.Position;distance=world.Distance end
+        for _,t in targets(m) do
+            local to=t.r.Position+Vector3.new(0,.5,0)-origin
+            local along=to:Dot(direction)
+            if along>0 and along<=limit and (distance==nil or along<distance) and (to-direction*along).Magnitude<=3 then
+                point=t.r.Position;distance=along;victim=t
+            end
+        end
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        delayed(p,s,m,cfg.Windup,function()
+            if point then
+                s.anchor={point=point,victim=victim,untilTime=clock()+cfg.Duration}
+            else
+                -- Nothing to hold: the gas is gone and the next attempt has to wait.
+                s.cooldowns.Anchor=clock()+cfg.MissCooldown
+            end
+            fx:FireAllClients("Anchor",{owner=p.UserId,from=origin,point=point or origin+direction*cfg.Range,hit=point~=nil,speed=cfg.WireSpeed})
+            sendState(p,s)
+        end)
+    elseif kind=="Reel" then
+        local cfg=C.Reel
+        local a=s.anchor
+        local distance=(a.point-r.Position).Magnitude
+        local travel=math.max(.3,(distance-cfg.StopDistance)/(cfg.Speed*.82))
+        local untilTime=n+math.min(cfg.MaxTime,travel+.4)
+        s.reel={point=a.point,victim=a.victim,untilTime=untilTime}
+        -- The Spin window: from the first pull until Grace seconds after the flight ends.
+        s.comboUntil=untilTime+C.Spin.Grace
+        fx:FireAllClients("Reel",{owner=p.UserId,point=a.point,speed=cfg.Speed,ramp=cfg.Ramp,stop=cfg.StopDistance,maxTime=cfg.MaxTime})
+    elseif kind=="Spin" then
+        local cfg=C.Spin
+        -- The wire is let go; the client keeps the flight's momentum through the whole turn.
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        s.busyUntil=n+windup+cfg.Rotation+cfg.Recovery
+        delayed(p,s,m,windup,function()
+            fx:FireAllClients("Spin",{owner=p.UserId,position=r.Position,radius=cfg.Radius,rotation=cfg.Rotation})
+        end)
+        delayed(p,s,m,windup+cfg.Rotation*.9,function()
+            local center=r.Position
+            local struck=0
+            for _,t in targets(m) do
+                if (t.r.Position-center).Magnitude<=cfg.Radius then
+                    struck+=1
+                    damage(p,t,cfg.Damage);launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
+                end
+            end
+            fx:FireAllClients("SpinHit",{owner=p.UserId,position=center,radius=cfg.Radius,struck=struck})
+            -- Landing stagger: all that spinning leaves the user rooted for a moment.
+            setTimed(m,h,"RootedUntil",cfg.Recovery)
+        end)
+    elseif kind=="Burst" then
+        local cfg=C.Burst
+        s.reel=nil;s.anchor=nil;s.comboUntil=0
+        fx:FireAllClients("Burst",{owner=p.UserId,position=r.Position,direction=direction})
+        fx:FireClient(p,"Impulse",{velocity=direction*cfg.Impulse+Vector3.new(0,cfg.Impulse*cfg.Lift,0)})
     elseif kind=="Kick" then
         local cfg=C.Kick
         -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
@@ -528,6 +628,9 @@ remote.OnServerEvent:Connect(function(p,skill,aim)
     if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    -- Levi: Reel needs a held anchor, and Spin only works while flying on one (the window Reel opens).
+    if skill=="Reel" and not (s.anchor and s.anchor.untilTime>n) then return end
+    if skill=="Spin" and (s.comboUntil or 0)<=n then return end
     local cfg=C[skill]
     local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
     if instant then
@@ -562,7 +665,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;cancelBlue(p,s)
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
 end)
@@ -570,7 +673,31 @@ local sync=0
 RunService.Heartbeat:Connect(function(dt)
     local n=clock();sync+=dt
     for p,s in states do
-        s.energy=math.min(C.MaxEnergy,s.energy+C.EnergyRegen*dt)
+        local regen=C.EnergyRegen
+        if kitOf(p)=="Levi" then
+            -- Gas refills much faster on solid ground than in the air.
+            local _,ch,cr=character(p)
+            if ch and ch.FloorMaterial~=Enum.Material.Air then regen*=C.GasGroundRegen end
+            local reel=s.reel
+            if reel and cr then
+                local distance=(reel.point-cr.Position).Magnitude
+                if distance<=C.Reel.StopDistance+2 or n>=reel.untilTime then
+                    s.reel=nil;s.anchor=nil;s.comboUntil=n+C.Spin.Grace
+                    local arrived=distance<=C.Reel.StopDistance+3
+                    local victim=reel.victim
+                    if arrived and victim and victim.m.Parent and victim.h.Health>0 and (victim.r.Position-cr.Position).Magnitude<=C.Reel.ArrivalRadius then
+                        damage(p,victim,C.Reel.ArrivalDamage);launch(victim,outward(cr.Position,victim,cr.CFrame.LookVector)*30+Vector3.new(0,28,0))
+                    end
+                    fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=arrived,position=cr.Position})
+                    sendState(p,s)
+                end
+            elseif reel then s.reel=nil end
+            if s.anchor and not s.reel and n>s.anchor.untilTime then
+                s.anchor=nil;fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=false})
+                sendState(p,s)
+            end
+        end
+        s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
         if sync>=.15 then sendState(p,s) end
     end
     if sync>=.15 then sync=0 end
@@ -647,9 +774,9 @@ end)
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
     local function reset()
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;cancelBlue(p,s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() s.generation+=1;s.hold=nil;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() s.generation+=1;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
@@ -734,6 +861,10 @@ local holdState=nil
 local slideUntil=0
 local drawnUntil,fovKickUntil=0,0
 local blueOrbs,shots,activeEffects={},{},{}
+local reelState=nil
+local wires={}
+local clearWires
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
 local clock=workspace.GetServerTimeNow
 local function time() return clock(workspace) end
 local KITS={
@@ -746,10 +877,14 @@ local KITS={
     Reze={title="レゼ  ·  레제",energy="GUNPOWDER",hint="R 변신(무제한) → Q 폭주대시 → 바로 E = 연계 폭발 킥 · R 다시 = 4초 뒤 대폭발   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
         sleeve=Color3.fromRGB(225,208,197),devilSleeve=Color3.fromRGB(40,36,38),handScale=1,
         slots={{"Rampage","Q","폭주대시"},{"Kick","E","폭발 킥"},{"BombDevil","R","폭탄의 악마"},{"Dash","SHIFT","대시"}}},
+    Levi={title="リヴァイ  ·  리바이 아커만",energy="ODM GAS",hint="Q 앵커(십자선 조준) → E 당기기 → 날아가는 중 R 회전 베기   /   SHIFT 가스 분사 (와이어 끊고 가속)   /   1 · 2 · 3 · 4 캐릭터",
+        sleeve=Color3.fromRGB(226,222,208),handScale=1,
+        slots={{"Anchor","Q","앵커"},{"Reel","E","당기기"},{"Spin","R","회전 베기"},{"Burst","SHIFT","가스 분사"}}},
 }
+local LEVI_KINDS={Anchor=true,Reel=true,Spin=true,Burst=true}
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) return C.Colors[kind] or (BOMB_KINDS[kind] and C.Colors.Bomb) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) return C.Colors[kind] or (LEVI_KINDS[kind] and C.Colors.Gas) or (BOMB_KINDS[kind] and C.Colors.Bomb) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
@@ -904,6 +1039,13 @@ local function hand(side)
     -- Bomb Devil: a fuse cord hangs from each wrist with a lit tip.
     piece(h.pieces,"Fuse",Vector3.new(.05,.4,.05),CFrame.new(side*.13,-.22,.16)*CFrame.Angles(.5,0,side*.5),Color3.fromRGB(84,62,44)).devilOnly=true
     piece(h.pieces,"Ember",Vector3.one*.08,CFrame.new(side*.22,-.38,.27),C.Colors.Bomb,Enum.Material.Neon,Enum.PartType.Ball).devilOnly=true
+    -- Levi's blades: held in the fist and pointing forward and a little up, so they stay in view.
+    local bladeFrame=CFrame.new(0,.05,-.05)*CFrame.Angles(.5,0,0)
+    local steel=Color3.fromRGB(214,222,230)
+    piece(h.pieces,"BladeGrip",Vector3.new(.05,.055,.26),bladeFrame*CFrame.new(0,0,.02),Color3.fromRGB(34,36,40)).leviOnly=true
+    piece(h.pieces,"BladeGuard",Vector3.new(.13,.03,.04),bladeFrame*CFrame.new(0,0,-.13),Color3.fromRGB(120,128,138),Enum.Material.Metal).leviOnly=true
+    piece(h.pieces,"Blade",Vector3.new(.012,.11,.55),bladeFrame*CFrame.new(0,0,-.4),steel,Enum.Material.Metal).leviOnly=true
+    piece(h.pieces,"BladeEdge",Vector3.new(.016,.012,.53),bladeFrame*CFrame.new(0,-.05,-.4),C.Colors.Gas,Enum.Material.Neon).leviOnly=true
     return h
 end
 local left,right=hand(-1),hand(1)
@@ -952,6 +1094,20 @@ local function armFrame(position,up)
     return CFrame.fromMatrix(position,side.Unit,up)
 end
 
+-- Levi's wires: two cables from the hips to the anchor, each with a small steel head. The head flies out at WireSpeed;
+-- on a miss the cables retract. Parts are created on the first frame they are needed and removed with the wire.
+function clearWires(owner)
+    local w=wires[owner]
+    if w and w.parts then for _,p in w.parts do p:Destroy() end end
+    wires[owner]=nil
+end
+local function wireParts(w)
+    if w.parts then return w.parts end
+    local steel=Color3.fromRGB(215,225,230)
+    w.parts={part(effects,"Wire",Vector3.new(.03,.03,1),steel,nil),part(effects,"Wire",Vector3.new(.03,.03,1),steel,nil),part(effects,"AnchorHead",Vector3.one*.35,Color3.fromRGB(240,246,250),nil,Enum.PartType.Ball)}
+    return w.parts
+end
+
 local gui=Instance.new("ScreenGui");gui.Name="InfinityHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true;gui.Parent=player:WaitForChild("PlayerGui")
 local function label(parent,text,size,pos,dim,color)
     local t=Instance.new("TextLabel");t.BackgroundTransparency=1;t.Text=text;t.Font=Enum.Font.GothamMedium;t.TextSize=size
@@ -981,10 +1137,10 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(320,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(430,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제"}
-for i,name in {"Gojo","Zenitsu","Reze"} do
+local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Levi="리바이"}
+for i,name in {"Gojo","Zenitsu","Reze","Levi"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(100,34);b.Position=UDim2.fromOffset((i-1)*110,0)
     b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
@@ -998,7 +1154,7 @@ end
 local function applyKit()
     local name=current();local kit=KITS[name]
     nameLabel.Text=kit.title;hint.Text=kit.hint
-    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or C.Colors.Blue
+    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Levi" and C.Colors.Gas or C.Colors.Blue
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -1013,12 +1169,13 @@ local function applyKit()
     end
     if cast then for _,o in cast.orbs do o:Destroy() end end
     cast=nil;holdState=nil;drawnUntil=0;blackout.BackgroundTransparency=1
+    reelState=nil;for owner in wires do clearWires(owner) end
 end
 applyKit()
 player:GetAttributeChangedSignal("Character"):Connect(applyKit)
 UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Levi"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then action:FireServer(buttons[slot].skill,camera.CFrame.LookVector) end
@@ -1049,7 +1206,7 @@ event.OnClientEvent:Connect(function(kind,data)
         if data.owner==player.UserId then
             holdState=nil
             local length=data.windup or C[data.kind].Windup or .2
-            cast={kind=data.kind,start=time(),length=length,orbs={},hold=data.kind=="Kick" and .2 or .15}
+            cast={kind=data.kind,start=time(),length=length,orbs={},hold=data.kind=="Kick" and .2 or data.kind=="Spin" and (C.Spin.Rotation+C.Spin.Recovery) or .15}
             if data.kind=="Purple" then
                 cast.orbs={orb(camera.CFrame.Position,C.Colors.Blue,.28),orb(camera.CFrame.Position,C.Colors.Red,.28)}
                 announce("虚式 • 茈","아오 + 아카  /  무라사키")
@@ -1061,7 +1218,14 @@ event.OnClientEvent:Connect(function(kind,data)
             elseif data.kind=="FlameGod" then announce("雷の呼吸 • 漆ノ型","화뢰신 · 火雷神 · 벽력일섬을 초월한 발도")
             elseif data.kind=="BombDevil" then announce("レゼ","쵸커의 핀을 당긴다")
             elseif data.kind=="Kick" then announce("爆裂蹴","폭발 킥")
-            elseif data.kind=="Detonation" then announce("大爆発","4초 뒤 광역 대폭발 · 체력 12% 소모") end
+            elseif data.kind=="Detonation" then announce("大爆発","4초 뒤 광역 대폭발 · 체력 12% 소모")
+            elseif data.kind=="Spin" then announce("回転斬り","회전 베기 · 날아가며 한 바퀴"..(C.Spin.ThirdPerson and "" or " (1인칭)")) end
+            -- The wire is let go the moment the user spins or bursts away; the flight's momentum carries on.
+            if data.kind=="Spin" or data.kind=="Burst" then reelState=nil end
+            if data.kind=="Spin" then
+                local m=player.Character;local root=m and m:FindFirstChild("HumanoidRootPart")
+                if root then root.AssemblyLinearVelocity*=C.Spin.Coast end
+            end
         else
             burst(data.position,colorOf(data.kind),3)
         end
@@ -1170,6 +1334,62 @@ event.OnClientEvent:Connect(function(kind,data)
             end)
             announce("人間に戻る","인간으로 돌아온다 · 폭탄의 악마 재사용 20초")
         end
+    elseif kind=="Anchor" then
+        clearWires(data.owner)
+        local travel=math.max(.05,(data.point-data.from).Magnitude/data.speed)
+        wires[data.owner]={from=data.from,point=data.point,hit=data.hit,fired=time(),travel=travel}
+        if data.hit then
+            -- The heads bite the surface: a ting and a spray of sparks.
+            task.delay(travel,function()
+                if wires[data.owner] then
+                    sound("rbxasset://sounds/electronicpingshort.wav",data.point,.5,2.2,1);burst(data.point,C.Colors.Gas,2.5)
+                end
+            end)
+        end
+    elseif kind=="Reel" then
+        if data.owner==player.UserId then
+            reelState={point=data.point,speed=data.speed,ramp=data.ramp,stop=data.stop,max=data.maxTime,start=time()}
+            sound("rbxasset://sounds/swordlunge.wav",data.point,.6,1.6,1.5)
+        end
+    elseif kind=="ReelEnd" then
+        clearWires(data.owner)
+        if data.owner==player.UserId then reelState=nil end
+        if data.arrived then burst(data.position,C.Colors.Gas,3) end
+    elseif kind=="Spin" then
+        -- Two blades sweep a full circle around the user, drawn one segment at a time; each follows the user's own
+        -- position so the arcs trail behind in a spiral while the momentum carries on.
+        local owner=Players:GetPlayerByUserId(data.owner)
+        local count=16;local reach=8
+        sound("rbxasset://sounds/swordslash.wav",data.position,.9,.8,2)
+        for blade=0,1 do
+            for i=0,count do
+                task.delay(i*data.rotation/count,function()
+                    local root=owner and owner.Character and owner.Character:FindFirstChild("HumanoidRootPart")
+                    local center=(root and root.Position or data.position)+Vector3.new(0,.6,0)
+                    local angle=blade*math.pi+i/count*math.pi*2
+                    local a=center+Vector3.new(math.cos(angle),0,math.sin(angle))*reach
+                    local b=center+Vector3.new(math.cos(angle+.5),0,math.sin(angle+.5))*reach
+                    local seg=part(effects,"SpinArc",Vector3.new(.34,.12,(b-a).Magnitude+.4),C.Colors.Gas,CFrame.lookAt((a+b)/2,b))
+                    tween(seg,.35,{Transparency=1,Size=Vector3.new(.04,.04,seg.Size.Z)});Debris:AddItem(seg,.4)
+                end)
+            end
+        end
+    elseif kind=="SpinHit" then
+        burst(data.position,C.Colors.Gas,data.radius*.45)
+        if data.struck>0 then sound("rbxasset://sounds/swordslash.wav",data.position,1,1.4,1) end
+        if data.owner==player.UserId then
+            fovKickUntil=time()+.18;blur.Size=14
+            if data.struck>0 then cross.Text="×";task.delay(.2,function() cross.Text="+" end) end
+        end
+    elseif kind=="Burst" then
+        burst(data.position,C.Colors.Gas,5)
+        sound("rbxasset://sounds/swordlunge.wav",data.position,.7,1.3,1.5)
+    elseif kind=="Impulse" then
+        local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid");local root=m and m:FindFirstChild("HumanoidRootPart")
+        if h and root then
+            h:ChangeState(Enum.HumanoidStateType.Freefall);root.AssemblyLinearVelocity=data.velocity
+            fovKickUntil=time()+.2;blur.Size=12
+        end
     elseif kind=="Knockback" then
         local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid");local root=m and m:FindFirstChild("HumanoidRootPart")
         if h and root then h:ChangeState(Enum.HumanoidStateType.FallingDown);root.AssemblyLinearVelocity=data.velocity end
@@ -1247,6 +1467,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local desiredFov=72;blur.Size=math.max(0,blur.Size-dt*24)
     local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
     local transformed=reze and m and (m:GetAttribute("BombDevilUntil") or 0)>n
+    local levi=current()=="Levi"
+    local spinPitch,spinYaw,spinRoll=0,0,0
+    local thirdPerson=false
     if reze then for _,hd in {left,right} do hd.sleeve.Color=transformed and KITS.Reze.devilSleeve or KITS.Reze.sleeve end end
     if cast then
         local a=n-cast.start;local u=math.clamp(a/cast.length,0,1)
@@ -1321,10 +1544,53 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             camera.CFrame*=CFrame.new((math.random()-.5)*shake*2,(math.random()-.5)*shake*2,0)
             desiredFov=66-8*(a/cast.length)
         elseif cast.kind=="Breath" then
-            push=.05*math.clamp(a/.4,0,1);swordPos+=Vector3.new(0,math.sin(a*3.2)*.02,0);desiredFov=66 end
+            push=.05*math.clamp(a/.4,0,1);swordPos+=Vector3.new(0,math.sin(a*3.2)*.02,0);desiredFov=66
+        elseif cast.kind=="Anchor" then
+            -- Both fists snap forward to fire the wires from the hips, with a small recoil once they leave.
+            local k=smoothstep(a/math.max(cast.length,.05))
+            l=CFrame.new(-.5,-.62+.12*k,-.7)*CFrame.Angles(.5*k,.3,-.5);r=CFrame.new(.5,-.62+.12*k,-.7)*CFrame.Angles(.5*k,-.3,.5)
+            spinPitch=.04*math.sin(math.clamp((a-cast.length)/.18,0,1)*math.pi);desiredFov=70
+        elseif cast.kind=="Spin" then
+            -- Coil (Windup): the body winds to the right, blades pulled back. Turn (Rotation): one full revolution to the
+            -- left with the arms flung wide, the view banking into the turn. Recovery: planted and rooted (server).
+            local w,rotation=C.Spin.Windup,C.Spin.Rotation
+            local lf,sp=smoothstep(a/w),smoothstep((a-w)/rotation)
+            local bank=math.sin(sp*math.pi)
+            spinYaw=-.7*lf+(math.pi*2+.7)*sp;spinRoll=-.32*bank+.05*lf*(1-sp);spinPitch=-.16*bank
+            desiredFov=66+20*bank-4*lf*(1-sp);blur.Size=math.max(blur.Size,bank*16);lean=.5*lf*(1-sp)
+            l=(CFrame.new(-.35,-.45,-.75)*CFrame.Angles(.35,.5,-.7)):Lerp(CFrame.new(-.8,-.3,-.6)*CFrame.Angles(.1,.9,-1.2),sp)
+            r=(CFrame.new(.65,-.4,-.55)*CFrame.Angles(.2,-.8,.9)):Lerp(CFrame.new(.8,-.3,-.6)*CFrame.Angles(.1,-.9,1.2),sp)
+            if C.Spin.ThirdPerson then
+                -- Optional: pull the camera out for the turn and spin the body instead of the view.
+                thirdPerson=true
+                local root=m and m:FindFirstChild("HumanoidRootPart")
+                if root then
+                    cast.baseRotation=cast.baseRotation or root.CFrame.Rotation
+                    root.CFrame=CFrame.new(root.Position)*cast.baseRotation*CFrame.Angles(0,spinYaw,0)
+                end
+                camera.CFrame*=CFrame.new(0,1.2,11)
+                spinPitch,spinYaw,spinRoll=0,0,0
+            end
+        end
         if a>=cast.length+cast.hold then for _,o in cast.orbs do o:Destroy() end;cast=nil end
     end
     if chinTilt>0 then camera.CFrame*=CFrame.Angles(-.5*chinTilt,0,0) end
+    if levi then
+        local anchored=(state.anchorUntil or 0)>n
+        if reelState then
+            -- Flying on the wire: fists taut ahead, the view tightens and streaks past.
+            local age=n-reelState.start
+            if not cast then
+                l=CFrame.new(-.4,-.3,-.7)*CFrame.Angles(.55,.35,-.5);r=CFrame.new(.4,-.3,-.7)*CFrame.Angles(.55,-.35,.5)
+            end
+            desiredFov=math.max(desiredFov,86+8*smoothstep(age/.4));blur.Size=math.max(blur.Size,5)
+            spinRoll+=math.sin(n*9)*.008
+        elseif anchored and not cast then
+            l=CFrame.new(-.45,-.42,-.78)*CFrame.Angles(.3,.3,-.4);r=CFrame.new(.45,-.42,-.78)*CFrame.Angles(.3,-.3,.4)
+        end
+        if spinYaw~=0 or spinRoll~=0 or spinPitch~=0 then camera.CFrame*=CFrame.Angles(spinPitch,spinYaw,spinRoll) end
+        if h then h.AutoRotate=not thirdPerson end
+    end
     if kickSwing>=0 then camera.CFrame*=CFrame.Angles(0,kickYaw,kickRoll) end
     -- Skid after a Rampage that hit nothing: drop low and recover.
     if n<slideUntil then lean=math.max(lean,.9*math.clamp((slideUntil-n)/.55,0,1)) end
@@ -1412,14 +1678,32 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
                 entry.stroke.Thickness=1;entry.stroke.Color=colorOf("Kick");entry.b.BackgroundColor3=Color3.fromRGB(14,21,34)
             end
         end
+        if levi then
+            if entry.skill=="Spin" then
+                local ready=(state.comboUntil or 0)-n
+                if ready>0 and cooldown<=0 then
+                    text=string.format("회전 베기!  %.1f",ready)
+                    entry.stroke.Thickness=3;entry.stroke.Color=Color3.fromRGB(232,255,240);entry.b.BackgroundColor3=Color3.fromRGB(20,56,44)
+                else
+                    if ready<=0 then text=entry.name.." (비행 중)";cooldown=math.max(cooldown,.001) end
+                    entry.stroke.Thickness=1;entry.stroke.Color=colorOf("Spin");entry.b.BackgroundColor3=Color3.fromRGB(14,21,34)
+                end
+            elseif entry.skill=="Reel" then
+                if (state.anchorUntil or 0)<=n then text=entry.name.." (앵커 필요)";cooldown=math.max(cooldown,.001) else text=entry.name.."  ●" end
+            end
+        end
         if reze and not transformed and (entry.skill=="Rampage" or entry.skill=="Kick") then text=entry.name.." (변신 필요)";cooldown=math.max(cooldown,.001) end
         entry.b.Text=entry.key.."\n"..text..(cooldown>0 and string.format("  %.1f",cooldown) or "")
         entry.b.BackgroundTransparency=cooldown>0 and .5 or .12
     end
     do
         local ready=(state.comboUntil or 0)-n
+        local spinReady=(state.comboUntil or 0)-n
         if current()=="Reze" and ready>0 and transformed then
             comboLabel.Text=string.format("E  연계 킥!   %.1f",ready)
+            comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
+        elseif levi and spinReady>0 and (state.cooldowns.Spin or 0)<=n then
+            comboLabel.Text=string.format("R  회전 베기!   %.1f",spinReady)
             comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         else comboLabel.Text="" end
     end
@@ -1433,8 +1717,37 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local alive=h and h.Health>0
     for _,hd in {left,right} do
         for _,entry in hd.pieces do
-            local shown=alive and (not entry.devilOnly or transformed) and (not entry.pinOnly or pinShown)
+            local shown=alive and (not entry.devilOnly or transformed) and (not entry.pinOnly or pinShown) and (not entry.leviOnly or (levi and not thirdPerson))
             entry.p.Transparency=shown and 0 or 1
+        end
+    end
+    for owner,w in wires do
+        local age=n-w.fired
+        local extend=math.clamp(age/w.travel,0,1)
+        if not w.hit then extend=extend*(1-math.clamp((age-w.travel)/.25,0,1)) end
+        if not w.hit and age>w.travel+.3 then clearWires(owner)
+        else
+            local wp=wireParts(w)
+            local point=w.point
+            local origins
+            if owner==player.UserId then
+                origins={camera.CFrame*l*CFrame.new(0,.15,-.1),camera.CFrame*r*CFrame.new(0,.15,-.1)}
+            else
+                local other=Players:GetPlayerByUserId(owner)
+                local root=other and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+                origins=root and {root.CFrame*CFrame.new(-1.1,-.5,-.6),root.CFrame*CFrame.new(1.1,-.5,-.6)} or {CFrame.new(w.from),CFrame.new(w.from)}
+            end
+            local side=(point-origins[1].Position):Cross(Vector3.yAxis);side=side.Magnitude>.01 and side.Unit or Vector3.xAxis
+            for i,sign in {-1,1} do
+                local from=origins[i].Position
+                local target=point+side*sign*.45
+                local tip=from:Lerp(target,extend)
+                local length=math.max(.05,(tip-from).Magnitude)
+                if (tip-from).Magnitude>.05 then wp[i].Size=Vector3.new(.03,.03,length);wp[i].CFrame=CFrame.lookAt((from+tip)/2,tip) end
+                wp[i].Transparency=(tip-from).Magnitude>.05 and 0 or 1
+            end
+            wp[3].Position=origins[1].Position:Lerp(point,extend)
+            wp[3].Transparency=(extend>=1 and w.hit) and 0 or 1
         end
     end
     for _,entry in katana.saya do entry.p.Transparency=(alive and zen) and 0 or 1 end
@@ -1443,6 +1756,29 @@ end)
 player.CharacterAdded:Connect(function()
     if cast then for _,o in cast.orbs do o:Destroy() end end
     cast=nil;blur.Size=0;drawnUntil=0;blackout.BackgroundTransparency=1
+end)
+
+-- Levi's flight. Players own their own physics, so the pull is applied here; the server decides when it starts, when
+-- it ends (arrival, timeout, Spin, Burst) and who gets hurt. Streaks fly past the camera while it lasts.
+Run.Heartbeat:Connect(function(dt)
+    local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid");local root=m and m:FindFirstChild("HumanoidRootPart")
+    if not (h and root) then return end
+    -- During the spin most of gravity is cancelled so the turn happens in the air.
+    if cast and cast.kind=="Spin" then root.AssemblyLinearVelocity+=Vector3.new(0,workspace.Gravity*dt*.6,0) end
+    if not reelState then return end
+    local n=time()
+    local to=reelState.point-root.Position
+    local age=n-reelState.start
+    if to.Magnitude<=reelState.stop or age>reelState.max then reelState=nil;return end
+    local speed=reelState.speed*math.clamp(.25+.75*age/reelState.ramp,.25,1)
+    h:ChangeState(Enum.HumanoidStateType.Freefall)
+    root.AssemblyLinearVelocity=to.Unit*speed
+    for _=1,2 do
+        local c=camera.CFrame
+        local at=c.Position+c.LookVector*(8+math.random()*8)+c.RightVector*(math.random()-.5)*14+c.UpVector*(math.random()-.5)*8
+        local streak=part(effects,"Streak",Vector3.new(.05,.05,4),Color3.fromRGB(235,245,250),CFrame.lookAt(at,at+to.Unit))
+        tween(streak,.2,{Transparency=1,Size=Vector3.new(.01,.01,6)});Debris:AddItem(streak,.25)
+    end
 end)
 ]]></string>
         </Properties>
