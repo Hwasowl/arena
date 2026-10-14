@@ -1,0 +1,20 @@
+// Bundles preview/ into one self-contained HTML: no module imports, no data: URLs (blocked in sandboxed frames).
+const fs = require('fs'), path = require('path');
+const [root, ...outs] = process.argv.slice(2);
+const p = rel => fs.readFileSync(path.join(root, 'preview', rel), 'utf8').replace(/\r\n/g, '\n');
+let three = p('vendor/three.module.js');
+const m = three.match(/\nexport \{([^}]*)\};?\s*$/);
+if (!m) throw new Error('three export block not found');
+three = three.slice(0, m.index) + '\nreturn {' + m[1] + '};\n';
+const importLine = "import * as T from './vendor/three.module.js';\n";
+const app = p('app.js');
+if (!app.startsWith(importLine)) throw new Error('unexpected app.js import');
+const esc = s => s.split('</script').join('<\\/script');
+const license = '<!--\n' + p('vendor/THREE-LICENSE.txt') + '\n-->\n';
+const script = '<script>\nconst T=(function(){\n' + esc(three) + '\n})();\n(function(){\n' + esc(app.slice(importLine.length)) + '\n})();\n</script>';
+let html = p('index.html');
+const link = '<link rel="stylesheet" href="style.css">', tag = '<script type="module" src="app.js"></script>';
+if (!html.includes(link) || !html.includes(tag)) throw new Error('index.html markers missing');
+html = html.replace(link, () => '<style>' + p('style.css') + '</style>').replace(tag, () => script).replace('<head>', () => '<head>\n' + license);
+for (const out of outs) fs.writeFileSync(out, html);
+console.log('wrote', html.length, 'bytes');
