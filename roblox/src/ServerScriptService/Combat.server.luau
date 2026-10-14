@@ -1,6 +1,7 @@
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local RS=game:GetService("ReplicatedStorage")
+local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
@@ -29,7 +30,7 @@ local function targets(exclude)
     return out
 end
 local function sendState(p,s)
-    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,anchorUntil=s.anchor and s.anchor.untilTime or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
+    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
 end
 local function validVector(v)
     return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
@@ -55,6 +56,34 @@ end
 local function setTimed(m,h,attribute,duration)
     m:SetAttribute(attribute,math.max(m:GetAttribute(attribute) or 0,clock()+duration));updateSpeed(m,h)
     task.delay(duration+.05,function() if m.Parent and h.Parent then updateSpeed(m,h) end end)
+end
+-- A server-created constraint lifts the actual character, while its network owner simulates it smoothly.
+-- A one-shot server velocity is unreliable for player-owned characters and falls before Purple releases.
+local function clearPurpleHover(s)
+    local hover=s.purpleHover
+    if not hover then return end
+    s.purpleHover=nil
+    hover.alignment:Destroy();hover.attachment:Destroy()
+end
+local function beginPurpleHover(s,m,h,r)
+    clearPurpleHover(s)
+    local cfg=C.Purple
+    local ceiling=workspace:Blockcast(r.CFrame,Vector3.new(3,5,3),Vector3.yAxis*cfg.RiseHeight,rayParams(m))
+    local height=ceiling and math.max(0,math.min(cfg.RiseHeight,ceiling.Distance-.5)) or cfg.RiseHeight
+    local duration=cfg.Windup+cfg.Recovery
+    local attachment=Instance.new("Attachment");attachment.Name="PurpleHoverAttachment";attachment.Parent=r
+    local alignment=Instance.new("AlignPosition")
+    alignment.Name="PurpleHover";alignment.Mode=Enum.PositionAlignmentMode.OneAttachment
+    alignment.Attachment0=attachment;alignment.Position=r.Position+Vector3.yAxis*height
+    alignment.ApplyAtCenterOfMass=true;alignment.RigidityEnabled=false
+    alignment.MaxForce=math.max(10000,r.AssemblyMass*workspace.Gravity*10)
+    alignment.MaxVelocity=cfg.RiseHeight/cfg.RiseDuration;alignment.Responsiveness=35
+    alignment.Parent=r
+    local hover={alignment=alignment,attachment=attachment}
+    s.purpleHover=hover
+    setTimed(m,h,"RootedUntil",duration)
+    Debris:AddItem(alignment,duration+.1);Debris:AddItem(attachment,duration+.1)
+    task.delay(duration,function() if s.purpleHover==hover then clearPurpleHover(s) end end)
 end
 -- Shared by Thunderclap and FlameGod: dash along `flat`, stopping short of walls, and return who stood on the path.
 local function dashStrike(m,r,flat,distance,width)
@@ -96,7 +125,8 @@ end
 local function perform(p,s,m,h,r,kind,direction,instant)
     local n=clock()
     local windup=instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
-    s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or windup)
+    s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
+    if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
     fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup})
     if kind=="Blue" then
         cancelBlue(p,s)
@@ -109,9 +139,13 @@ local function perform(p,s,m,h,r,kind,direction,instant)
             fx:FireAllClients("Blue",{owner=p.UserId,position=desired,duration=C.Blue.Duration});sendState(p,s)
         end)
     elseif kind=="Red" or kind=="Purple" then
-        if kind=="Purple" then h:ChangeState(Enum.HumanoidStateType.Jumping);r.AssemblyLinearVelocity=Vector3.new(r.AssemblyLinearVelocity.X,42,r.AssemblyLinearVelocity.Z) end
         delayed(p,s,m,C[kind].Windup,function()
             local cfgShot=C[kind];local origin=r.Position+direction*3
+            if kind=="Purple" then
+                -- Launch from eye level at the top of the rise, matching the visible merged sphere.
+                local head=m:FindFirstChild("Head")
+                origin=(head and head.Position or r.Position+Vector3.yAxis*1.5)+direction*cfgShot.OrbDistance
+            end
             local id=tostring(p.UserId)..":"..tostring(clock())
             table.insert(projectiles,{id=id,owner=p,model=m,position=origin,direction=direction,kind=kind,distance=0,hit={}})
             fx:FireAllClients("Projectile",{id=id,owner=p.UserId,position=origin,direction=direction,kind=kind,speed=cfgShot.Speed,range=cfgShot.Range})
@@ -241,70 +275,6 @@ local function perform(p,s,m,h,r,kind,direction,instant)
                 end
             end)
         end)
-    elseif kind=="Anchor" then
-        local cfg=C.Anchor
-        -- The wire is shot along the crosshair. Level geometry is found with a raycast (floors never hold); enemies are
-        -- found by how close the ray passes to them, because training rigs are not collidable. The nearer of the two wins.
-        local origin=r.Position+Vector3.new(0,1.5,0)
-        local params=rayParams(m);params.RespectCanCollide=true
-        local world=workspace:Raycast(origin,direction*cfg.Range,params)
-        local limit=world and world.Distance or cfg.Range
-        local point,distance,victim
-        if world and world.Normal.Y<.85 then point=world.Position;distance=world.Distance end
-        for _,t in targets(m) do
-            local to=t.r.Position+Vector3.new(0,.5,0)-origin
-            local along=to:Dot(direction)
-            if along>0 and along<=limit and (distance==nil or along<distance) and (to-direction*along).Magnitude<=3 then
-                point=t.r.Position;distance=along;victim=t
-            end
-        end
-        s.reel=nil;s.anchor=nil;s.comboUntil=0
-        delayed(p,s,m,cfg.Windup,function()
-            if point then
-                s.anchor={point=point,victim=victim,untilTime=clock()+cfg.Duration}
-            else
-                -- Nothing to hold: the gas is gone and the next attempt has to wait.
-                s.cooldowns.Anchor=clock()+cfg.MissCooldown
-            end
-            fx:FireAllClients("Anchor",{owner=p.UserId,from=origin,point=point or origin+direction*cfg.Range,hit=point~=nil,speed=cfg.WireSpeed})
-            sendState(p,s)
-        end)
-    elseif kind=="Reel" then
-        local cfg=C.Reel
-        local a=s.anchor
-        local distance=(a.point-r.Position).Magnitude
-        local travel=math.max(.3,(distance-cfg.StopDistance)/(cfg.Speed*.82))
-        local untilTime=n+math.min(cfg.MaxTime,travel+.4)
-        s.reel={point=a.point,victim=a.victim,untilTime=untilTime}
-        -- The Spin window: from the first pull until Grace seconds after the flight ends.
-        s.comboUntil=untilTime+C.Spin.Grace
-        fx:FireAllClients("Reel",{owner=p.UserId,point=a.point,speed=cfg.Speed,ramp=cfg.Ramp,stop=cfg.StopDistance,maxTime=cfg.MaxTime})
-    elseif kind=="Spin" then
-        local cfg=C.Spin
-        -- The wire is let go; the client keeps the flight's momentum through the whole turn.
-        s.reel=nil;s.anchor=nil;s.comboUntil=0
-        s.busyUntil=n+windup+cfg.Rotation+cfg.Recovery
-        delayed(p,s,m,windup,function()
-            fx:FireAllClients("Spin",{owner=p.UserId,position=r.Position,radius=cfg.Radius,rotation=cfg.Rotation})
-        end)
-        delayed(p,s,m,windup+cfg.Rotation*.9,function()
-            local center=r.Position
-            local struck=0
-            for _,t in targets(m) do
-                if (t.r.Position-center).Magnitude<=cfg.Radius then
-                    struck+=1
-                    damage(p,t,cfg.Damage);launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
-                end
-            end
-            fx:FireAllClients("SpinHit",{owner=p.UserId,position=center,radius=cfg.Radius,struck=struck})
-            -- Landing stagger: all that spinning leaves the user rooted for a moment.
-            setTimed(m,h,"RootedUntil",cfg.Recovery)
-        end)
-    elseif kind=="Burst" then
-        local cfg=C.Burst
-        s.reel=nil;s.anchor=nil;s.comboUntil=0
-        fx:FireAllClients("Burst",{owner=p.UserId,position=r.Position,direction=direction})
-        fx:FireClient(p,"Impulse",{velocity=direction*cfg.Impulse+Vector3.new(0,cfg.Impulse*cfg.Lift,0)})
     elseif kind=="Kick" then
         local cfg=C.Kick
         -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
@@ -358,9 +328,6 @@ remote.OnServerEvent:Connect(function(p,skill,aim)
     if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
-    -- Levi: Reel needs a held anchor, and Spin only works while flying on one (the window Reel opens).
-    if skill=="Reel" and not (s.anchor and s.anchor.untilTime>n) then return end
-    if skill=="Spin" and (s.comboUntil or 0)<=n then return end
     local cfg=C[skill]
     local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
     if instant then
@@ -395,7 +362,8 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
+    clearPurpleHover(s)
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
 end)
@@ -404,29 +372,6 @@ RunService.Heartbeat:Connect(function(dt)
     local n=clock();sync+=dt
     for p,s in states do
         local regen=C.EnergyRegen
-        if kitOf(p)=="Levi" then
-            -- Gas refills much faster on solid ground than in the air.
-            local _,ch,cr=character(p)
-            if ch and ch.FloorMaterial~=Enum.Material.Air then regen*=C.GasGroundRegen end
-            local reel=s.reel
-            if reel and cr then
-                local distance=(reel.point-cr.Position).Magnitude
-                if distance<=C.Reel.StopDistance+2 or n>=reel.untilTime then
-                    s.reel=nil;s.anchor=nil;s.comboUntil=n+C.Spin.Grace
-                    local arrived=distance<=C.Reel.StopDistance+3
-                    local victim=reel.victim
-                    if arrived and victim and victim.m.Parent and victim.h.Health>0 and (victim.r.Position-cr.Position).Magnitude<=C.Reel.ArrivalRadius then
-                        damage(p,victim,C.Reel.ArrivalDamage);launch(victim,outward(cr.Position,victim,cr.CFrame.LookVector)*30+Vector3.new(0,28,0))
-                    end
-                    fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=arrived,position=cr.Position})
-                    sendState(p,s)
-                end
-            elseif reel then s.reel=nil end
-            if s.anchor and not s.reel and n>s.anchor.untilTime then
-                s.anchor=nil;fx:FireAllClients("ReelEnd",{owner=p.UserId,arrived=false})
-                sendState(p,s)
-            end
-        end
         s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
         if sync>=.15 then sendState(p,s) end
     end
@@ -447,7 +392,9 @@ RunService.Heartbeat:Connect(function(dt)
     end
     for i=#projectiles,1,-1 do
         local shot=projectiles[i];local cfg=C[shot.kind];local step=shot.direction*cfg.Speed*dt
-        local hitWorld=workspace:Spherecast(shot.position,cfg.Radius,step,rayParams(shot.model))
+        -- Hollow Purple travels through arena geometry, like the reference; victims still receive one hit.
+        -- Its wide damage radius used to clip a nearby pillar and delete it immediately after release.
+        local hitWorld=not cfg.PierceWorld and workspace:Spherecast(shot.position,cfg.Radius,step,rayParams(shot.model)) or nil
         local segmentLength=step.Magnitude
         if hitWorld then
             local hitModel=hitWorld.Instance:FindFirstAncestorOfClass("Model")
@@ -504,11 +451,12 @@ end)
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
     local function reset()
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s)
+        clearPurpleHover(s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() s.generation+=1;s.hold=nil;s.anchor=nil;s.reel=nil;s.comboUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() clearPurpleHover(s);s.generation+=1;s.hold=nil;s.comboUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
 Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then cancelBlue(p,states[p]) end;states[p]=nil end)
+Players.PlayerRemoving:Connect(function(p) if states[p] then clearPurpleHover(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)

@@ -1,3 +1,7 @@
 infinity-gojo-preview.html
 node_modules/
 tools/shots/
+
+# Roblox Studio place locks
+*.rbxl.lock
+*.rbxlx.lock

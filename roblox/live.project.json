@@ -1,0 +1,52 @@
+{
+  "name": "InfinityArena-Gojo-Live",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$properties": {
+        "Gravity": 150,
+        "FilteringEnabled": true
+      },
+      "$ignoreUnknownInstances": true
+    },
+    "Lighting": {
+      "$properties": {
+        "ClockTime": 13.5,
+        "Brightness": 3,
+        "Ambient": [
+          0.38,
+          0.42,
+          0.52
+        ],
+        "OutdoorAmbient": [
+          0.5,
+          0.54,
+          0.64
+        ]
+      },
+      "$ignoreUnknownInstances": true
+    },
+    "ReplicatedStorage": {
+      "$path": "src/ReplicatedStorage",
+      "$ignoreUnknownInstances": true
+    },
+    "ServerScriptService": {
+      "$path": "src/ServerScriptService",
+      "$ignoreUnknownInstances": true
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "CameraMode": "LockFirstPerson",
+        "CharacterWalkSpeed": 20,
+        "CharacterJumpPower": 45
+      },
+      "StarterPlayerScripts": {
+        "$path": "src/StarterPlayer/StarterPlayerScripts",
+        "$ignoreUnknownInstances": true
+      },
+      "$ignoreUnknownInstances": true
+    },
+    "$ignoreUnknownInstances": true
+  },
+  "servePort": 34872
+}
