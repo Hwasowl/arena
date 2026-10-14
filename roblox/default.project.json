@@ -1,0 +1,14 @@
+{
+  "name": "InfinityArena-Gojo",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": { "$properties": { "Gravity": 150, "FilteringEnabled": true } },
+    "Lighting": { "$properties": { "ClockTime": 0, "Brightness": 2, "Ambient": [0.16, 0.19, 0.28], "OutdoorAmbient": [0.16, 0.19, 0.28] } },
+    "ReplicatedStorage": { "$path": "src/ReplicatedStorage" },
+    "ServerScriptService": { "$path": "src/ServerScriptService" },
+    "StarterPlayer": {
+      "$properties": { "CameraMode": "LockFirstPerson", "CharacterWalkSpeed": 20, "CharacterJumpPower": 45 },
+      "StarterPlayerScripts": { "$path": "src/StarterPlayer/StarterPlayerScripts" }
+    }
+  }
+}
