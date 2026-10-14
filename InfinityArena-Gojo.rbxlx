@@ -1,786 +1,820 @@
-<roblox version="4">
-  <Item class="Lighting" referent="0">
-    <Properties>
-      <string name="Name">Lighting</string>
-      <Color3 name="Ambient">
-        <R>0.38</R>
-        <G>0.42</G>
-        <B>0.52</B>
-      </Color3>
-      <float name="Brightness">3</float>
-      <float name="ClockTime">13.5</float>
-      <Color3 name="OutdoorAmbient">
-        <R>0.5</R>
-        <G>0.54</G>
-        <B>0.64</B>
-      </Color3>
-    </Properties>
-  </Item>
-  <Item class="ReplicatedStorage" referent="1">
-    <Properties>
-      <string name="Name">ReplicatedStorage</string>
-    </Properties>
-    <Item class="ModuleScript" referent="2">
-      <Properties>
-        <string name="Name">GojoConfig</string>
-        <string name="Source"><![CDATA[-- Shared tuning; all combat decisions are made by Combat.server.luau.
-return {
-    MaxEnergy = 100, EnergyRegen = 5, MaxHealth = 200,
-    -- Skills each character may request; the server rejects anything outside the player's kit.
-    Kits = {
-        Gojo = { "Blue", "Red", "Domain", "Dash" },
-        Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
-        Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
-    },
-    Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
-    Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
-    -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
-    Hold = { Duration = 3 },
-    Purple = {
-        Windup = 3.6, Damage = 180, Speed = 105, Radius = 7, Range = 170,
-        RiseHeight = 12, RiseDuration = 2.4, MergeAt = 2.85, Recovery = 0.45,
-        OrbDistance = 5, ChargeRadius = 0.6, MergedRadius = 1.4, VisualRadius = 3, PierceWorld = true,
-    },
-    Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8 },
-    Dash = { Cost = 5, Cooldown = 2.5, Distance = 16 },
-    -- Zenitsu: Breath grants Charges instant Thunderclaps (no windup, cost or cooldown) for ChargeWindow seconds.
-    Thunderclap = { Cost = 18, Cooldown = 6, Windup = 2, InstantWindup = 0.05, Distance = 36, Width = 5, Damage = 70 },
-    Breath = { Cost = 20, Cooldown = 14, Windup = 2, Charges = 3, ChargeWindow = 12 },
-    -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
-    -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.
-    FlameGod = { DragonScale = 2.5, Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.9, RecoilDelay = 1, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
-    -- Reze. Human form: only Dash and BombDevil. Pulling the choker pin transforms her with no time limit and heals
-    -- Heal of max HP (never past full); Rampage and Kick then work, each costing HpCost of max HP (never lethal).
-    -- R again is Detonation: Windup seconds later a huge blast goes off, it costs 12% HP, and she turns human again.
-    -- BombDevil can be used again Recharge seconds after she reverts.
-    BombDevil = { Cost = 0, Cooldown = 0, Recharge = 20, Windup = 1, Blackout = 2, Heal = 0.2, Radius = 16, Damage = 90, Knockback = 110, Lift = 55 },
-    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60 },
-    -- Rampage: a blast under the feet launches her forward; anyone on the path is blown upward, and the gunpowder
-    -- left along the path detonates TrailDelay seconds later.
-    Rampage = { Cost = 0, HpCost = 0.03, Cooldown = 5, Windup = 0.12, SlideSpeed = 55, Distance = 30, Width = 5, Damage = 45, Launch = 70, TrailDelay = 1, TrailRadius = 5.5, TrailDamage = 35, TrailLift = 45 },
-    -- Kick: a roundhouse. The right foot is raised for most of Windup, then whips right to left. Alone it goes off Reach studs in front of her; used within ComboWindow seconds of
-    -- Rampage it continues the Rampage direction as a ComboDistance dash ending in a bigger blast.
-    Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.38, Reach = 5, Radius = 6, Damage = 45, Knockback = 32, Lift = 28, ComboWindow = 1.3, ComboDistance = 18, Width = 4.5, ComboRadius = 8, ComboDamage = 85, ComboKnockback = 70, ComboLift = 36 },
-    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46) },
-}
-]]></string>
-      </Properties>
-    </Item>
-  </Item>
-  <Item class="ServerScriptService" referent="3">
-    <Properties>
-      <string name="Name">ServerScriptService</string>
-    </Properties>
-    <Item class="Script" referent="4">
-      <Properties>
-        <string name="Name">Arena</string>
-        <token name="RunContext">0</token>
-        <string name="Source"><![CDATA[local Players = game:GetService("Players")
-local Lighting = game:GetService("Lighting")
--- Apply daylight when the arena starts, including places synced from older builds.
-Lighting.ClockTime = 13.5
-Lighting.Brightness = 3
-Lighting.Ambient = Color3.new(0.38, 0.42, 0.52)
-Lighting.OutdoorAmbient = Color3.new(0.5, 0.54, 0.64)
-local Config = require(game.ReplicatedStorage:WaitForChild("GojoConfig"))
-local arena = Instance.new("Folder")
-arena.Name = "InfinityArena"
-arena.Parent = workspace
-local function part(name, size, cf, color, material, parent)
-    local p = Instance.new("Part")
-    p.Name, p.Size, p.CFrame = name, size, cf
-    p.Color, p.Material = color, material or Enum.Material.Slate
-    p.Anchored, p.TopSurface, p.BottomSurface = true, Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-    p.Parent = parent or arena
-    return p
-end
-local dark = Color3.fromRGB(42, 50, 67)
-local cyan = Color3.fromRGB(57, 170, 215)
-part("Foundation", Vector3.new(150, 4, 150), CFrame.new(0,-3,0), dark)
-for x=-7,7 do
-    for z=-7,7 do
-        local shade = 45 + ((x*7+z*3)%5)*2
-        part("StoneTile", Vector3.new(9.88,.35,9.88), CFrame.new(x*10,-.825,z*10), Color3.fromRGB(shade,shade+7,shade+15),Enum.Material.Concrete)
-    end
-end
-for _,radius in {22,42,66} do
-    for i=1,100 do
-        local a = i*math.pi*2/100
-        local p=part("RuneCircle",Vector3.new(.10,.03,radius*.064),CFrame.new(math.cos(a)*radius,-.63,math.sin(a)*radius)*CFrame.Angles(0,-a,0),cyan,Enum.Material.Neon)
-        p.CanCollide=false
-    end
-end
-for i=0,11 do
-    local a = i*math.pi/6
-    local cf=CFrame.new(math.sin(a)*61,0,math.cos(a)*61)*CFrame.Angles(0,a,0)
-    for _,side in {-1,1} do
-        part("GatePillar",Vector3.new(3,16,3),cf*CFrame.new(side*4,7,0),dark)
-        part("LightInset",Vector3.new(.12,11,3.04),cf*CFrame.new(side*4,7,0),cyan,Enum.Material.Neon).CanCollide=false
-    end
-    part("GateLintel",Vector3.new(13,2,4),cf*CFrame.new(0,15,0),dark)
-end
-local spawn=Instance.new("SpawnLocation")
-spawn.Name="Entry";spawn.Size=Vector3.new(8,.2,8);spawn.CFrame=CFrame.new(0,-.5,23)
-spawn.Anchored=true;spawn.Transparency=1;spawn.Neutral=true;spawn.Duration=0;spawn.Parent=arena
-local atmosphere=Instance.new("Atmosphere")
-atmosphere.Density=.18;atmosphere.Offset=.25;atmosphere.Color=Color3.fromRGB(152,174,211);atmosphere.Decay=Color3.fromRGB(78,92,128);atmosphere.Parent=Lighting
-local bloom=Instance.new("BloomEffect")
-bloom.Intensity=.65;bloom.Size=28;bloom.Threshold=1.2;bloom.Parent=Lighting
-local grade=Instance.new("ColorCorrectionEffect")
-grade.Contrast=.04;grade.Saturation=-.04;grade.TintColor=Color3.fromRGB(235,243,255);grade.Parent=Lighting
-
-local function dummy(pos,index)
-    local m=Instance.new("Model");m.Name="Training Target "..index
-    local root=part("HumanoidRootPart",Vector3.new(2,2,1),CFrame.new(pos),dark,nil,m);root.Transparency=1;root.CanCollide=false
-    local h=Instance.new("Humanoid");h.RequiresNeck=false;h.BreakJointsOnDeath=false;h.MaxHealth=250;h.Health=250;h.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.Viewer;h.Parent=m
-    local pieces={
-        {"Torso",Vector3.new(2,2,1),Vector3.new(0,0,0)},
-        {"Head",Vector3.new(1.4,1.4,1.4),Vector3.new(0,1.7,0)},
-        {"Left Arm",Vector3.new(.7,2,.8),Vector3.new(-1.5,0,0)},
-        {"Right Arm",Vector3.new(.7,2,.8),Vector3.new(1.5,0,0)},
-        {"Left Leg",Vector3.new(.8,2,.8),Vector3.new(-.6,-2,0)},
-        {"Right Leg",Vector3.new(.8,2,.8),Vector3.new(.6,-2,0)},
-    }
-    for _,v in pieces do
-        local p=part(v[1],v[2],CFrame.new(pos+v[3]),Color3.fromRGB(71,88,113),Enum.Material.Metal,m)
-        p.Anchored=false;p.CanCollide=false;p.Massless=true
-        local weld=Instance.new("WeldConstraint");weld.Part0=root;weld.Part1=p;weld.Parent=p
-    end
-    local core=part("Core",Vector3.new(.7,.7,.12),CFrame.new(pos+Vector3.new(0,.15,.56)),cyan,Enum.Material.Neon,m)
-    core.Anchored=false;core.CanCollide=false
-    local weld=Instance.new("WeldConstraint");weld.Part0=root;weld.Part1=core;weld.Parent=core
-    m.PrimaryPart=root;m:SetAttribute("TrainingTarget",true);m.Parent=workspace
-    h.Died:Connect(function() task.delay(3,function() m:Destroy();dummy(pos,index) end) end)
-end
-dummy(Vector3.new(0,3,-12),1);dummy(Vector3.new(-13,3,-20),2);dummy(Vector3.new(13,3,-26),3)
-
--- Arena pillars and low walls. Same layout as the browser preview (scaled up for studs).
--- Collidable pillars and low walls provide cover and elevated positions.
-local stoneTrim=Color3.fromRGB(99,115,132)
-local function pillar(x,z,width,height)
-    local base=-.65
-    part("AnchorPillar",Vector3.new(width,height,width),CFrame.new(x,base+height/2,z),dark,Enum.Material.Concrete)
-    part("AnchorPillarCap",Vector3.new(width+.8,1,width+.8),CFrame.new(x,base+height-.5,z),stoneTrim,Enum.Material.Metal)
-    local inset=part("AnchorPillarLight",Vector3.new(.15,height*.7,width*.35),CFrame.new(x,base+height*.45,z+width/2+.02),cyan,Enum.Material.Neon)
-    inset.CanCollide=false;inset.CanQuery=false
-end
-local function wall(x,z,sizeX,sizeZ,height)
-    part("AnchorWall",Vector3.new(sizeX,height,sizeZ),CFrame.new(x,-.65+height/2,z),dark,Enum.Material.Concrete)
-    part("AnchorWallCap",Vector3.new(sizeX+.6,.8,sizeZ+.6),CFrame.new(x,-.65+height-.4,z),stoneTrim,Enum.Material.Metal)
-end
-for _,v in {{-26,-8,5,35},{26,-12,5,40},{-34,-34,5,30},{36,-28,5,34},{0,-46,6,45},{-20,16,4.5,26},{22,18,4.5,30}} do pillar(v[1],v[2],v[3],v[4]) end
-wall(-12,2,20,2,12);wall(14,-3,2,18,12)
-
--- Only each character's signature piece is added; the rest of the player's own avatar is left untouched.
--- Gojo: blindfold. Zenitsu: sheathed katana. Reze: choker, replaced by the Bomb Devil head while transformed.
--- Parts tagged "Outfit" are rebuilt whenever the character or transformation changes.
-local function outfit(character,kind,fresh)
-    local h=character:WaitForChild("Humanoid");h.MaxHealth=Config.MaxHealth
-    if fresh then h.Health=Config.MaxHealth end
-    local head=character:WaitForChild("Head")
-    local root=character:WaitForChild("HumanoidRootPart")
-    for _,v in character:GetChildren() do if v:GetAttribute("Outfit") then v:Destroy() end end
-    -- Undo anything hidden by a previous Bomb Devil head.
-    for _,v in character:GetDescendants() do
-        local original=v:GetAttribute("OutfitHidden")
-        if original~=nil then v.Transparency=original;v:SetAttribute("OutfitHidden",nil) end
-    end
-    local function attach(anchor,name,size,offset,color,material,shape)
-        local p=part(name,size,anchor.CFrame*offset,color,material or Enum.Material.SmoothPlastic,character)
-        if shape then p.Shape=shape end
-        p.Anchored=false;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Massless=true;p:SetAttribute("Outfit",true)
-        local weld=Instance.new("WeldConstraint");weld.Part0=anchor;weld.Part1=p;weld.Parent=p
-        return p
-    end
-    local function hide(v)
-        if v:GetAttribute("OutfitHidden")==nil then v:SetAttribute("OutfitHidden",v.Transparency) end
-        v.Transparency=1
-    end
-    local neck=-head.Size.Y/2-.08
-    if kind=="Zenitsu" then
-        -- Sheathed katana at the left hip, edge up, hilt forward.
-        attach(root,"ZenitsuSaya",Vector3.new(.22,.28,3.4),CFrame.new(-1.15,-.9,.6)*CFrame.Angles(.25,.12,0),Color3.fromRGB(43,34,51))
-        attach(root,"ZenitsuTsuba",Vector3.new(.5,.5,.08),CFrame.new(-1.05,-.62,-1.0)*CFrame.Angles(.25,.12,0),Color3.fromRGB(42,37,34),Enum.Material.Metal)
-        attach(root,"ZenitsuTsuka",Vector3.new(.18,.22,1.1),CFrame.new(-1.0,-.5,-1.55)*CFrame.Angles(.25,.12,0),Color3.fromRGB(241,234,216))
-    elseif kind=="Reze" then
-        local transformed=(character:GetAttribute("BombDevilUntil") or 0)>workspace:GetServerTimeNow()
-        if transformed then
-            -- Bomb Devil: the real head and anything worn on it disappear under a bomb-shaped head with fuse hair.
-            hide(head)
-            for _,v in head:GetChildren() do if v:IsA("Decal") then hide(v) end end
-            for _,accessory in character:GetChildren() do
-                local handle=accessory:IsA("Accessory") and accessory:FindFirstChild("Handle")
-                local weld=handle and handle:FindFirstChildWhichIsA("Weld")
-                if weld and (weld.Part0==head or weld.Part1==head) then hide(handle) end
-            end
-            local metal=Color3.fromRGB(46,44,48)
-            local bomb=attach(head,"BombHead",Vector3.one*1.7,CFrame.new(0,.15,0),metal,Enum.Material.Metal,Enum.PartType.Ball)
-            attach(head,"BombBand",Vector3.new(1.76,.28,1.76),CFrame.new(0,-.05,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(24,22,26),Enum.Material.Metal,Enum.PartType.Cylinder)
-            attach(head,"BombCap",Vector3.new(.3,.55,.55),CFrame.new(0,1.05,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(120,112,104),Enum.Material.Metal,Enum.PartType.Cylinder)
-            for i=-2,2 do
-                attach(head,"BombTooth",Vector3.new(.16,.2,.08),CFrame.new(i*.19,-.38,-.8)*CFrame.Angles(0,i*.18,0),Color3.fromRGB(240,236,226))
-            end
-            for _,x in {-.34,.34} do
-                attach(head,"BombEye",Vector3.new(.34,.09,.08),CFrame.new(x,.22,-.82)*CFrame.Angles(0,x*.5,x>0 and -.2 or .2),Color3.new(1,.55,.2),Enum.Material.Neon)
-            end
-            -- Fuse cords hang from the back and sides like hair, each with a lit tip.
-            for i=0,6 do
-                local a=math.pi*.15+i*math.pi*.7/6
-                local offset=CFrame.new(math.cos(a)*.75,.25,math.sin(a)*.75)*CFrame.Angles(.35*math.sin(a),0,-.35*math.cos(a))
-                attach(head,"Fuse",Vector3.new(.1,1.3,.1),offset*CFrame.new(0,-.55,0),Color3.fromRGB(84,62,44))
-                local tip=attach(head,"FuseTip",Vector3.one*.16,offset*CFrame.new(0,-1.25,0),Config.Colors.Bomb,Enum.Material.Neon,Enum.PartType.Ball)
-                if i%2==0 then local sparks=Instance.new("Sparkles");sparks.SparkleColor=Config.Colors.Bomb;sparks.Parent=tip end
-            end
-            local light=Instance.new("PointLight");light.Color=Config.Colors.Bomb;light.Brightness=2;light.Range=10;light.Parent=bomb
-        else
-            -- Choker with the grenade pin ring at the front of the throat.
-            attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
-            attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
-        end
-    else
-        attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
-    end
-end
-local function joined(p)
-    local function dress(c,fresh) outfit(c,p:GetAttribute("Character") or "Gojo",fresh) end
-    p.CharacterAdded:Connect(function(c)
-        c:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(c) end)
-        dress(c,true)
-    end)
-    p:GetAttributeChangedSignal("Character"):Connect(function() if p.Character then task.spawn(dress,p.Character) end end)
-    if p.Character then
-        p.Character:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(p.Character) end)
-        task.spawn(dress,p.Character,true)
-    end
-end
-Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-]]></string>
-      </Properties>
-    </Item>
-    <Item class="Script" referent="5">
-      <Properties>
-        <string name="Name">Combat</string>
-        <token name="RunContext">0</token>
-        <string name="Source"><![CDATA[local Players=game:GetService("Players")
-local RunService=game:GetService("RunService")
-local RS=game:GetService("ReplicatedStorage")
-local Debris=game:GetService("Debris")
-local C=require(RS:WaitForChild("GojoConfig"))
-local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
-local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
-local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
-local states, blues, projectiles, domains, flights={},{},{},{},{}
-local kits={}
-for name,list in C.Kits do kits[name]={};for _,skill in list do kits[name][skill]=true end end
-local function kitOf(p) local name=p:GetAttribute("Character");return kits[name] and name or "Gojo" end
-local BASE_SPEED=game:GetService("StarterPlayer").CharacterWalkSpeed
-local now=workspace.GetServerTimeNow
-local function clock() return now(workspace) end
-local function character(p)
-    local m=p.Character
-    local h=m and m:FindFirstChildOfClass("Humanoid")
-    local r=m and m:FindFirstChild("HumanoidRootPart")
-    if h and r and h.Health>0 then return m,h,r end
-end
-local function targets(exclude)
-    local out={}
-    for _,m in workspace:GetChildren() do
-        if m:IsA("Model") and m~=exclude then
-            local h=m:FindFirstChildOfClass("Humanoid");local r=m:FindFirstChild("HumanoidRootPart")
-            if h and r and h.Health>0 then table.insert(out,{m=m,h=h,r=r}) end
-        end
-    end
-    return out
-end
-local function sendState(p,s)
-    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
-end
-local function validVector(v)
-    return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
-end
-local function rayParams(m)
-    local p=RaycastParams.new();p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={m};return p
-end
-local function damage(owner,t,amount)
-    if not t.m.Parent or t.h.Health<=0 then return end
-    t.h:TakeDamage(amount);fx:FireAllClients("Hit",{position=t.r.Position,damage=amount,owner=owner.UserId})
-end
-local function cancelBlue(p,s)
-    s.blueUntil=0
-    if blues[p] then blues[p]=nil;fx:FireAllClients("BlueEnd",{owner=p.UserId}) end
-end
--- WalkSpeed is derived from timed attributes so overlapping roots and slows never leave a stale speed behind.
-local function updateSpeed(m,h)
-    local n=clock();local speed=BASE_SPEED
-    if (m:GetAttribute("SlowedUntil") or 0)>n then speed*=C.FlameGod.SlowFactor end
-    if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
-    h.WalkSpeed=speed
-end
-local function setTimed(m,h,attribute,duration)
-    m:SetAttribute(attribute,math.max(m:GetAttribute(attribute) or 0,clock()+duration));updateSpeed(m,h)
-    task.delay(duration+.05,function() if m.Parent and h.Parent then updateSpeed(m,h) end end)
-end
--- A server-created constraint lifts the actual character, while its network owner simulates it smoothly.
--- A one-shot server velocity is unreliable for player-owned characters and falls before Purple releases.
-local function clearPurpleHover(s)
-    local hover=s.purpleHover
-    if not hover then return end
-    s.purpleHover=nil
-    hover.alignment:Destroy();hover.attachment:Destroy()
-end
-local function beginPurpleHover(s,m,h,r)
-    clearPurpleHover(s)
-    local cfg=C.Purple
-    local ceiling=workspace:Blockcast(r.CFrame,Vector3.new(3,5,3),Vector3.yAxis*cfg.RiseHeight,rayParams(m))
-    local height=ceiling and math.max(0,math.min(cfg.RiseHeight,ceiling.Distance-.5)) or cfg.RiseHeight
-    local duration=cfg.Windup+cfg.Recovery
-    local attachment=Instance.new("Attachment");attachment.Name="PurpleHoverAttachment";attachment.Parent=r
-    local alignment=Instance.new("AlignPosition")
-    alignment.Name="PurpleHover";alignment.Mode=Enum.PositionAlignmentMode.OneAttachment
-    alignment.Attachment0=attachment;alignment.Position=r.Position+Vector3.yAxis*height
-    alignment.ApplyAtCenterOfMass=true;alignment.RigidityEnabled=false
-    alignment.MaxForce=math.max(10000,r.AssemblyMass*workspace.Gravity*10)
-    alignment.MaxVelocity=cfg.RiseHeight/cfg.RiseDuration;alignment.Responsiveness=35
-    alignment.Parent=r
-    local hover={alignment=alignment,attachment=attachment}
-    s.purpleHover=hover
-    setTimed(m,h,"RootedUntil",duration)
-    Debris:AddItem(alignment,duration+.1);Debris:AddItem(attachment,duration+.1)
-    task.delay(duration,function() if s.purpleHover==hover then clearPurpleHover(s) end end)
-end
--- Shared by Thunderclap and FlameGod: dash along `flat`, stopping short of walls, and return who stood on the path.
-local function dashStrike(m,r,flat,distance,width)
-    local start=r.Position
-    local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*distance,rayParams(m))
-    local travelled=result and math.max(0,result.Distance-.5) or distance
-    local finish=start+flat*travelled
-    r.CFrame=CFrame.lookAt(finish,finish+flat)
-    local victims={}
-    for _,t in targets(m) do
-        local along=math.clamp((t.r.Position-start):Dot(flat),0,travelled)
-        if (start+flat*along-t.r.Position).Magnitude<=width then table.insert(victims,t) end
-    end
-    return start,finish,victims
-end
--- Knockback. Players own their own physics, so their client applies the impulse; anchored training targets
--- follow a server-simulated arc in the Heartbeat loop; any other unanchored rig takes the velocity directly.
-local function launch(t,velocity)
-    local victim=Players:GetPlayerFromCharacter(t.m)
-    if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
-    elseif t.r.Anchored then
-        local f=flights[t.m]
-        flights[t.m]={t=t,velocity=velocity,ground=f and f.ground or t.r.Position.Y}
-    else t.r.AssemblyLinearVelocity=velocity end
-end
-local function outward(from,t,fallback)
-    local delta=t.r.Position-from;delta=Vector3.new(delta.X,0,delta.Z)
-    return delta.Magnitude>.1 and delta.Unit or fallback
-end
-local function devil(m) return (m:GetAttribute("BombDevilUntil") or 0)>clock() end
-local function delayed(p,s,m,delaySeconds,callback)
-    local generation=s.generation
-    task.delay(delaySeconds,function()
-        local current=character(p)
-        if states[p]==s and generation==s.generation and current==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then callback() end
-    end)
-end
--- Starts a technique whose cost and cooldown are already paid: windup, busy time, the Cast broadcast, then the effect.
-local function perform(p,s,m,h,r,kind,direction,instant)
-    local n=clock()
-    local windup=instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
-    s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
-    if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
-    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup})
-    if kind=="Blue" then
-        cancelBlue(p,s)
-        local desired=r.Position+direction*C.Blue.Range
-        local result=workspace:Raycast(r.Position,direction*C.Blue.Range,rayParams(m))
-        if result then desired=result.Position-direction*2 end
-        desired=Vector3.new(desired.X,math.max(2,desired.Y),desired.Z)
-        delayed(p,s,m,C.Blue.Windup,function()
-            s.blueUntil=clock()+C.Blue.Duration;blues[p]={position=desired,untilTime=s.blueUntil,model=m}
-            fx:FireAllClients("Blue",{owner=p.UserId,position=desired,duration=C.Blue.Duration});sendState(p,s)
-        end)
-    elseif kind=="Red" or kind=="Purple" then
-        delayed(p,s,m,C[kind].Windup,function()
-            local cfgShot=C[kind];local origin=r.Position+direction*3
-            if kind=="Purple" then
-                -- Launch from eye level at the top of the rise, matching the visible merged sphere.
-                local head=m:FindFirstChild("Head")
-                origin=(head and head.Position or r.Position+Vector3.yAxis*1.5)+direction*cfgShot.OrbDistance
-            end
-            local id=tostring(p.UserId)..":"..tostring(clock())
-            table.insert(projectiles,{id=id,owner=p,model=m,position=origin,direction=direction,kind=kind,distance=0,hit={}})
-            fx:FireAllClients("Projectile",{id=id,owner=p.UserId,position=origin,direction=direction,kind=kind,speed=cfgShot.Speed,range=cfgShot.Range})
-        end)
-    elseif kind=="Domain" then
-        delayed(p,s,m,C.Domain.Windup,function()
-            local flat=Vector3.new(direction.X,0,direction.Z)
-            if flat.Magnitude<.05 then flat=Vector3.new(0,0,-1) end
-            local center=r.Position+flat.Unit*14
-            local d={owner=p,model=m,center=center,expires=clock()+C.Domain.Duration,nextTick=clock(),captured={}}
-            for _,t in targets(m) do
-                if (t.r.Position-center).Magnitude<C.Domain.Radius then
-                    table.insert(d.captured,t)
-                    t.m:SetAttribute("DomainLockedUntil",math.max(t.m:GetAttribute("DomainLockedUntil") or 0,d.expires))
-                end
-            end
-            table.insert(domains,d)
-            fx:FireAllClients("Domain",{owner=p.UserId,position=center,radius=C.Domain.Radius,duration=C.Domain.Duration})
-        end)
-    elseif kind=="Dash" then
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=flat.Unit
-        local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*C.Dash.Distance,rayParams(m))
-        local distance=result and math.max(0,result.Distance-.5) or C.Dash.Distance
-        r.CFrame+=flat*distance
-    elseif kind=="Thunderclap" then
-        local cfg=C.Thunderclap
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=flat.Unit
-        -- Crouched stance: rooted in place during the long windup.
-        if windup>.1 then setTimed(m,h,"RootedUntil",windup) end
-        delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
-            for _,t in victims do damage(p,t,cfg.Damage) end
-            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish})
-        end)
-    elseif kind=="Breath" then
-        delayed(p,s,m,C.Breath.Windup,function()
-            s.charges=C.Breath.Charges;s.chargesUntil=clock()+C.Breath.ChargeWindow;sendState(p,s)
-            fx:FireAllClients("Strike",{position=r.Position-Vector3.new(0,3,0),big=true})
-        end)
-    elseif kind=="FlameGod" then
-        local cfg=C.FlameGod
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=flat.Unit
-        setTimed(m,h,"RootedUntil",windup)
-        delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
-            fx:FireAllClients("FlameGod",{owner=p.UserId,from=start,to=finish})
-            -- Too fast to see: the cuts land only after the user is already past.
-            task.delay(cfg.HitDelay,function()
-                for _,t in victims do damage(p,t,cfg.Damage) end
-            end)
-            -- The cut lands after the turn; recoil follows just after the user sees the result.
-            task.delay(cfg.RecoilDelay,function()
-                if p.Character~=m or not m.Parent or not h.Parent or h.Health<=0 then return end
-                if h.Health>1 then h.Health=math.max(1,h.Health-cfg.SelfDamage) end
-                setTimed(m,h,"SlowedUntil",cfg.SlowDuration)
-                fx:FireClient(p,"Recoil",{damage=cfg.SelfDamage,duration=cfg.SlowDuration})
-            end)
-        end)
-    elseif kind=="BombDevil" then
-        local cfg=C.BombDevil
-        -- Rooted from the pin pull until her own sight returns.
-        setTimed(m,h,"RootedUntil",windup+cfg.Blackout)
-        delayed(p,s,m,windup,function()
-            local center=r.Position
-            -- No time limit: the transformation lasts until Detonation (or death) ends it.
-            m:SetAttribute("BombDevilUntil",1e12)
-            local healed=math.max(0,math.min(h.MaxHealth,h.Health+h.MaxHealth*cfg.Heal)-h.Health)
-            if healed>0 then h.Health+=healed end
-            fx:FireAllClients("BombDevil",{owner=p.UserId,position=center+Vector3.new(0,1.5,0),blackout=cfg.Blackout,healed=math.floor(healed+.5)})
-            for _,t in targets(m) do
-                local distance=(t.r.Position-center).Magnitude
-                if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
-                    local power=1-.5*distance/cfg.Radius
-                    launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
-                end
-            end
-        end)
-    elseif kind=="Detonation" then
-        local cfg=C.Detonation
-        -- The fuse hair burns down for Windup seconds (free to move, other skills locked), then everything goes off.
-        delayed(p,s,m,windup,function()
-            local center=r.Position
-            fx:FireAllClients("Detonation",{owner=p.UserId,position=center,radius=cfg.Radius})
-            for _,t in targets(m) do
-                local distance=(t.r.Position-center).Magnitude
-                if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
-                    local power=1-.55*distance/cfg.Radius
-                    launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
-                end
-            end
-            -- Back to human; the transformation can be used again after the recharge.
-            m:SetAttribute("BombDevilUntil",0)
-            s.cooldowns.BombDevil=clock()+C.BombDevil.Recharge
-            sendState(p,s)
-        end)
-    elseif kind=="Rampage" then
-        local cfg=C.Rampage
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=flat.Unit
-        delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
-            for _,t in victims do
-                damage(p,t,cfg.Damage);launch(t,flat*14+Vector3.new(0,cfg.Launch,0))
-            end
-            -- Missed everything: she skids on a little further instead of stopping dead.
-            local slide=#victims==0
-            if slide then r.AssemblyLinearVelocity=flat*cfg.SlideSpeed end
-            fx:FireAllClients("Rampage",{owner=p.UserId,from=start,to=finish,delay=cfg.TrailDelay,slide=slide})
-            s.comboDir=flat;s.comboUntil=clock()+C.Kick.ComboWindow;sendState(p,s)
-            -- The gunpowder left on the path goes off on its own, even if Reze has moved on or died.
-            local length=(finish-start).Magnitude
-            task.delay(cfg.TrailDelay,function()
-                for _,t in targets(m) do
-                    local along=math.clamp((t.r.Position-start):Dot(flat),0,length)
-                    if (start+flat*along-t.r.Position).Magnitude<=cfg.TrailRadius then
-                        damage(p,t,cfg.TrailDamage);launch(t,Vector3.new(0,cfg.TrailLift,0))
-                    end
-                end
-            end)
-        end)
-    elseif kind=="Kick" then
-        local cfg=C.Kick
-        -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
-        local combo=(s.comboUntil or 0)>n and s.comboDir~=nil
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=combo and s.comboDir or flat.Unit
-        s.comboUntil=0
-        delayed(p,s,m,windup,function()
-            local struck={}
-            local from=r.Position
-            local center,radius,damageAmount,knock,lift
-            if combo then
-                local _,finish,victims=dashStrike(m,r,flat,cfg.ComboDistance,cfg.Width)
-                for _,t in victims do struck[t.m]=t end
-                center=finish+flat*2.5;radius=cfg.ComboRadius;damageAmount=cfg.ComboDamage;knock=cfg.ComboKnockback;lift=cfg.ComboLift
-            else
-                center=from+flat*cfg.Reach;radius=cfg.Radius;damageAmount=cfg.Damage;knock=cfg.Knockback;lift=cfg.Lift
-            end
-            for _,t in targets(m) do
-                if (t.r.Position-center).Magnitude<=radius then struck[t.m]=t end
-            end
-            fx:FireAllClients("Kick",{owner=p.UserId,from=from,to=center,combo=combo,radius=radius})
-            for _,t in struck do
-                damage(p,t,damageAmount);launch(t,flat*knock+Vector3.new(0,lift,0))
-            end
-        end)
-    end
-end
-remote.OnServerEvent:Connect(function(p,skill,aim)
-    local s=states[p];if not s then return end
-    local n=clock()
-    if n-s.lastRequest<.1 then return end;s.lastRequest=n
-    if type(skill)~="string" or not kits[kitOf(p)][skill] or not validVector(aim) then return end
-    local m,h,r=character(p);if not m then return end
-    if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
-    -- During a hold: the other of Blue/Red fuses both into Purple (paying its own cost), the same one fires at once.
-    local hold=s.hold
-    if hold and (skill=="Blue" or skill=="Red") then
-        if s.busyUntil>n then return end
-        if skill~=hold.kind then
-            if (s.cooldowns[skill] or 0)>n or s.energy<C[skill].Cost then return end
-            s.energy-=C[skill].Cost;s.cooldowns[skill]=n+C[skill].Cooldown
-        end
-        s.hold=nil
-        perform(p,s,m,h,r,skill==hold.kind and skill or "Purple",aim.Unit,false)
-        sendState(p,s);return
-    end
-    if hold and skill~="Dash" then return end
-    if s.busyUntil>n then return end
-    if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
-    if skill=="BombDevil" and devil(m) then return end
-    if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
-    local cfg=C[skill]
-    local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
-    if instant then
-        s.charges-=1
-    else
-        if (s.cooldowns[skill] or 0)>n or s.energy<cfg.Cost then return end
-        s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown
-    end
-    -- Reze pays in health, never lethally.
-    if cfg.HpCost and h.Health>1 then h.Health=math.max(1,h.Health-h.MaxHealth*cfg.HpCost) end
-    -- Gojo: Blue and Red are held with an arm raised for up to Hold.Duration seconds instead of firing at once.
-    if skill=="Blue" or skill=="Red" then
-        local hold={kind=skill,untilTime=n+C.Hold.Duration}
-        s.hold=hold
-        fx:FireAllClients("Hold",{owner=p.UserId,kind=skill,position=r.Position,duration=C.Hold.Duration})
-        local generation=s.generation
-        task.delay(C.Hold.Duration,function()
-            if s.hold~=hold or generation~=s.generation then return end
-            s.hold=nil
-            local cm,ch,cr=character(p)
-            if cm==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then
-                -- No fresh aim on a timeout: fire where the character faces (it turns with the first-person camera).
-                perform(p,s,cm,ch,cr,skill,cr.CFrame.LookVector,false)
-            end
-            sendState(p,s)
-        end)
-        sendState(p,s);return
-    end
-    perform(p,s,m,h,r,skill,aim.Unit,instant)
-    sendState(p,s)
-end)
-selectRemote.OnServerEvent:Connect(function(p,name)
-    local s=states[p]
-    if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s)
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
-    if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
-    p:SetAttribute("Character",name);sendState(p,s)
-end)
-local sync=0
-RunService.Heartbeat:Connect(function(dt)
-    local n=clock();sync+=dt
-    for p,s in states do
-        local regen=C.EnergyRegen
-        s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
-        if sync>=.15 then sendState(p,s) end
-    end
-    if sync>=.15 then sync=0 end
-    for p,b in blues do
-        if n>b.untilTime or not b.model.Parent then
-            if states[p] then cancelBlue(p,states[p]) else blues[p]=nil end
-        else
-            for _,t in targets(b.model) do
-                local delta=b.position-t.r.Position;local distance=delta.Magnitude
-                if distance<C.Blue.Radius and distance>2 then
-                    local step=delta.Unit*math.min(C.Blue.PullSpeed*dt,distance-2)
-                    local obstacle=workspace:Raycast(t.r.Position,step,rayParams(t.m))
-                    if not obstacle then t.r.CFrame+=step end
-                end
-            end
-        end
-    end
-    for i=#projectiles,1,-1 do
-        local shot=projectiles[i];local cfg=C[shot.kind];local step=shot.direction*cfg.Speed*dt
-        -- Hollow Purple travels through arena geometry, like the reference; victims still receive one hit.
-        -- Its wide damage radius used to clip a nearby pillar and delete it immediately after release.
-        local hitWorld=not cfg.PierceWorld and workspace:Spherecast(shot.position,cfg.Radius,step,rayParams(shot.model)) or nil
-        local segmentLength=step.Magnitude
-        if hitWorld then
-            local hitModel=hitWorld.Instance:FindFirstAncestorOfClass("Model")
-            if not (hitModel and hitModel:FindFirstChildOfClass("Humanoid")) then segmentLength=hitWorld.Distance end
-        end
-        local travel=shot.direction*segmentLength
-        for _,t in targets(shot.model) do
-            local projection=math.clamp((t.r.Position-shot.position):Dot(shot.direction),0,segmentLength)
-            local closest=shot.position+shot.direction*projection
-            if not shot.hit[t.m] and (t.r.Position-closest).Magnitude<=cfg.Radius+2 then
-                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage)
-                if shot.kind=="Red" and not t.r.Anchored then t.r.AssemblyLinearVelocity+=shot.direction*34 end
-            end
-        end
-        shot.position+=travel;shot.distance+=segmentLength
-        if shot.distance>=cfg.Range or segmentLength<step.Magnitude-.001 then
-            fx:FireAllClients("ProjectileEnd",{id=shot.id,position=shot.position,kind=shot.kind});table.remove(projectiles,i)
-        end
-    end
-    -- Knocked-back training targets: ballistic arc until they land back on their starting height; walls stop drift.
-    for model,f in flights do
-        local root=f.t.r
-        if not model.Parent or not root.Parent then
-            flights[model]=nil
-        else
-            f.velocity-=Vector3.new(0,workspace.Gravity*dt,0)
-            local step=f.velocity*dt
-            local wall=workspace:Raycast(root.Position,Vector3.new(step.X,0,step.Z),rayParams(model))
-            if wall then step=Vector3.new(0,step.Y,0);f.velocity=Vector3.new(0,f.velocity.Y,0) end
-            local position=root.Position+step
-            if position.Y<=f.ground and f.velocity.Y<0 then position=Vector3.new(position.X,f.ground,position.Z);flights[model]=nil end
-            root.CFrame=CFrame.new(position)*root.CFrame.Rotation
-        end
-    end
-    for i=#domains,1,-1 do
-        local d=domains[i]
-        if n>=d.expires or not d.model.Parent then
-            for _,t in d.captured do
-                if t.m.Parent and (t.m:GetAttribute("DomainLockedUntil") or 0)<=d.expires then t.m:SetAttribute("DomainLockedUntil",0) end
-            end
-            table.remove(domains,i)
-        else
-            for _,t in d.captured do
-                if t.m.Parent and t.h.Health>0 then
-                    local delta=t.r.Position-d.center
-                    if delta.Magnitude>C.Domain.Radius-2 then t.r.CFrame=CFrame.new(d.center+delta.Unit*(C.Domain.Radius-2))*t.r.CFrame.Rotation end
-                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage) end
-                end
-            end
-            if n>=d.nextTick then d.nextTick=n+C.Domain.Tick end
-        end
-    end
-end)
-local function joined(p)
-    local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
-    local function reset()
-        clearPurpleHover(s)
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
-        local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() clearPurpleHover(s);s.generation+=1;s.hold=nil;s.comboUntil=0;cancelBlue(p,s) end) end
-    end
-    p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
-end
-Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then clearPurpleHover(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
-]]></string>
-      </Properties>
-    </Item>
-    <Item class="Script" referent="6">
-      <Properties>
-        <string name="Name">StoreVFX</string>
-        <token name="RunContext">0</token>
-        <string name="Source"><![CDATA[-- Optional Creator Store decoration. The game also runs when permissions prevent loading.
--- Only ParticleEmitter data is copied; imported scripts are never parented to the DataModel.
-local InsertService=game:GetService("InsertService")
-local RS=game:GetService("ReplicatedStorage")
-local templates=Instance.new("Folder");templates.Name="StoreVFX";templates.Parent=RS
-local ASSET_ID=17879749515 -- Red and Blue VFX Gojo !, @XxMurder_ProgamexX
-task.spawn(function()
-    local ok,model=pcall(function() return InsertService:LoadAsset(ASSET_ID) end)
-    if not ok then
-        templates:SetAttribute("Status","Permission unavailable; procedural fallback")
-        warn("Creator Store VFX not loaded. Open this place with the account that acquired asset "..ASSET_ID)
-        return
-    end
-    -- model remains unparented throughout inspection.
-    for _,v in model:GetDescendants() do if v:IsA("LuaSourceContainer") then v:Destroy() end end
-    local count=0
-    for _,v in model:GetDescendants() do
-        if v:IsA("ParticleEmitter") and count<8 then
-            count+=1
-            local copy=v:Clone()
-            for _,child in copy:GetChildren() do child:Destroy() end
-            copy.Name="StoreParticle"..count
-            copy.Enabled=false;copy.Rate=math.min(copy.Rate,30)
-            copy.Lifetime=NumberRange.new(math.min(copy.Lifetime.Min,1),math.min(copy.Lifetime.Max,1.6))
-            copy.Speed=NumberRange.new(math.min(copy.Speed.Min,10),math.min(copy.Speed.Max,16))
-            copy.Parent=templates
-        end
-    end
-    model:Destroy()
-    templates:SetAttribute("Status",count>0 and "Loaded" or "No particle emitters; procedural fallback")
-    templates:SetAttribute("SourceAssetId",ASSET_ID)
-end)
-]]></string>
-      </Properties>
-    </Item>
-  </Item>
-  <Item class="StarterPlayer" referent="7">
-    <Properties>
-      <string name="Name">StarterPlayer</string>
-      <token name="CameraMode">1</token>
-      <float name="CharacterJumpPower">45</float>
-      <float name="CharacterWalkSpeed">20</float>
-    </Properties>
-    <Item class="StarterPlayerScripts" referent="8">
-      <Properties>
-        <string name="Name">StarterPlayerScripts</string>
-      </Properties>
-      <Item class="LocalScript" referent="9">
-        <Properties>
-          <string name="Name">Gojo</string>
-          <string name="Source"><![CDATA[local Players=game:GetService("Players")
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Workspace" referent="10">
+		<Properties>
+			<float name="AirDensity">0.00120000006</float>
+			<float name="AirTurbulenceIntensity">0</float>
+			<bool name="AllowThirdPartySales">false</bool>
+			<token name="AuthorityMode">1</token>
+			<token name="AvatarUnificationMode">0</token>
+			<token name="ClientAnimatorThrottling">0</token>
+			<Ref name="CurrentCamera">RBX71BA1C6067E04E3983BE8BEB9BECFEFE</Ref>
+			<double name="DistributedGameTime">0</double>
+			<token name="EnableSLIMAvatars">0</token>
+			<token name="ExpandedTerrain">0</token>
+			<bool name="ExplicitAutoJoints">true</bool>
+			<bool name="FallHeightEnabled">true</bool>
+			<float name="FallenPartsDestroyHeight">-500</float>
+			<token name="FluidForces">0</token>
+			<Vector3 name="GlobalWind">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<float name="Gravity">150</float>
+			<token name="IKControlConstraintSupport">0</token>
+			<token name="ImprovedAnimationConstraint">0</token>
+			<token name="ImprovedPhysicsReplication">0</token>
+			<token name="LayeredClothingCacheOptimizations">0</token>
+			<token name="LuauTypeCheckMode">0</token>
+			<token name="MapTVRemoteToGamepadKeycodes">0</token>
+			<token name="MeshPartHeadsAndAccessories">0</token>
+			<token name="MeshStreamingAndImprovedLods">0</token>
+			<token name="ModelStreamingBehavior">0</token>
+			<token name="NextGenerationReplication">0</token>
+			<token name="PathfindingUseImprovedSearch">0</token>
+			<token name="PhysicsSteppingMethod">0</token>
+			<token name="PlayerCharacterDestroyBehavior">0</token>
+			<token name="PlayerScriptsUseInputActionSystem">0</token>
+			<token name="PredictiveStreamingMode">0</token>
+			<token name="PrimalPhysicsSolver">0</token>
+			<token name="RejectCharacterDeletions">0</token>
+			<token name="RenderingCacheOptimizations">0</token>
+			<token name="ReplicateInstanceDestroySetting">0</token>
+			<token name="ReplicationFrequency">0</token>
+			<token name="ReplicationThroughput">0</token>
+			<token name="Retargeting">0</token>
+			<token name="SandboxedInstanceMode">0</token>
+			<token name="SignalBehavior2">0</token>
+			<token name="StreamOutBehavior">0</token>
+			<bool name="StreamingAdaptiveRadius">false</bool>
+			<bool name="StreamingEnabled">false</bool>
+			<token name="StreamingIntegrityMode">0</token>
+			<int name="StreamingMinRadius">64</int>
+			<int name="StreamingTargetRadius">1024</int>
+			<bool name="TerrainWeldsFixed">true</bool>
+			<token name="TouchEventsUseCollisionGroups">0</token>
+			<bool name="TouchesUseCollisionGroups">false</bool>
+			<token name="UseFixedSimulation">0</token>
+			<token name="UseInputSink">0</token>
+			<token name="UseNewLuauTypeSolver">2</token>
+			<token name="ValidateEnabledProximityPrompt">0</token>
+			<bool name="AutoSimulate">true</bool>
+			<BinaryString name="CollisionGroupData">AQEABP////8HRGVmYXVsdA==</BinaryString>
+			<Vector3 name="GravityDirection">
+				<X>0</X>
+				<Y>-1</Y>
+				<Z>0</Z>
+			</Vector3>
+			<float name="SimulationRate">1</float>
+			<float name="Wind">0</float>
+			<Vector3 name="WindDirection">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<token name="LevelOfDetail">0</token>
+			<CoordinateFrame name="ModelMeshCFrame">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+				<R00>1</R00>
+				<R01>0</R01>
+				<R02>0</R02>
+				<R10>0</R10>
+				<R11>1</R11>
+				<R12>0</R12>
+				<R20>0</R20>
+				<R21>0</R21>
+				<R22>1</R22>
+			</CoordinateFrame>
+			<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<Vector3 name="ModelMeshSize">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<token name="ModelStreamingMode">0</token>
+			<bool name="NeedsPivotMigration">false</bool>
+			<Ref name="PrimaryPart">null</Ref>
+			<float name="ScaleFactor">1</float>
+			<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<OptionalCoordinateFrame name="WorldPivotData"></OptionalCoordinateFrame>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Workspace</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000002</UniqueId>
+		</Properties>
+		<Item class="Terrain" referent="RBXCC269EB484B543248D77C34B1B38DB9F">
+			<Properties>
+				<token name="AcquisitionMethod">0</token>
+				<bool name="Decoration">false</bool>
+				<float name="GrassLength">0.699999988</float>
+				<BinaryString name="MaterialColors"><![CDATA[AAAAAAAAan8/P39rf2Y/ilY+j35fi21PZmxvZbDqw8faiVpHOi4kHh4lZlw76JxKc3trhHta
+gcLgc4RKxr21zq2UlJSM]]></BinaryString>
+				<SharedString name="Materials">leDEa27wHRPaBssaK0OoqQ==</SharedString>
+				<BinaryString name="PhysicsGrid">AgMAAAAAAAAAAAAAAAA=</BinaryString>
+				<BinaryString name="SmoothGrid">AQU=</BinaryString>
+				<bool name="SmoothVoxelsUpgraded">false</bool>
+				<AssetContentMap name="VoxelGridAssetContentMap">[]</AssetContentMap>
+				<Color3 name="WaterColor">
+					<R>0.0500000007</R>
+					<G>0.330000013</G>
+					<B>0.360000014</B>
+				</Color3>
+				<float name="WaterReflectance">1</float>
+				<float name="WaterTransparency">0.300000012</float>
+				<float name="WaterWaveSize">0.150000006</float>
+				<float name="WaterWaveSpeed">10</float>
+				<bool name="Anchored">true</bool>
+				<bool name="AudioCanCollide">true</bool>
+				<float name="BackParamA">-0.5</float>
+				<float name="BackParamB">0.5</float>
+				<token name="BackSurface">0</token>
+				<token name="BackSurfaceInput">0</token>
+				<float name="BottomParamA">-0.5</float>
+				<float name="BottomParamB">0.5</float>
+				<token name="BottomSurface">4</token>
+				<token name="BottomSurfaceInput">0</token>
+				<CoordinateFrame name="CFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">true</bool>
+				<bool name="CanQuery">true</bool>
+				<bool name="CanTouch">true</bool>
+				<bool name="CastShadow">true</bool>
+				<string name="CollisionGroup">Default</string>
+				<int name="CollisionGroupId">0</int>
+				<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+				<PhysicalProperties name="CustomPhysicalProperties">
+					<CustomPhysics>false</CustomPhysics>
+				</PhysicalProperties>
+				<bool name="EnableFluidForces">true</bool>
+				<float name="FrontParamA">-0.5</float>
+				<float name="FrontParamB">0.5</float>
+				<token name="FrontSurface">0</token>
+				<token name="FrontSurfaceInput">0</token>
+				<float name="LeftParamA">-0.5</float>
+				<float name="LeftParamB">0.5</float>
+				<token name="LeftSurface">0</token>
+				<token name="LeftSurfaceInput">0</token>
+				<bool name="Locked">true</bool>
+				<bool name="Massless">false</bool>
+				<token name="Material">256</token>
+				<string name="MaterialVariantSerialized"></string>
+				<CoordinateFrame name="PivotOffset">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<float name="Reflectance">0</float>
+				<float name="RightParamA">-0.5</float>
+				<float name="RightParamB">0.5</float>
+				<token name="RightSurface">0</token>
+				<token name="RightSurfaceInput">0</token>
+				<int name="RootPriority">0</int>
+				<Vector3 name="RotVelocity">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<float name="TopParamA">-0.5</float>
+				<float name="TopParamB">0.5</float>
+				<token name="TopSurface">3</token>
+				<token name="TopSurfaceInput">0</token>
+				<float name="Transparency">0</float>
+				<Vector3 name="Velocity">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<Vector3 name="size">
+					<X>2044</X>
+					<Y>252</Y>
+					<Z>2044</Z>
+				</Vector3>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">Terrain</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e0</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="Camera" referent="RBX71BA1C6067E04E3983BE8BEB9BECFEFE">
+			<Properties>
+				<CoordinateFrame name="CFrame">
+					<X>-7.5</X>
+					<Y>20</Y>
+					<Z>20</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>-0</R02>
+					<R10>-0</R10>
+					<R11>0.780868828</R11>
+					<R12>0.624695063</R12>
+					<R20>0</R20>
+					<R21>-0.624695063</R21>
+					<R22>0.780868828</R22>
+				</CoordinateFrame>
+				<Ref name="CameraSubject">null</Ref>
+				<token name="CameraType">0</token>
+				<float name="FieldOfView">70</float>
+				<token name="FieldOfViewMode">0</token>
+				<CoordinateFrame name="Focus">
+					<X>-7.5</X>
+					<Y>18.7506104</Y>
+					<Z>18.4382629</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<bool name="HeadLocked">true</bool>
+				<float name="HeadScale">1</float>
+				<token name="OrthographicMode">0</token>
+				<float name="OrthographicSize">300</float>
+				<token name="ProjectionType">0</token>
+				<bool name="VRTiltAndRollEnabled">false</bool>
+				<float name="ViewStretch">1</float>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">Camera</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003f0</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="TimerService" referent="RBXB8D2B1F36F804F43BF82D5CEF988B23E">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">TimerService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000364</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CollectionService" referent="RBX0DBE2672FB954CD4A8E4A98D19FEA238">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">CollectionService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000365</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="SoundService" referent="RBXB958ADEBCA164F87BD2C323248FEDCB5">
+		<Properties>
+			<bool name="AcousticSimulationEnabled">false</bool>
+			<token name="AmbientReverb">0</token>
+			<token name="AudioApiByDefault">0</token>
+			<token name="CharacterSoundsUseNewApi">0</token>
+			<token name="DefaultListenerLocation">0</token>
+			<bool name="DiffractionEnabled">true</bool>
+			<float name="DistanceFactor">3.32999992</float>
+			<float name="DopplerScale">1</float>
+			<bool name="IsNewExpForAudioApiByDefault">false</bool>
+			<CoordinateFrame name="ListenerCFrame">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+				<R00>1</R00>
+				<R01>0</R01>
+				<R02>0</R02>
+				<R10>0</R10>
+				<R11>1</R11>
+				<R12>0</R12>
+				<R20>0</R20>
+				<R21>0</R21>
+				<R22>1</R22>
+			</CoordinateFrame>
+			<Ref name="ListenerObject">null</Ref>
+			<token name="ListenerType">0</token>
+			<bool name="OcclusionEnabled">true</bool>
+			<bool name="RespectFilteringEnabled">false</bool>
+			<bool name="ReverbEnabled">true</bool>
+			<float name="RolloffScale">1</float>
+			<token name="VolumetricAudio">1</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">SoundService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000366</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="VideoCaptureService" referent="RBXFCBF3635A16B45419F13E24959C108CB">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">VideoCaptureService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000372</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="NonReplicatedCSGDictionaryService" referent="RBXB5D3F5A22F59452CB3B10E82331376AB">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">NonReplicatedCSGDictionaryService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000373</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CSGDictionaryService" referent="RBXCA080336DA7B4BD59933E92E7C9FB2CE">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">CSGDictionaryService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000374</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Chat" referent="RBX5FEC49C009F3452AAC520C82D3592942">
+		<Properties>
+			<bool name="BubbleChatEnabled">false</bool>
+			<bool name="IsAutoMigrated">false</bool>
+			<bool name="LoadDefaultChat">true</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Chat</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000037a</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Players" referent="RBX0868B1F0DFB540B6AF4BFA7DA23EAC6C">
+		<Properties>
+			<bool name="BanningEnabled">true</bool>
+			<bool name="CharacterAutoLoads">true</bool>
+			<int name="MaxPlayersInternal">12</int>
+			<int name="PreferredPlayersInternal">0</int>
+			<float name="RespawnTime">5</float>
+			<bool name="UseStrafingAnimations">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Players</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000037c</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ReplicatedFirst" referent="RBXB519C1CB3E4A44C584CBBE07EFC30A39">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ReplicatedFirst</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000037f</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TweenService" referent="RBX9A4ADA8ED1A1485ABA46A40AC4FD15E8">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">TweenService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000381</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="MaterialService" referent="RBX285B4F6DC8B943198F8ADDB7FF769E74">
+		<Properties>
+			<string name="AsphaltName">Asphalt</string>
+			<string name="BasaltName">Basalt</string>
+			<string name="BrickName">Brick</string>
+			<string name="CardboardName">Cardboard</string>
+			<string name="CarpetName">Carpet</string>
+			<string name="CeramicTilesName">CeramicTiles</string>
+			<string name="ClayRoofTilesName">ClayRoofTiles</string>
+			<string name="CobblestoneName">Cobblestone</string>
+			<string name="ConcreteName">Concrete</string>
+			<string name="CorrodedMetalName">CorrodedMetal</string>
+			<string name="CrackedLavaName">CrackedLava</string>
+			<string name="DiamondPlateName">DiamondPlate</string>
+			<string name="FabricName">Fabric</string>
+			<string name="FoilName">Foil</string>
+			<string name="GlacierName">Glacier</string>
+			<string name="GraniteName">Granite</string>
+			<string name="GrassName">Grass</string>
+			<string name="GroundName">Ground</string>
+			<string name="IceName">Ice</string>
+			<string name="LeafyGrassName">LeafyGrass</string>
+			<string name="LeatherName">Leather</string>
+			<string name="LimestoneName">Limestone</string>
+			<string name="MarbleName">Marble</string>
+			<string name="MetalName">Metal</string>
+			<string name="MudName">Mud</string>
+			<string name="PavementName">Pavement</string>
+			<string name="PebbleName">Pebble</string>
+			<string name="PlasterName">Plaster</string>
+			<string name="PlasticName">Plastic</string>
+			<string name="RockName">Rock</string>
+			<string name="RoofShinglesName">RoofShingles</string>
+			<string name="RubberName">Rubber</string>
+			<string name="SaltName">Salt</string>
+			<string name="SandName">Sand</string>
+			<string name="SandstoneName">Sandstone</string>
+			<string name="SlateName">Slate</string>
+			<string name="SmoothPlasticName">SmoothPlastic</string>
+			<string name="SnowName">Snow</string>
+			<bool name="Use2022MaterialsXml">false</bool>
+			<string name="WoodName">Wood</string>
+			<string name="WoodPlanksName">WoodPlanks</string>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">MaterialService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000382</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TextChatService" referent="RBXD188E4CB0E314A24A200B82DDE734A9A">
+		<Properties>
+			<bool name="ChatTranslationFTUXShown">true</bool>
+			<bool name="ChatTranslationToggleEnabled">false</bool>
+			<token name="ChatVersion">0</token>
+			<bool name="CreateDefaultCommands">true</bool>
+			<bool name="CreateDefaultTextChannels">true</bool>
+			<bool name="HasSeenDeprecationDialog">false</bool>
+			<bool name="IsLegacyChatDisabled">false</bool>
+			<token name="PlatformIntegratedChat">0</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">TextChatService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000383</UniqueId>
+		</Properties>
+		<Item class="ChatWindowConfiguration" referent="RBX87F7CAB1F1EF4A0EBE87492F237C8C35">
+			<Properties>
+				<Color3 name="BackgroundColor3">
+					<R>0.0980392173</R>
+					<G>0.105882354</G>
+					<B>0.113725491</B>
+				</Color3>
+				<double name="BackgroundTransparency">0.2999999999999999889</double>
+				<bool name="Enabled">true</bool>
+				<Font name="FontFace">
+					<Family><url>rbxasset://fonts/families/GothamSSm.json</url></Family>
+					<Weight>500</Weight>
+					<Style>Normal</Style>
+					<CachedFaceId><url>rbxasset://fonts/Montserrat-Medium.ttf</url></CachedFaceId>
+				</Font>
+				<float name="HeightScale">1</float>
+				<token name="HorizontalAlignment">1</token>
+				<token name="TextChannelDisplayMode">0</token>
+				<Color3 name="TextColor3">
+					<R>1</R>
+					<G>1</G>
+					<B>1</B>
+				</Color3>
+				<int64 name="TextSize">14</int64>
+				<Color3 name="TextStrokeColor3">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<double name="TextStrokeTransparency">0.5</double>
+				<token name="VerticalAlignment">1</token>
+				<float name="WidthScale">1</float>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ChatWindowConfiguration</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e2</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ChatInputBarConfiguration" referent="RBX86DB41FAE3754A7A9E3F351DB4614C31">
+			<Properties>
+				<bool name="AutocompleteEnabled">true</bool>
+				<Color3 name="BackgroundColor3">
+					<R>0.0980392173</R>
+					<G>0.105882354</G>
+					<B>0.113725491</B>
+				</Color3>
+				<double name="BackgroundTransparency">0.2000000000000000111</double>
+				<bool name="Enabled">true</bool>
+				<Font name="FontFace">
+					<Family><url>rbxasset://fonts/families/GothamSSm.json</url></Family>
+					<Weight>500</Weight>
+					<Style>Normal</Style>
+					<CachedFaceId><url>rbxasset://fonts/Montserrat-Medium.ttf</url></CachedFaceId>
+				</Font>
+				<token name="KeyboardKeyCode">47</token>
+				<Color3 name="PlaceholderColor3">
+					<R>0.698039234</R>
+					<G>0.698039234</G>
+					<B>0.698039234</B>
+				</Color3>
+				<Ref name="TargetTextChannel">null</Ref>
+				<Color3 name="TextColor3">
+					<R>1</R>
+					<G>1</G>
+					<B>1</B>
+				</Color3>
+				<int64 name="TextSize">14</int64>
+				<Color3 name="TextStrokeColor3">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<double name="TextStrokeTransparency">0.5</double>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ChatInputBarConfiguration</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e3</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="BubbleChatConfiguration" referent="RBXCEFC41C1FAD74F5F8A8954B8B006887A">
+			<Properties>
+				<string name="AdorneeName">HumanoidRootPart</string>
+				<Color3 name="BackgroundColor3">
+					<R>0.980392158</R>
+					<G>0.980392158</G>
+					<B>0.980392158</B>
+				</Color3>
+				<double name="BackgroundTransparency">0.10000000000000000555</double>
+				<float name="BubbleDuration">15</float>
+				<float name="BubblesSpacing">6</float>
+				<bool name="Enabled">true</bool>
+				<token name="Font">18</token>
+				<Font name="FontFace">
+					<Family><url>rbxasset://fonts/families/GothamSSm.json</url></Family>
+					<Weight>500</Weight>
+					<Style>Normal</Style>
+					<CachedFaceId><url>rbxasset://fonts/Montserrat-Medium.ttf</url></CachedFaceId>
+				</Font>
+				<Vector3 name="LocalPlayerStudsOffset">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<float name="MaxBubbles">3</float>
+				<float name="MaxDistance">100</float>
+				<float name="MinimizeDistance">40</float>
+				<bool name="TailVisible">true</bool>
+				<Color3 name="TextColor3">
+					<R>0.223529413</R>
+					<G>0.23137255</G>
+					<B>0.239215687</B>
+				</Color3>
+				<int64 name="TextSize">16</int64>
+				<float name="VerticalStudsOffset">0</float>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">BubbleChatConfiguration</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e4</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ChannelTabsConfiguration" referent="RBX775D29E88A2E470E8A784D4EAACD4049">
+			<Properties>
+				<Color3 name="BackgroundColor3">
+					<R>0.0980392173</R>
+					<G>0.105882354</G>
+					<B>0.113725491</B>
+				</Color3>
+				<double name="BackgroundTransparency">0</double>
+				<bool name="Enabled">false</bool>
+				<Font name="FontFace">
+					<Family><url>rbxasset://fonts/families/BuilderSans.json</url></Family>
+					<Weight>700</Weight>
+					<Style>Normal</Style>
+					<CachedFaceId><url>rbxasset://fonts/BuilderSans-Bold.otf</url></CachedFaceId>
+				</Font>
+				<Color3 name="HoverBackgroundColor3">
+					<R>0.490196079</R>
+					<G>0.490196079</G>
+					<B>0.490196079</B>
+				</Color3>
+				<Color3 name="SelectedTabTextColor3">
+					<R>1</R>
+					<G>1</G>
+					<B>1</B>
+				</Color3>
+				<Color3 name="TextColor3">
+					<R>0.686274529</R>
+					<G>0.686274529</G>
+					<B>0.686274529</B>
+				</Color3>
+				<int64 name="TextSize">18</int64>
+				<Color3 name="TextStrokeColor3">
+					<R>0</R>
+					<G>0</G>
+					<B>0</B>
+				</Color3>
+				<double name="TextStrokeTransparency">1</double>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ChannelTabsConfiguration</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e5</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="PermissionsService" referent="RBXC41DF6FA40B040E49A80318AF7636DDC">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">PermissionsService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000385</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="PlayerEmulatorService" referent="RBX3CFB2ABBAC0B437C97EEB0499DD39BCE">
+		<Properties>
+			<bool name="CustomPoliciesEnabled">false</bool>
+			<string name="EmulatedCountryCode"></string>
+			<string name="EmulatedGameLocale"></string>
+			<bool name="PlayerEmulationEnabled">false</bool>
+			<bool name="PseudolocalizationEnabled">false</bool>
+			<BinaryString name="SerializedEmulatedPolicyInfo"></BinaryString>
+			<int name="TextElongationFactor">0</int>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">PlayerEmulatorService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000386</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StudioData" referent="RBX2BD9B1D4E43045FD976ABD1FD3B51560">
+		<Properties>
+			<bool name="EnableScriptCollabByDefaultOnLoad">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">StudioData</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000389</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StarterPlayer" referent="7">
+		<Properties>
+			<bool name="AllowCustomAnimations">true</bool>
+			<bool name="AutoJumpEnabled">true</bool>
+			<token name="AvatarJointUpgrade_SerializedRollout">0</token>
+			<float name="CameraMaxZoomDistance">400</float>
+			<float name="CameraMinZoomDistance">0.5</float>
+			<token name="CameraMode">1</token>
+			<bool name="CharacterBreakJointsOnDeath">true</bool>
+			<float name="CharacterJumpHeight">7.19999981</float>
+			<float name="CharacterJumpPower">45</float>
+			<float name="CharacterMaxSlopeAngle">89</float>
+			<bool name="CharacterUseJumpPower">true</bool>
+			<float name="CharacterWalkSpeed">20</float>
+			<bool name="ClassicDeath">true</bool>
+			<bool name="CreateDefaultPlayerModule">true</bool>
+			<token name="DevCameraOcclusionMode">0</token>
+			<token name="DevComputerCameraMovementMode">0</token>
+			<token name="DevComputerMovementMode">0</token>
+			<token name="DevTouchCameraMovementMode">0</token>
+			<token name="DevTouchMovementMode">0</token>
+			<token name="EnableDynamicHeads">0</token>
+			<bool name="EnableMouseLockOption">true</bool>
+			<token name="GameSettingsAvatar">1</token>
+			<token name="GameSettingsR15Collision">0</token>
+			<float name="HealthDisplayDistance">100</float>
+			<bool name="LoadCharacterAppearance">true</bool>
+			<token name="LoadCharacterLayeredClothing">0</token>
+			<token name="LuaCharacterController">0</token>
+			<float name="NameDisplayDistance">100</float>
+			<Ref name="PlaceAvatarRules">null</Ref>
+			<int name="PlayerModuleStatus">0</int>
+			<bool name="UserEmotesEnabled">true</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">StarterPlayer</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000038b</UniqueId>
+		</Properties>
+		<Item class="StarterPlayerScripts" referent="8">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">StarterPlayerScripts</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003de</UniqueId>
+			</Properties>
+			<Item class="LocalScript" referent="9">
+				<Properties>
+					<ProtectedString name="Source"><![CDATA[local Players=game:GetService("Players")
 local RS=game:GetService("ReplicatedStorage")
 local Run=game:GetService("RunService")
 local UIS=game:GetService("UserInputService")
@@ -790,6 +824,8 @@ local Lighting=game:GetService("Lighting")
 local player=Players.LocalPlayer
 local C=require(RS:WaitForChild("GojoConfig"))
 local action=RS:WaitForChild("GojoAction")
+local aimRemote=RS:WaitForChild("GojoAim")
+local nextAimAt=0
 local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local camera=workspace.CurrentCamera
@@ -810,13 +846,13 @@ local clock=workspace.GetServerTimeNow
 local function time() return clock(workspace) end
 local KITS={
     Gojo={title="五条 悟  ·  고죠 사토루",energy="CURSED ENERGY",hint="Q / E 3초 대기 · 그 안에 다른 쪽 = 무라사키 · 같은 키 = 즉시 발사   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(17,21,35),handScale=1,
+        handScale=1,
         slots={{"Blue","Q","아오"},{"Red","E","아카"},{"Domain","R","영역전개"},{"Dash","SHIFT","대시"}}},
     Zenitsu={title="我妻 善逸  ·  아가츠마 젠이츠",energy="BREATH",hint="Q → E  전집중 후 벽력일섬 즉시 ×3   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(240,184,40),handScale=.62,
+        handScale=1,
         slots={{"Breath","Q","전집중 호흡"},{"Thunderclap","E","벽력일섬"},{"FlameGod","R","화뢰신"},{"Dash","SHIFT","대시"}}},
     Reze={title="レゼ  ·  레제",energy="GUNPOWDER",hint="R 변신(무제한) → Q 폭주대시 → 바로 E = 연계 폭발 킥 · R 다시 = 4초 뒤 대폭발   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(225,208,197),devilSleeve=Color3.fromRGB(40,36,38),handScale=1,
+        handScale=1,
         slots={{"Rampage","Q","폭주대시"},{"Kick","E","폭발 킥"},{"BombDevil","R","폭탄의 악마"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
@@ -1069,17 +1105,91 @@ local function piece(list,name,size,offset,color,material,shape)
     local p=part(viewmodel,name,size,color,nil,shape);p.Material=material or Enum.Material.SmoothPlastic
     local entry={p=p,offset=offset,size=size};table.insert(list,entry);return entry
 end
-local function hand(side)
-    local h={pieces={},side=side,scale=1}
-    local skin=Color3.fromRGB(225,208,197)
-    h.sleeve=piece(h.pieces,"Sleeve",Vector3.new(.29,.75,.32),CFrame.new(0,-.42,.12)*CFrame.Angles(-.15,0,0),Color3.fromRGB(17,21,35)).p
-    piece(h.pieces,"Palm",Vector3.new(.29,.32,.12),CFrame.identity,skin)
-    -- Bomb Devil: a fuse cord hangs from each wrist with a lit tip.
-    piece(h.pieces,"Fuse",Vector3.new(.05,.4,.05),CFrame.new(side*.13,-.22,.16)*CFrame.Angles(.5,0,side*.5),Color3.fromRGB(84,62,44)).devilOnly=true
-    piece(h.pieces,"Ember",Vector3.one*.08,CFrame.new(side*.22,-.38,.27),C.Colors.Bomb,Enum.Material.Neon,Enum.PartType.Ball).devilOnly=true
-    return h
+-- The rendered arms come from the player's loaded avatar, including R6/R15 body
+-- meshes, skin colors and classic clothing. No kit-specific skin or sleeves.
+local left={scale=1,avatar={}}
+local right={scale=1,avatar={}}
+local avatarRig=nil
+local avatarDirty=true
+local avatarConnections={}
+local ARM_NAMES={Left={"Left Arm","LeftUpperArm","LeftLowerArm","LeftHand"},Right={"Right Arm","RightUpperArm","RightLowerArm","RightHand"}}
+local function rebuildAvatarArms()
+    avatarDirty=false
+    if avatarRig then avatarRig:Destroy();avatarRig=nil end
+    left.avatar={};right.avatar={}
+    local character=player.Character
+    if not character or not character:FindFirstChildOfClass("Humanoid") then return end
+    local archivable=character.Archivable;character.Archivable=true
+    local rig=character:Clone();character.Archivable=archivable
+    if not rig then return end
+    rig.Name="AvatarArms"
+    -- Keep the rig and clothing containers so Roblox renders classic shirt sleeves.
+    for _,v in rig:GetDescendants() do
+        if v:IsA("BaseScript") or v:IsA("ModuleScript") or v:IsA("Tool") or v:IsA("Accessory") or v:GetAttribute("Outfit") then
+            v:Destroy()
+        elseif v:IsA("BasePart") then
+            v.Anchored=true;v.CanCollide=false;v.CanTouch=false;v.CanQuery=false;v.CastShadow=false
+            v.LocalTransparencyModifier=0;v.Transparency=1
+        elseif v:IsA("Decal") then v.Transparency=1
+        elseif v:IsA("Humanoid") then
+            -- A display rig must never restore limb collisions or run character physics.
+            v.EvaluateStateMachine=false;v.AutoRotate=false;v.AutomaticScalingEnabled=false
+            v.RequiresNeck=false;v.BreakJointsOnDeath=false;v.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
+        end
+    end
+    for side,hd in {Left=left,Right=right} do
+        local names=ARM_NAMES[side]
+        local palm=character:FindFirstChild(side.."Hand") or character:FindFirstChild(side.." Arm")
+        if palm then
+            local grip=palm.CFrame
+            if palm.Name==side.." Arm" then grip*=CFrame.new(0,-palm.Size.Y/2+.16,0) end
+            grip*=CFrame.Angles(0,0,math.pi)
+            for _,name in names do
+                local source=character:FindFirstChild(name);local clone=rig:FindFirstChild(name)
+                if source and clone then
+                    local meshes={}
+                    for _,mesh in clone:GetChildren() do if mesh:IsA("SpecialMesh") then table.insert(meshes,{p=mesh,scale=mesh.Scale}) end end
+                    table.insert(hd.avatar,{p=clone,source=source,size=source.Size,offset=grip:ToObjectSpace(source.CFrame),transparency=source.Transparency,meshes=meshes})
+                end
+            end
+        end
+    end
+    -- Only arms are rendered. Hidden torso/root/legs would still form a humanoid
+    -- collider even with state evaluation disabled, so remove them and all joints.
+    local armParts={}
+    for _,hd in {left,right} do for _,entry in hd.avatar do armParts[entry.p]=true end end
+    for _,v in rig:GetDescendants() do
+        if v:IsA("JointInstance") or v:IsA("Constraint") or v:IsA("Animator") or (v:IsA("BasePart") and not armParts[v]) then v:Destroy() end
+    end
+    rig.Parent=viewmodel;avatarRig=rig
 end
-local left,right=hand(-1),hand(1)
+local function watchAvatar(character)
+    for _,connection in avatarConnections do connection:Disconnect() end
+    avatarConnections={};avatarDirty=true
+    local function changed(v)
+        if v:IsA("BasePart") or v:IsA("Clothing") or v:IsA("BodyColors") or v:IsA("CharacterMesh") or v:IsA("Accessory") or v:IsA("SurfaceAppearance") then avatarDirty=true end
+    end
+    table.insert(avatarConnections,character.DescendantAdded:Connect(changed))
+    table.insert(avatarConnections,character.DescendantRemoving:Connect(changed))
+    local humanoid=character:FindFirstChildOfClass("Humanoid")
+    if humanoid then table.insert(avatarConnections,humanoid.ApplyDescriptionFinished:Connect(function() avatarDirty=true end)) end
+end
+player.CharacterAdded:Connect(watchAvatar)
+player.CharacterAppearanceLoaded:Connect(function(character) if character==player.Character then avatarDirty=true end end)
+if player.Character then watchAvatar(player.Character) end
+local function showAvatarArm(hd,frame,posed,alive)
+    local size=.42*hd.scale
+    for _,entry in hd.avatar do
+        if entry.source.Parent then
+            entry.p.Size=entry.size*size
+            for _,mesh in entry.meshes do mesh.p.Scale=mesh.scale*size end
+            entry.p.Color=entry.source.Color
+            entry.p.CFrame=camera.CFrame*frame*CFrame.new(entry.offset.Position*size)*entry.offset.Rotation
+            entry.p.Transparency=alive and entry.transparency or 1
+            entry.p.LocalTransparencyModifier=0
+        else avatarDirty=true;entry.p.Transparency=1 end
+    end
+end
 -- The choker stays outside the first-person view; this invisible target guides the pin-pull pose.
 local RING_AT=CFrame.new(.05,-.635,-1.026)*CFrame.Angles(0,math.pi/2,0)
 local pinPart=part(viewmodel,"Pin",Vector3.one*.01,Color3.fromRGB(205,210,218));pinPart.Transparency=1
@@ -1096,14 +1206,7 @@ local boot=part(viewmodel,"Boot",Vector3.new(.2,.16,.5),Color3.fromRGB(28,26,30)
 -- Where the ring sits relative to the hooking hand, and the elbow-out hooking pose.
 local PIN_IN_HAND=CFrame.new(-.03,.17,-.07)*CFrame.Angles(0,math.pi/2,0)
 local HOOK=CFrame.Angles(-.15,-.2,1.25)
-local function scaleHand(h,s)
-    if h.scale~=s then h.scale=s;for _,entry in h.pieces do entry.p.Size=entry.size*s end end
-end
-local function pose(h,cf)
-    for _,entry in h.pieces do
-        entry.p.CFrame=camera.CFrame*cf*CFrame.new(entry.offset.Position*h.scale)*entry.offset.Rotation
-    end
-end
+local function scaleHand(h,s) h.scale=s end
 -- Zenitsu's sheathed katana. In the sword frame -Z runs from the tsuba toward the pommel, +Z into the saya.
 local katana={saya={},hilt={}}
 local gold=Color3.fromRGB(201,162,74)
@@ -1146,7 +1249,7 @@ for i=1,4 do
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,10);corner.Parent=b
     local stroke=Instance.new("UIStroke");stroke.Thickness=1;stroke.Parent=b
     local entry={b=b,stroke=stroke};buttons[i]=entry
-    b.Activated:Connect(function() if entry.skill then action:FireServer(entry.skill,camera.CFrame.LookVector) end end)
+    b.Activated:Connect(function() if entry.skill then action:FireServer(entry.skill,camera.CFrame.LookVector,camera.CFrame.Position) end end)
 end
 local comboLabel=label(gui,"",26,UDim2.fromScale(.5,.62),UDim2.fromOffset(420,40),Color3.fromRGB(255,224,176));comboLabel.AnchorPoint=Vector2.new(.5,.5)
 comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;comboLabel.TextStrokeColor3=Color3.fromRGB(255,122,46)
@@ -1180,8 +1283,7 @@ local function applyKit()
         b.BackgroundColor3=on and Color3.fromRGB(219,234,240) or Color3.fromRGB(14,21,34);b.TextColor3=on and Color3.fromRGB(16,34,54) or Color3.fromRGB(200,214,228)
     end
     for _,h in {left,right} do
-        h.sleeve.Color=kit.sleeve;h.scale=kit.handScale
-        for _,entry in h.pieces do entry.p.Size=entry.size*kit.handScale end
+        h.scale=kit.handScale
     end
     clearCastVFX();finishFlameTurn()
     cast=nil;holdState=nil;drawnUntil=0;blackout.BackgroundTransparency=1
@@ -1193,7 +1295,7 @@ UIS.InputBegan:Connect(function(input,processed)
     local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
-    if slot then action:FireServer(buttons[slot].skill,camera.CFrame.LookVector) end
+    if slot then action:FireServer(buttons[slot].skill,camera.CFrame.LookVector,camera.CFrame.Position) end
 end)
 action.OnClientEvent:Connect(function(s) state=s end)
 
@@ -1449,7 +1551,8 @@ Run:BindToRenderStep("RezeChinReset",Enum.RenderPriority.Camera.Value-1,function
 end)
 Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     camera=workspace.CurrentCamera;viewmodel.Parent=camera
-    local n=time();local bob=math.sin(n*2)*.014
+    if avatarDirty then rebuildAvatarArms() end
+    local n=time();local bob=0
     local zen=current()=="Zenitsu"
     local reze=current()=="Reze"
     local pinShown=cast and cast.kind=="BombDevil"
@@ -1457,14 +1560,17 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local pinGrabbed,pinHooked,chinTilt,handSize=false,false,0,KITS[current()].handScale
     local look=camera.CFrame.LookVector;local flat=Vector3.new(look.X,0,look.Z)
     local neckFrame=CFrame.lookAt(camera.CFrame.Position,camera.CFrame.Position+(flat.Magnitude>.01 and flat.Unit or Vector3.new(0,0,-1)))
-    local l=CFrame.new(-.48,-.53+bob,-.88)*CFrame.Angles(.2,.15,-.3)
-    local r=CFrame.new(.48,-.5-bob,-.88)*CFrame.Angles(.1,-.2,.3)
+    local l=CFrame.new(-.64,-.78,-1.15)*CFrame.Angles(.12,.08,-.08)
+    local r=CFrame.new(.64,-.78,-1.15)*CFrame.Angles(.12,-.08,.08)
     local swordPos,swordDir=Vector3.new(-.05,-.5+bob,-1.12),Vector3.new(.8,.25,-.55).Unit
     local push,lean=0,0
     local desiredFov=72;blur.Size=math.max(0,blur.Size-dt*24)
     local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
     local transformed=reze and m and (m:GetAttribute("BombDevilUntil") or 0)>n
-    if reze then for _,hd in {left,right} do hd.sleeve.Color=transformed and KITS.Reze.devilSleeve or KITS.Reze.sleeve end end
+    if current()=="Gojo" and (holdState or (cast and (cast.kind=="Red" or cast.kind=="Purple"))) and n>=nextAimAt then
+        nextAimAt=n+1/20
+        aimRemote:FireServer(camera.CFrame.LookVector,camera.CFrame.Position)
+    end
     if cast and not (h and h.Health>0) then clearCastVFX();finishFlameTurn();cast=nil end
     if cast then
         local a=n-cast.start;local u=math.clamp(a/cast.length,0,1)
@@ -1480,7 +1586,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             r=CFrame.new(.08+math.cos(angle)*radius,-.12+math.sin(angle)*radius,-.87)*CFrame.Angles(-.2,-.25,angle*.25)
             desiredFov=72-8*smoothstep(a/cfg.RiseDuration)
             -- The spheres orbit in clear view, then become one visible Purple at the launch point.
-            local focus=CFrame.lookAt(camera.CFrame.Position,camera.CFrame.Position+cast.direction)
+            local focus=camera.CFrame
             local center=(focus*CFrame.new(0,0,-cfg.OrbDistance)).Position
             if not cast.fired then
                 if a<cfg.MergeAt then
@@ -1493,7 +1599,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
                         for _,o in cast.orbs do o:Destroy() end;cast.orbs={}
                         cast.merged=orb(center,C.Colors.Purple,cfg.MergedRadius)
                         cast.merged.Name="HollowPurpleCharge";cast.merged.PrimaryPart.Color=Color3.fromRGB(227,192,255)
-                        burst(center,C.Colors.Purple,3);purpleRing(center,cast.direction,1)
+                        burst(center,C.Colors.Purple,3);purpleRing(center,focus.LookVector,1)
                     end
                     local charge=smoothstep((a-cfg.MergeAt)/(cfg.Windup-cfg.MergeAt))
                     cast.merged:ScaleTo(.8+.4*charge);cast.merged:PivotTo(CFrame.new(center)*focus.Rotation)
@@ -1630,6 +1736,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local width=camera.ViewportSize.X;scale.Scale=math.min(1,(width-28)/480)
     local handScale=math.min(1,camera.ViewportSize.X/camera.ViewportSize.Y)
     local drawn=n<drawnUntil
+    local alive=h and h.Health>0
+    local posed=zen or cast~=nil or holdHand~=nil
+    local leftFrame,rightFrame=l,r
     if zen then
         swordPos*=Vector3.new(handScale,1,1)
         local sword=CFrame.lookAt(swordPos,swordPos+swordDir)
@@ -1638,21 +1747,23 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             local at=Vector3.new(.32*handScale,-.38,-.92);hilt=CFrame.lookAt(at,at-Vector3.new(-.75,.06,-.66))
         end
         place(katana.saya,sword);place(katana.hilt,hilt)
-        pose(right,armFrame((hilt*GRIP).Position,RIGHT_UP))
-        pose(left,armFrame((sword*SAYA).Position,LEFT_UP))
+        rightFrame=armFrame((hilt*GRIP).Position,RIGHT_UP)
+        leftFrame=armFrame((sword*SAYA).Position,LEFT_UP)
     else
         scaleHand(right,handSize)
         if holdHand then
             holdOrb.CFrame=camera.CFrame*CFrame.new(holdHand.Position*Vector3.new(handScale,1,1))*holdHand.Rotation*CFrame.new(0,.3,0)
             holdOrb.Color=C.Colors[holdState.kind];holdOrb.Size=Vector3.one*(.16+math.sin(n*14)*.015)
         end
-        pose(left,CFrame.new(l.Position*Vector3.new(handScale,1,1))*l.Rotation)
+        leftFrame=CFrame.new(l.Position*Vector3.new(handScale,1,1))*l.Rotation
         -- While pulling the pin the hand must meet the ring exactly, so the narrow-screen squeeze is skipped.
-        pose(right,pinShown and r or CFrame.new(r.Position*Vector3.new(handScale,1,1))*r.Rotation)
+        rightFrame=pinShown and r or CFrame.new(r.Position*Vector3.new(handScale,1,1))*r.Rotation
         if pinShown then
             pinPart.CFrame=pinGrabbed and camera.CFrame*r*CFrame.new(PIN_IN_HAND.Position*handSize)*PIN_IN_HAND.Rotation or neckFrame*RING_AT*CFrame.Angles(0,0,pinHooked and math.sin(n*50)*.15 or 0)
         end
     end
+    showAvatarArm(left,leftFrame,posed,alive)
+    showAvatarArm(right,rightFrame,posed,alive)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -1717,12 +1828,6 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         or reze and "변신 전 · R 폭탄의 악마 / SHIFT 대시만 사용 가능"
         or string.format("%s   %d%%",KITS[current()].energy,state.energy)
     local alive=h and h.Health>0
-    for _,hd in {left,right} do
-        for _,entry in hd.pieces do
-            local shown=alive and (not entry.devilOnly or transformed) and (not entry.pinOnly or pinShown)
-            entry.p.Transparency=shown and 0 or 1
-        end
-    end
     for _,entry in katana.saya do entry.p.Transparency=(alive and zen) and 0 or 1 end
     for _,entry in katana.hilt do entry.p.Transparency=(alive and zen and (drawn or not entry.drawnOnly)) and 0 or 1 end
 end)
@@ -1731,17 +1836,1366 @@ player.CharacterAdded:Connect(function()
     finishFlameTurn()
     cast=nil;blur.Size=0;drawnUntil=0;blackout.BackgroundTransparency=1
 end)
-]]></string>
-        </Properties>
-      </Item>
-    </Item>
-  </Item>
-  <Item class="Workspace" referent="10">
-    <Properties>
-      <string name="Name">Workspace</string>
-      <bool name="FilteringEnabled">true</bool>
-      <float name="Gravity">150</float>
-      <bool name="NeedsPivotMigration">false</bool>
-    </Properties>
-  </Item>
+]]></ProtectedString>
+					<bool name="Disabled">false</bool>
+					<Content name="LinkedSource"><null></null></Content>
+					<token name="RunContext">0</token>
+					<string name="ScriptGuid">{6563F0C3-B4F6-4B73-B1FC-DB522AD1F27D}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+					<string name="Name">Gojo</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003df</UniqueId>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="StarterCharacterScripts" referent="RBX7F9C37DB80D24D009A4BC8B04C90276F">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">StarterCharacterScripts</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003e1</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="StarterPack" referent="RBX8D1B41B1F4CE4891919AA9011F4DAB00">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">StarterPack</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000038c</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="StarterGui" referent="RBX86B5A108059840B0AF26042593FCAFB7">
+		<Properties>
+			<token name="ClipsDescendantsSupportsRotation">0</token>
+			<bool name="ResetPlayerGuiOnSpawn">true</bool>
+			<token name="RtlTextSupport">0</token>
+			<token name="ScreenOrientation">2</token>
+			<bool name="ShowDevelopmentGui">true</bool>
+			<Ref name="StudioDefaultStyleSheet">null</Ref>
+			<Ref name="StudioInsertWidgetLayerCollectorAutoLinkStyleSheet">null</Ref>
+			<token name="VirtualCursorMode">0</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">StarterGui</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000038d</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="LocalizationService" referent="RBX1B1E562CF385475882155AFDE3F861BA">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">LocalizationService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000038f</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TeleportService" referent="RBXA18690FB49FE432F8E1981A82AC04307">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Teleport Service</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000393</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="PhysicsService" referent="RBXB2A465A38F4C4BDDAA67FE4E878144A5">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">PhysicsService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000395</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="InsertService" referent="RBXBE8F5E39F0D740A2A7539616BCC0F5CD">
+		<Properties>
+			<bool name="AllowInsertFreeModels">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">InsertService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000398</UniqueId>
+		</Properties>
+		<Item class="StringValue" referent="RBX3EC5F227483A49D0874B9760A575530E">
+			<Properties>
+				<string name="Value">{A51AD588-780A-4B64-B696-E532803042CF}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">InsertionHash</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000378e</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="GamePassService" referent="RBX5316E5DD93FC42D3980C1932C615218C">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">GamePassService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000399</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Debris" referent="RBX4D27B21A813243178BE5A97E26930914">
+		<Properties>
+			<int name="MaxItems">1000</int>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Debris</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000039a</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="CookiesService" referent="RBX17CEDB4F640D4A06A6A48641EC503EE0">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">CookiesService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000039b</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Selection" referent="RBXCED05AAAF65A49D1B9786C36C0375B67">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Selection</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000039c</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="VRService" referent="RBXACEA880CCDDE4D339D116E8ABA37BC53">
+		<Properties>
+			<token name="AutomaticScaling">0</token>
+			<bool name="AvatarGestures">false</bool>
+			<token name="ControllerModels">1</token>
+			<bool name="FadeOutViewOnCollision">true</bool>
+			<token name="LaserPointer">1</token>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">VRService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003a0</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ContextActionService" referent="RBX7AD10AF90D8D4423B227A7353497C683">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ContextActionService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003a1</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ScriptService" referent="RBX8BFA7B8F19B74CA2BDF437B7731BDDCA">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ScriptService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003a2</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="AssetService" referent="RBX2C464EBDF37A41799BF18E4C7D81FE27">
+		<Properties>
+			<bool name="AllowInsertFreeAssets">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">AssetService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003a3</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TouchInputService" referent="RBXCBEDFF346DBA4678AC7B78426B65A238">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">TouchInputService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003a5</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="AvatarSettings" referent="RBX0A5C9CC919C2446488DBC591F077576A">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">AvatarSettings</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003ab</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Packages" referent="RBX3474CDC9303C4558A0DE6FB7BD35673A">
+		<Properties>
+			<bool name="IsDehydrated">false</bool>
+			<int name="ShellPackagesCount">0</int>
+			<int name="SkippedInstancesCount">0</int>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Packages</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003af</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="GuidRegistryService" referent="RBX020C03C15F654A9D84617315ACFA7C50">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">GuidRegistryService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003b0</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ServiceVisibilityService" referent="RBX205B06285C6849139075A83F71C5BD78">
+		<Properties>
+			<BinaryString name="HiddenServices">AAAAAA==</BinaryString>
+			<BinaryString name="VisibleServices">AAAAAA==</BinaryString>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ServiceVisibilityService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003b2</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="LuaWebService" referent="RBX2E5193B1982749ABBF6F9537566AF94A">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">LuaWebService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c3</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ProcessInstancePhysicsService" referent="RBXCEB439B051DB412BAB87978E728B007B">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ProcessInstancePhysicsService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c4</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="ReplicatedStorage" referent="1">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ReplicatedStorage</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c5</UniqueId>
+		</Properties>
+		<Item class="ModuleScript" referent="2">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- Shared tuning; all combat decisions are made by Combat.server.luau.
+return {
+    MaxEnergy = 100, EnergyRegen = 5, MaxHealth = 200,
+    -- Skills each character may request; the server rejects anything outside the player's kit.
+    Kits = {
+        Gojo = { "Blue", "Red", "Domain", "Dash" },
+        Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
+        Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
+    },
+    Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
+    Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
+    -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
+    Hold = { Duration = 3 },
+    Purple = {
+        Windup = 3.6, Damage = 180, Speed = 105, Radius = 7, Range = 170,
+        RiseHeight = 12, RiseDuration = 2.4, MergeAt = 2.85, Recovery = 0.45,
+        OrbDistance = 5, ChargeRadius = 0.6, MergedRadius = 1.4, VisualRadius = 3, PierceWorld = true,
+    },
+    Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8 },
+    Dash = { Cost = 5, Cooldown = 2.5, Distance = 16 },
+    -- Zenitsu: Breath grants Charges instant Thunderclaps (no windup, cost or cooldown) for ChargeWindow seconds.
+    Thunderclap = { Cost = 18, Cooldown = 6, Windup = 2, InstantWindup = 0.05, Distance = 36, Width = 5, Damage = 70 },
+    Breath = { Cost = 20, Cooldown = 14, Windup = 2, Charges = 3, ChargeWindow = 12 },
+    -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
+    -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.
+    FlameGod = { DragonScale = 2.5, Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.9, RecoilDelay = 1, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
+    -- Reze. Human form: only Dash and BombDevil. Pulling the choker pin transforms her with no time limit and heals
+    -- Heal of max HP (never past full); Rampage and Kick then work, each costing HpCost of max HP (never lethal).
+    -- R again is Detonation: Windup seconds later a huge blast goes off, it costs 12% HP, and she turns human again.
+    -- BombDevil can be used again Recharge seconds after she reverts.
+    BombDevil = { Cost = 0, Cooldown = 0, Recharge = 20, Windup = 1, Blackout = 2, Heal = 0.2, Radius = 16, Damage = 90, Knockback = 110, Lift = 55 },
+    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60 },
+    -- Rampage: a blast under the feet launches her forward; anyone on the path is blown upward, and the gunpowder
+    -- left along the path detonates TrailDelay seconds later.
+    Rampage = { Cost = 0, HpCost = 0.03, Cooldown = 5, Windup = 0.12, SlideSpeed = 55, Distance = 30, Width = 5, Damage = 45, Launch = 70, TrailDelay = 1, TrailRadius = 5.5, TrailDamage = 35, TrailLift = 45 },
+    -- Kick: a roundhouse. The right foot is raised for most of Windup, then whips right to left. Alone it goes off Reach studs in front of her; used within ComboWindow seconds of
+    -- Rampage it continues the Rampage direction as a ComboDistance dash ending in a bigger blast.
+    Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.38, Reach = 5, Radius = 6, Damage = 45, Knockback = 32, Lift = 28, ComboWindow = 1.3, ComboDistance = 18, Width = 4.5, ComboRadius = 8, ComboDamage = 85, ComboKnockback = 70, ComboLift = 36 },
+    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46) },
+}
+]]></ProtectedString>
+				<string name="ScriptGuid">{340B944B-D45D-42E5-9070-489FF02D6AA3}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">GojoConfig</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d9</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="ServerScriptService" referent="3">
+		<Properties>
+			<bool name="LoadStringEnabled">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ServerScriptService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c6</UniqueId>
+		</Properties>
+		<Item class="Script" referent="4">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+-- Apply daylight when the arena starts, including places synced from older builds.
+Lighting.ClockTime = 13.5
+Lighting.Brightness = 3
+Lighting.Ambient = Color3.new(0.38, 0.42, 0.52)
+Lighting.OutdoorAmbient = Color3.new(0.5, 0.54, 0.64)
+local Config = require(game.ReplicatedStorage:WaitForChild("GojoConfig"))
+local arena = Instance.new("Folder")
+arena.Name = "InfinityArena"
+arena.Parent = workspace
+local function part(name, size, cf, color, material, parent)
+    local p = Instance.new("Part")
+    p.Name, p.Size, p.CFrame = name, size, cf
+    p.Color, p.Material = color, material or Enum.Material.Slate
+    p.Anchored, p.TopSurface, p.BottomSurface = true, Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+    p.Parent = parent or arena
+    return p
+end
+local dark = Color3.fromRGB(42, 50, 67)
+local cyan = Color3.fromRGB(57, 170, 215)
+part("Foundation", Vector3.new(150, 4, 150), CFrame.new(0,-3,0), dark)
+for x=-7,7 do
+    for z=-7,7 do
+        local shade = 45 + ((x*7+z*3)%5)*2
+        part("StoneTile", Vector3.new(9.88,.35,9.88), CFrame.new(x*10,-.825,z*10), Color3.fromRGB(shade,shade+7,shade+15),Enum.Material.Concrete)
+    end
+end
+for _,radius in {22,42,66} do
+    for i=1,100 do
+        local a = i*math.pi*2/100
+        local p=part("RuneCircle",Vector3.new(.10,.03,radius*.064),CFrame.new(math.cos(a)*radius,-.63,math.sin(a)*radius)*CFrame.Angles(0,-a,0),cyan,Enum.Material.Neon)
+        p.CanCollide=false
+    end
+end
+for i=0,11 do
+    local a = i*math.pi/6
+    local cf=CFrame.new(math.sin(a)*61,0,math.cos(a)*61)*CFrame.Angles(0,a,0)
+    for _,side in {-1,1} do
+        part("GatePillar",Vector3.new(3,16,3),cf*CFrame.new(side*4,7,0),dark)
+        part("LightInset",Vector3.new(.12,11,3.04),cf*CFrame.new(side*4,7,0),cyan,Enum.Material.Neon).CanCollide=false
+    end
+    part("GateLintel",Vector3.new(13,2,4),cf*CFrame.new(0,15,0),dark)
+end
+local spawn=Instance.new("SpawnLocation")
+spawn.Name="Entry";spawn.Size=Vector3.new(8,.2,8);spawn.CFrame=CFrame.new(0,-.5,23)
+spawn.Anchored=true;spawn.Transparency=1;spawn.Neutral=true;spawn.Duration=0;spawn.Parent=arena
+local atmosphere=Instance.new("Atmosphere")
+atmosphere.Density=.18;atmosphere.Offset=.25;atmosphere.Color=Color3.fromRGB(152,174,211);atmosphere.Decay=Color3.fromRGB(78,92,128);atmosphere.Parent=Lighting
+local bloom=Instance.new("BloomEffect")
+bloom.Intensity=.65;bloom.Size=28;bloom.Threshold=1.2;bloom.Parent=Lighting
+local grade=Instance.new("ColorCorrectionEffect")
+grade.Contrast=.04;grade.Saturation=-.04;grade.TintColor=Color3.fromRGB(235,243,255);grade.Parent=Lighting
+
+local function dummy(pos,index)
+    local m=Instance.new("Model");m.Name="Training Target "..index
+    local root=part("HumanoidRootPart",Vector3.new(2,2,1),CFrame.new(pos),dark,nil,m);root.Transparency=1;root.CanCollide=false
+    local h=Instance.new("Humanoid");h.RequiresNeck=false;h.BreakJointsOnDeath=false;h.MaxHealth=250;h.Health=250;h.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.Viewer;h.Parent=m
+    local pieces={
+        {"Torso",Vector3.new(2,2,1),Vector3.new(0,0,0)},
+        {"Head",Vector3.new(1.4,1.4,1.4),Vector3.new(0,1.7,0)},
+        {"Left Arm",Vector3.new(.7,2,.8),Vector3.new(-1.5,0,0)},
+        {"Right Arm",Vector3.new(.7,2,.8),Vector3.new(1.5,0,0)},
+        {"Left Leg",Vector3.new(.8,2,.8),Vector3.new(-.6,-2,0)},
+        {"Right Leg",Vector3.new(.8,2,.8),Vector3.new(.6,-2,0)},
+    }
+    for _,v in pieces do
+        local p=part(v[1],v[2],CFrame.new(pos+v[3]),Color3.fromRGB(71,88,113),Enum.Material.Metal,m)
+        p.Anchored=false;p.CanCollide=false;p.Massless=true
+        local weld=Instance.new("WeldConstraint");weld.Part0=root;weld.Part1=p;weld.Parent=p
+    end
+    local core=part("Core",Vector3.new(.7,.7,.12),CFrame.new(pos+Vector3.new(0,.15,.56)),cyan,Enum.Material.Neon,m)
+    core.Anchored=false;core.CanCollide=false
+    local weld=Instance.new("WeldConstraint");weld.Part0=root;weld.Part1=core;weld.Parent=core
+    m.PrimaryPart=root;m:SetAttribute("TrainingTarget",true);m.Parent=workspace
+    h.Died:Connect(function() task.delay(3,function() m:Destroy();dummy(pos,index) end) end)
+end
+dummy(Vector3.new(0,3,-12),1);dummy(Vector3.new(-13,3,-20),2);dummy(Vector3.new(13,3,-26),3)
+
+-- Arena pillars and low walls. Same layout as the browser preview (scaled up for studs).
+-- Collidable pillars and low walls provide cover and elevated positions.
+local stoneTrim=Color3.fromRGB(99,115,132)
+local function pillar(x,z,width,height)
+    local base=-.65
+    part("AnchorPillar",Vector3.new(width,height,width),CFrame.new(x,base+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorPillarCap",Vector3.new(width+.8,1,width+.8),CFrame.new(x,base+height-.5,z),stoneTrim,Enum.Material.Metal)
+    local inset=part("AnchorPillarLight",Vector3.new(.15,height*.7,width*.35),CFrame.new(x,base+height*.45,z+width/2+.02),cyan,Enum.Material.Neon)
+    inset.CanCollide=false;inset.CanQuery=false
+end
+local function wall(x,z,sizeX,sizeZ,height)
+    part("AnchorWall",Vector3.new(sizeX,height,sizeZ),CFrame.new(x,-.65+height/2,z),dark,Enum.Material.Concrete)
+    part("AnchorWallCap",Vector3.new(sizeX+.6,.8,sizeZ+.6),CFrame.new(x,-.65+height-.4,z),stoneTrim,Enum.Material.Metal)
+end
+for _,v in {{-26,-8,5,35},{26,-12,5,40},{-34,-34,5,30},{36,-28,5,34},{0,-46,6,45},{-20,16,4.5,26},{22,18,4.5,30}} do pillar(v[1],v[2],v[3],v[4]) end
+wall(-12,2,20,2,12);wall(14,-3,2,18,12)
+
+-- Only each character's signature piece is added; the rest of the player's own avatar is left untouched.
+-- Gojo: blindfold. Zenitsu: sheathed katana. Reze: choker, replaced by the Bomb Devil head while transformed.
+-- Parts tagged "Outfit" are rebuilt whenever the character or transformation changes.
+local function outfit(character,kind,fresh)
+    local h=character:WaitForChild("Humanoid");h.MaxHealth=Config.MaxHealth
+    if fresh then h.Health=Config.MaxHealth end
+    local head=character:WaitForChild("Head")
+    local root=character:WaitForChild("HumanoidRootPart")
+    for _,v in character:GetChildren() do if v:GetAttribute("Outfit") then v:Destroy() end end
+    -- Undo anything hidden by a previous Bomb Devil head.
+    for _,v in character:GetDescendants() do
+        local original=v:GetAttribute("OutfitHidden")
+        if original~=nil then v.Transparency=original;v:SetAttribute("OutfitHidden",nil) end
+    end
+    local function attach(anchor,name,size,offset,color,material,shape)
+        local p=part(name,size,anchor.CFrame*offset,color,material or Enum.Material.SmoothPlastic,character)
+        if shape then p.Shape=shape end
+        p.Anchored=false;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Massless=true;p:SetAttribute("Outfit",true)
+        local weld=Instance.new("WeldConstraint");weld.Part0=anchor;weld.Part1=p;weld.Parent=p
+        return p
+    end
+    local function hide(v)
+        if v:GetAttribute("OutfitHidden")==nil then v:SetAttribute("OutfitHidden",v.Transparency) end
+        v.Transparency=1
+    end
+    local neck=-head.Size.Y/2-.08
+    if kind=="Zenitsu" then
+        -- Sheathed katana at the left hip, edge up, hilt forward.
+        attach(root,"ZenitsuSaya",Vector3.new(.22,.28,3.4),CFrame.new(-1.15,-.9,.6)*CFrame.Angles(.25,.12,0),Color3.fromRGB(43,34,51))
+        attach(root,"ZenitsuTsuba",Vector3.new(.5,.5,.08),CFrame.new(-1.05,-.62,-1.0)*CFrame.Angles(.25,.12,0),Color3.fromRGB(42,37,34),Enum.Material.Metal)
+        attach(root,"ZenitsuTsuka",Vector3.new(.18,.22,1.1),CFrame.new(-1.0,-.5,-1.55)*CFrame.Angles(.25,.12,0),Color3.fromRGB(241,234,216))
+    elseif kind=="Reze" then
+        local transformed=(character:GetAttribute("BombDevilUntil") or 0)>workspace:GetServerTimeNow()
+        if transformed then
+            -- Bomb Devil: the real head and anything worn on it disappear under a bomb-shaped head with fuse hair.
+            hide(head)
+            for _,v in head:GetChildren() do if v:IsA("Decal") then hide(v) end end
+            for _,accessory in character:GetChildren() do
+                local handle=accessory:IsA("Accessory") and accessory:FindFirstChild("Handle")
+                local weld=handle and handle:FindFirstChildWhichIsA("Weld")
+                if weld and (weld.Part0==head or weld.Part1==head) then hide(handle) end
+            end
+            local metal=Color3.fromRGB(46,44,48)
+            local bomb=attach(head,"BombHead",Vector3.one*1.7,CFrame.new(0,.15,0),metal,Enum.Material.Metal,Enum.PartType.Ball)
+            attach(head,"BombBand",Vector3.new(1.76,.28,1.76),CFrame.new(0,-.05,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(24,22,26),Enum.Material.Metal,Enum.PartType.Cylinder)
+            attach(head,"BombCap",Vector3.new(.3,.55,.55),CFrame.new(0,1.05,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(120,112,104),Enum.Material.Metal,Enum.PartType.Cylinder)
+            for i=-2,2 do
+                attach(head,"BombTooth",Vector3.new(.16,.2,.08),CFrame.new(i*.19,-.38,-.8)*CFrame.Angles(0,i*.18,0),Color3.fromRGB(240,236,226))
+            end
+            for _,x in {-.34,.34} do
+                attach(head,"BombEye",Vector3.new(.34,.09,.08),CFrame.new(x,.22,-.82)*CFrame.Angles(0,x*.5,x>0 and -.2 or .2),Color3.new(1,.55,.2),Enum.Material.Neon)
+            end
+            -- Fuse cords hang from the back and sides like hair, each with a lit tip.
+            for i=0,6 do
+                local a=math.pi*.15+i*math.pi*.7/6
+                local offset=CFrame.new(math.cos(a)*.75,.25,math.sin(a)*.75)*CFrame.Angles(.35*math.sin(a),0,-.35*math.cos(a))
+                attach(head,"Fuse",Vector3.new(.1,1.3,.1),offset*CFrame.new(0,-.55,0),Color3.fromRGB(84,62,44))
+                local tip=attach(head,"FuseTip",Vector3.one*.16,offset*CFrame.new(0,-1.25,0),Config.Colors.Bomb,Enum.Material.Neon,Enum.PartType.Ball)
+                if i%2==0 then local sparks=Instance.new("Sparkles");sparks.SparkleColor=Config.Colors.Bomb;sparks.Parent=tip end
+            end
+            local light=Instance.new("PointLight");light.Color=Config.Colors.Bomb;light.Brightness=2;light.Range=10;light.Parent=bomb
+        else
+            -- Choker with the grenade pin ring at the front of the throat.
+            attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
+            attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
+        end
+    else
+        attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
+    end
+end
+local function joined(p)
+    local function dress(c,fresh) outfit(c,p:GetAttribute("Character") or "Gojo",fresh) end
+    p.CharacterAdded:Connect(function(c)
+        c:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(c) end)
+        dress(c,true)
+    end)
+    p:GetAttributeChangedSignal("Character"):Connect(function() if p.Character then task.spawn(dress,p.Character) end end)
+    if p.Character then
+        p.Character:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(p.Character) end)
+        task.spawn(dress,p.Character,true)
+    end
+end
+Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
+]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">0</token>
+				<string name="ScriptGuid">{691C7EC0-BCE0-4EC4-8324-56E2E186AE33}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">Arena</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003da</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="Script" referent="5">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local RS=game:GetService("ReplicatedStorage")
+local Debris=game:GetService("Debris")
+local C=require(RS:WaitForChild("GojoConfig"))
+local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
+local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
+local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
+local aimRemote=Instance.new("RemoteEvent");aimRemote.Name="GojoAim";aimRemote.Parent=RS
+local states, blues, projectiles, domains, flights={},{},{},{},{}
+local kits={}
+for name,list in C.Kits do kits[name]={};for _,skill in list do kits[name][skill]=true end end
+local function kitOf(p) local name=p:GetAttribute("Character");return kits[name] and name or "Gojo" end
+local BASE_SPEED=game:GetService("StarterPlayer").CharacterWalkSpeed
+local now=workspace.GetServerTimeNow
+local function clock() return now(workspace) end
+local function character(p)
+    local m=p.Character
+    local h=m and m:FindFirstChildOfClass("Humanoid")
+    local r=m and m:FindFirstChild("HumanoidRootPart")
+    if h and r and h.Health>0 then return m,h,r end
+end
+local function targets(exclude)
+    local out={}
+    for _,m in workspace:GetChildren() do
+        if m:IsA("Model") and m~=exclude then
+            local h=m:FindFirstChildOfClass("Humanoid");local r=m:FindFirstChild("HumanoidRootPart")
+            if h and r and h.Health>0 then table.insert(out,{m=m,h=h,r=r}) end
+        end
+    end
+    return out
+end
+local function sendState(p,s)
+    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
+end
+local function validVector(v)
+    return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
+end
+-- Camera samples have their own rate limit so aiming cannot swallow skill inputs.
+local function rememberAim(s,m,direction,origin)
+    if not validVector(direction) then return end
+    local head=m:FindFirstChild("Head")
+    s.aimDirection=direction.Unit;s.aimAt=clock()
+    s.aimOrigin=head and typeof(origin)=="Vector3" and (origin-head.Position).Magnitude<=12 and origin or nil
+end
+aimRemote.OnServerEvent:Connect(function(p,direction,origin)
+    local s=states[p];if not s or kitOf(p)~="Gojo" then return end
+    local n=clock()
+    if n-(s.lastAimRequest or 0)<1/30 or (not s.hold and n>=s.busyUntil) then return end
+    s.lastAimRequest=n
+    local m=character(p);if m then rememberAim(s,m,direction,origin) end
+end)
+local function releaseAim(s,m,r,fallback)
+    local head=m:FindFirstChild("Head")
+    local eye=head and head.Position or r.Position+Vector3.yAxis*1.5
+    local fresh=s.aimAt and clock()-s.aimAt<.5
+    local direction=fresh and s.aimDirection or fallback
+    local origin=fresh and s.aimOrigin
+    if not origin or (origin-eye).Magnitude>12 then origin=eye end
+    return direction,origin
+end
+local function rayParams(m)
+    local p=RaycastParams.new();p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={m};return p
+end
+local function damage(owner,t,amount)
+    if not t.m.Parent or t.h.Health<=0 then return end
+    t.h:TakeDamage(amount);fx:FireAllClients("Hit",{position=t.r.Position,damage=amount,owner=owner.UserId})
+end
+local function cancelBlue(p,s)
+    s.blueUntil=0
+    if blues[p] then blues[p]=nil;fx:FireAllClients("BlueEnd",{owner=p.UserId}) end
+end
+-- WalkSpeed is derived from timed attributes so overlapping roots and slows never leave a stale speed behind.
+local function updateSpeed(m,h)
+    local n=clock();local speed=BASE_SPEED
+    if (m:GetAttribute("SlowedUntil") or 0)>n then speed*=C.FlameGod.SlowFactor end
+    if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
+    h.WalkSpeed=speed
+end
+local function setTimed(m,h,attribute,duration)
+    m:SetAttribute(attribute,math.max(m:GetAttribute(attribute) or 0,clock()+duration));updateSpeed(m,h)
+    task.delay(duration+.05,function() if m.Parent and h.Parent then updateSpeed(m,h) end end)
+end
+-- A server-created constraint lifts the actual character, while its network owner simulates it smoothly.
+-- A one-shot server velocity is unreliable for player-owned characters and falls before Purple releases.
+local function clearPurpleHover(s)
+    local hover=s.purpleHover
+    if not hover then return end
+    s.purpleHover=nil
+    hover.alignment:Destroy();hover.attachment:Destroy()
+end
+local function beginPurpleHover(s,m,h,r)
+    clearPurpleHover(s)
+    local cfg=C.Purple
+    local ceiling=workspace:Blockcast(r.CFrame,Vector3.new(3,5,3),Vector3.yAxis*cfg.RiseHeight,rayParams(m))
+    local height=ceiling and math.max(0,math.min(cfg.RiseHeight,ceiling.Distance-.5)) or cfg.RiseHeight
+    local duration=cfg.Windup+cfg.Recovery
+    local attachment=Instance.new("Attachment");attachment.Name="PurpleHoverAttachment";attachment.Parent=r
+    local alignment=Instance.new("AlignPosition")
+    alignment.Name="PurpleHover";alignment.Mode=Enum.PositionAlignmentMode.OneAttachment
+    alignment.Attachment0=attachment;alignment.Position=r.Position+Vector3.yAxis*height
+    alignment.ApplyAtCenterOfMass=true;alignment.RigidityEnabled=false
+    alignment.MaxForce=math.max(10000,r.AssemblyMass*workspace.Gravity*10)
+    alignment.MaxVelocity=cfg.RiseHeight/cfg.RiseDuration;alignment.Responsiveness=35
+    alignment.Parent=r
+    local hover={alignment=alignment,attachment=attachment}
+    s.purpleHover=hover
+    setTimed(m,h,"RootedUntil",duration)
+    Debris:AddItem(alignment,duration+.1);Debris:AddItem(attachment,duration+.1)
+    task.delay(duration,function() if s.purpleHover==hover then clearPurpleHover(s) end end)
+end
+-- Shared by Thunderclap and FlameGod: dash along `flat`, stopping short of walls, and return who stood on the path.
+local function dashStrike(m,r,flat,distance,width)
+    local start=r.Position
+    local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*distance,rayParams(m))
+    local travelled=result and math.max(0,result.Distance-.5) or distance
+    local finish=start+flat*travelled
+    r.CFrame=CFrame.lookAt(finish,finish+flat)
+    local victims={}
+    for _,t in targets(m) do
+        local along=math.clamp((t.r.Position-start):Dot(flat),0,travelled)
+        if (start+flat*along-t.r.Position).Magnitude<=width then table.insert(victims,t) end
+    end
+    return start,finish,victims
+end
+-- Knockback. Players own their own physics, so their client applies the impulse; anchored training targets
+-- follow a server-simulated arc in the Heartbeat loop; any other unanchored rig takes the velocity directly.
+local function launch(t,velocity)
+    local victim=Players:GetPlayerFromCharacter(t.m)
+    if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
+    elseif t.r.Anchored then
+        local f=flights[t.m]
+        flights[t.m]={t=t,velocity=velocity,ground=f and f.ground or t.r.Position.Y}
+    else t.r.AssemblyLinearVelocity=velocity end
+end
+local function outward(from,t,fallback)
+    local delta=t.r.Position-from;delta=Vector3.new(delta.X,0,delta.Z)
+    return delta.Magnitude>.1 and delta.Unit or fallback
+end
+local function devil(m) return (m:GetAttribute("BombDevilUntil") or 0)>clock() end
+local function delayed(p,s,m,delaySeconds,callback)
+    local generation=s.generation
+    task.delay(delaySeconds,function()
+        local current=character(p)
+        if states[p]==s and generation==s.generation and current==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then callback() end
+    end)
+end
+-- Starts a technique whose cost and cooldown are already paid: windup, busy time, the Cast broadcast, then the effect.
+local function perform(p,s,m,h,r,kind,direction,instant)
+    local n=clock()
+    local windup=instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
+    s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
+    if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
+    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup})
+    if kind=="Blue" then
+        cancelBlue(p,s)
+        local desired=r.Position+direction*C.Blue.Range
+        local result=workspace:Raycast(r.Position,direction*C.Blue.Range,rayParams(m))
+        if result then desired=result.Position-direction*2 end
+        desired=Vector3.new(desired.X,math.max(2,desired.Y),desired.Z)
+        delayed(p,s,m,C.Blue.Windup,function()
+            s.blueUntil=clock()+C.Blue.Duration;blues[p]={position=desired,untilTime=s.blueUntil,model=m}
+            fx:FireAllClients("Blue",{owner=p.UserId,position=desired,duration=C.Blue.Duration});sendState(p,s)
+        end)
+    elseif kind=="Red" or kind=="Purple" then
+        delayed(p,s,m,C[kind].Windup,function()
+            local cfgShot=C[kind]
+            -- Lock the current camera ray at release, after the windup and Purple's ascent.
+            local eye
+            direction,eye=releaseAim(s,m,r,direction)
+            local offset=kind=="Purple" and cfgShot.OrbDistance or 1.6
+            local obstruction=not cfgShot.PierceWorld and workspace:Raycast(eye,direction*offset,rayParams(m))
+            if obstruction then offset=math.max(0,obstruction.Distance-.1) end
+            local origin=eye+direction*offset
+            local id=tostring(p.UserId)..":"..tostring(clock())
+            table.insert(projectiles,{id=id,owner=p,model=m,position=origin,direction=direction,kind=kind,distance=0,hit={}})
+            fx:FireAllClients("Projectile",{id=id,owner=p.UserId,position=origin,direction=direction,kind=kind,speed=cfgShot.Speed,range=cfgShot.Range})
+        end)
+    elseif kind=="Domain" then
+        delayed(p,s,m,C.Domain.Windup,function()
+            local flat=Vector3.new(direction.X,0,direction.Z)
+            if flat.Magnitude<.05 then flat=Vector3.new(0,0,-1) end
+            local center=r.Position+flat.Unit*14
+            local d={owner=p,model=m,center=center,expires=clock()+C.Domain.Duration,nextTick=clock(),captured={}}
+            for _,t in targets(m) do
+                if (t.r.Position-center).Magnitude<C.Domain.Radius then
+                    table.insert(d.captured,t)
+                    t.m:SetAttribute("DomainLockedUntil",math.max(t.m:GetAttribute("DomainLockedUntil") or 0,d.expires))
+                end
+            end
+            table.insert(domains,d)
+            fx:FireAllClients("Domain",{owner=p.UserId,position=center,radius=C.Domain.Radius,duration=C.Domain.Duration})
+        end)
+    elseif kind=="Dash" then
+        local flat=Vector3.new(direction.X,0,direction.Z)
+        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+        flat=flat.Unit
+        local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*C.Dash.Distance,rayParams(m))
+        local distance=result and math.max(0,result.Distance-.5) or C.Dash.Distance
+        r.CFrame+=flat*distance
+    elseif kind=="Thunderclap" then
+        local cfg=C.Thunderclap
+        local flat=Vector3.new(direction.X,0,direction.Z)
+        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+        flat=flat.Unit
+        -- Crouched stance: rooted in place during the long windup.
+        if windup>.1 then setTimed(m,h,"RootedUntil",windup) end
+        delayed(p,s,m,windup,function()
+            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
+            for _,t in victims do damage(p,t,cfg.Damage) end
+            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish})
+        end)
+    elseif kind=="Breath" then
+        delayed(p,s,m,C.Breath.Windup,function()
+            s.charges=C.Breath.Charges;s.chargesUntil=clock()+C.Breath.ChargeWindow;sendState(p,s)
+            fx:FireAllClients("Strike",{position=r.Position-Vector3.new(0,3,0),big=true})
+        end)
+    elseif kind=="FlameGod" then
+        local cfg=C.FlameGod
+        local flat=Vector3.new(direction.X,0,direction.Z)
+        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+        flat=flat.Unit
+        setTimed(m,h,"RootedUntil",windup)
+        delayed(p,s,m,windup,function()
+            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
+            fx:FireAllClients("FlameGod",{owner=p.UserId,from=start,to=finish})
+            -- Too fast to see: the cuts land only after the user is already past.
+            task.delay(cfg.HitDelay,function()
+                for _,t in victims do damage(p,t,cfg.Damage) end
+            end)
+            -- The cut lands after the turn; recoil follows just after the user sees the result.
+            task.delay(cfg.RecoilDelay,function()
+                if p.Character~=m or not m.Parent or not h.Parent or h.Health<=0 then return end
+                if h.Health>1 then h.Health=math.max(1,h.Health-cfg.SelfDamage) end
+                setTimed(m,h,"SlowedUntil",cfg.SlowDuration)
+                fx:FireClient(p,"Recoil",{damage=cfg.SelfDamage,duration=cfg.SlowDuration})
+            end)
+        end)
+    elseif kind=="BombDevil" then
+        local cfg=C.BombDevil
+        -- Rooted from the pin pull until her own sight returns.
+        setTimed(m,h,"RootedUntil",windup+cfg.Blackout)
+        delayed(p,s,m,windup,function()
+            local center=r.Position
+            -- No time limit: the transformation lasts until Detonation (or death) ends it.
+            m:SetAttribute("BombDevilUntil",1e12)
+            local healed=math.max(0,math.min(h.MaxHealth,h.Health+h.MaxHealth*cfg.Heal)-h.Health)
+            if healed>0 then h.Health+=healed end
+            fx:FireAllClients("BombDevil",{owner=p.UserId,position=center+Vector3.new(0,1.5,0),blackout=cfg.Blackout,healed=math.floor(healed+.5)})
+            for _,t in targets(m) do
+                local distance=(t.r.Position-center).Magnitude
+                if distance<=cfg.Radius then
+                    damage(p,t,cfg.Damage)
+                    local power=1-.5*distance/cfg.Radius
+                    launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
+                end
+            end
+        end)
+    elseif kind=="Detonation" then
+        local cfg=C.Detonation
+        -- The fuse hair burns down for Windup seconds (free to move, other skills locked), then everything goes off.
+        delayed(p,s,m,windup,function()
+            local center=r.Position
+            fx:FireAllClients("Detonation",{owner=p.UserId,position=center,radius=cfg.Radius})
+            for _,t in targets(m) do
+                local distance=(t.r.Position-center).Magnitude
+                if distance<=cfg.Radius then
+                    damage(p,t,cfg.Damage)
+                    local power=1-.55*distance/cfg.Radius
+                    launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
+                end
+            end
+            -- Back to human; the transformation can be used again after the recharge.
+            m:SetAttribute("BombDevilUntil",0)
+            s.cooldowns.BombDevil=clock()+C.BombDevil.Recharge
+            sendState(p,s)
+        end)
+    elseif kind=="Rampage" then
+        local cfg=C.Rampage
+        local flat=Vector3.new(direction.X,0,direction.Z)
+        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+        flat=flat.Unit
+        delayed(p,s,m,windup,function()
+            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
+            for _,t in victims do
+                damage(p,t,cfg.Damage);launch(t,flat*14+Vector3.new(0,cfg.Launch,0))
+            end
+            -- Missed everything: she skids on a little further instead of stopping dead.
+            local slide=#victims==0
+            if slide then r.AssemblyLinearVelocity=flat*cfg.SlideSpeed end
+            fx:FireAllClients("Rampage",{owner=p.UserId,from=start,to=finish,delay=cfg.TrailDelay,slide=slide})
+            s.comboDir=flat;s.comboUntil=clock()+C.Kick.ComboWindow;sendState(p,s)
+            -- The gunpowder left on the path goes off on its own, even if Reze has moved on or died.
+            local length=(finish-start).Magnitude
+            task.delay(cfg.TrailDelay,function()
+                for _,t in targets(m) do
+                    local along=math.clamp((t.r.Position-start):Dot(flat),0,length)
+                    if (start+flat*along-t.r.Position).Magnitude<=cfg.TrailRadius then
+                        damage(p,t,cfg.TrailDamage);launch(t,Vector3.new(0,cfg.TrailLift,0))
+                    end
+                end
+            end)
+        end)
+    elseif kind=="Kick" then
+        local cfg=C.Kick
+        -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
+        local combo=(s.comboUntil or 0)>n and s.comboDir~=nil
+        local flat=Vector3.new(direction.X,0,direction.Z)
+        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+        flat=combo and s.comboDir or flat.Unit
+        s.comboUntil=0
+        delayed(p,s,m,windup,function()
+            local struck={}
+            local from=r.Position
+            local center,radius,damageAmount,knock,lift
+            if combo then
+                local _,finish,victims=dashStrike(m,r,flat,cfg.ComboDistance,cfg.Width)
+                for _,t in victims do struck[t.m]=t end
+                center=finish+flat*2.5;radius=cfg.ComboRadius;damageAmount=cfg.ComboDamage;knock=cfg.ComboKnockback;lift=cfg.ComboLift
+            else
+                center=from+flat*cfg.Reach;radius=cfg.Radius;damageAmount=cfg.Damage;knock=cfg.Knockback;lift=cfg.Lift
+            end
+            for _,t in targets(m) do
+                if (t.r.Position-center).Magnitude<=radius then struck[t.m]=t end
+            end
+            fx:FireAllClients("Kick",{owner=p.UserId,from=from,to=center,combo=combo,radius=radius})
+            for _,t in struck do
+                damage(p,t,damageAmount);launch(t,flat*knock+Vector3.new(0,lift,0))
+            end
+        end)
+    end
+end
+remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
+    local s=states[p];if not s then return end
+    local n=clock()
+    if n-s.lastRequest<.1 then return end;s.lastRequest=n
+    if type(skill)~="string" or not kits[kitOf(p)][skill] or not validVector(aim) then return end
+    local m,h,r=character(p);if not m then return end
+    if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
+    rememberAim(s,m,aim,aimOrigin)
+    -- During a hold: the other of Blue/Red fuses both into Purple (paying its own cost), the same one fires at once.
+    local hold=s.hold
+    if hold and (skill=="Blue" or skill=="Red") then
+        if s.busyUntil>n then return end
+        if skill~=hold.kind then
+            if (s.cooldowns[skill] or 0)>n or s.energy<C[skill].Cost then return end
+            s.energy-=C[skill].Cost;s.cooldowns[skill]=n+C[skill].Cooldown
+        end
+        s.hold=nil
+        perform(p,s,m,h,r,skill==hold.kind and skill or "Purple",aim.Unit,false)
+        sendState(p,s);return
+    end
+    if hold and skill~="Dash" then return end
+    if s.busyUntil>n then return end
+    if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
+    if skill=="BombDevil" and devil(m) then return end
+    if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    local cfg=C[skill]
+    local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
+    if instant then
+        s.charges-=1
+    else
+        if (s.cooldowns[skill] or 0)>n or s.energy<cfg.Cost then return end
+        s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown
+    end
+    -- Reze pays in health, never lethally.
+    if cfg.HpCost and h.Health>1 then h.Health=math.max(1,h.Health-h.MaxHealth*cfg.HpCost) end
+    -- Gojo: Blue and Red are held with an arm raised for up to Hold.Duration seconds instead of firing at once.
+    if skill=="Blue" or skill=="Red" then
+        local hold={kind=skill,untilTime=n+C.Hold.Duration}
+        s.hold=hold
+        fx:FireAllClients("Hold",{owner=p.UserId,kind=skill,position=r.Position,duration=C.Hold.Duration})
+        local generation=s.generation
+        task.delay(C.Hold.Duration,function()
+            if s.hold~=hold or generation~=s.generation then return end
+            s.hold=nil
+            local cm,ch,cr=character(p)
+            if cm==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then
+                local direction=releaseAim(s,cm,cr,aim.Unit)
+                perform(p,s,cm,ch,cr,skill,direction,false)
+            end
+            sendState(p,s)
+        end)
+        sendState(p,s);return
+    end
+    perform(p,s,m,h,r,skill,aim.Unit,instant)
+    sendState(p,s)
+end)
+selectRemote.OnServerEvent:Connect(function(p,name)
+    local s=states[p]
+    if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
+    clearPurpleHover(s)
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
+    if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
+    p:SetAttribute("Character",name);sendState(p,s)
+end)
+local sync=0
+RunService.Heartbeat:Connect(function(dt)
+    local n=clock();sync+=dt
+    for p,s in states do
+        local regen=C.EnergyRegen
+        s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
+        if sync>=.15 then sendState(p,s) end
+    end
+    if sync>=.15 then sync=0 end
+    for p,b in blues do
+        if n>b.untilTime or not b.model.Parent then
+            if states[p] then cancelBlue(p,states[p]) else blues[p]=nil end
+        else
+            for _,t in targets(b.model) do
+                local delta=b.position-t.r.Position;local distance=delta.Magnitude
+                if distance<C.Blue.Radius and distance>2 then
+                    local step=delta.Unit*math.min(C.Blue.PullSpeed*dt,distance-2)
+                    local obstacle=workspace:Raycast(t.r.Position,step,rayParams(t.m))
+                    if not obstacle then t.r.CFrame+=step end
+                end
+            end
+        end
+    end
+    for i=#projectiles,1,-1 do
+        local shot=projectiles[i];local cfg=C[shot.kind];local step=shot.direction*cfg.Speed*dt
+        -- Hollow Purple travels through arena geometry, like the reference; victims still receive one hit.
+        -- Its wide damage radius used to clip a nearby pillar and delete it immediately after release.
+        local hitWorld=not cfg.PierceWorld and workspace:Spherecast(shot.position,cfg.WorldRadius or cfg.Radius,step,rayParams(shot.model)) or nil
+        local segmentLength=step.Magnitude
+        if hitWorld then
+            local hitModel=hitWorld.Instance:FindFirstAncestorOfClass("Model")
+            if not (hitModel and hitModel:FindFirstChildOfClass("Humanoid")) then segmentLength=hitWorld.Distance end
+        end
+        local travel=shot.direction*segmentLength
+        for _,t in targets(shot.model) do
+            local projection=math.clamp((t.r.Position-shot.position):Dot(shot.direction),0,segmentLength)
+            local closest=shot.position+shot.direction*projection
+            if not shot.hit[t.m] and (t.r.Position-closest).Magnitude<=cfg.Radius+2 then
+                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage)
+                if shot.kind=="Red" and not t.r.Anchored then t.r.AssemblyLinearVelocity+=shot.direction*34 end
+            end
+        end
+        shot.position+=travel;shot.distance+=segmentLength
+        if shot.distance>=cfg.Range or segmentLength<step.Magnitude-.001 then
+            fx:FireAllClients("ProjectileEnd",{id=shot.id,position=shot.position,kind=shot.kind});table.remove(projectiles,i)
+        end
+    end
+    -- Knocked-back training targets: ballistic arc until they land back on their starting height; walls stop drift.
+    for model,f in flights do
+        local root=f.t.r
+        if not model.Parent or not root.Parent then
+            flights[model]=nil
+        else
+            f.velocity-=Vector3.new(0,workspace.Gravity*dt,0)
+            local step=f.velocity*dt
+            local wall=workspace:Raycast(root.Position,Vector3.new(step.X,0,step.Z),rayParams(model))
+            if wall then step=Vector3.new(0,step.Y,0);f.velocity=Vector3.new(0,f.velocity.Y,0) end
+            local position=root.Position+step
+            if position.Y<=f.ground and f.velocity.Y<0 then position=Vector3.new(position.X,f.ground,position.Z);flights[model]=nil end
+            root.CFrame=CFrame.new(position)*root.CFrame.Rotation
+        end
+    end
+    for i=#domains,1,-1 do
+        local d=domains[i]
+        if n>=d.expires or not d.model.Parent then
+            for _,t in d.captured do
+                if t.m.Parent and (t.m:GetAttribute("DomainLockedUntil") or 0)<=d.expires then t.m:SetAttribute("DomainLockedUntil",0) end
+            end
+            table.remove(domains,i)
+        else
+            for _,t in d.captured do
+                if t.m.Parent and t.h.Health>0 then
+                    local delta=t.r.Position-d.center
+                    if delta.Magnitude>C.Domain.Radius-2 then t.r.CFrame=CFrame.new(d.center+delta.Unit*(C.Domain.Radius-2))*t.r.CFrame.Rotation end
+                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage) end
+                end
+            end
+            if n>=d.nextTick then d.nextTick=n+C.Domain.Tick end
+        end
+    end
+end)
+local function joined(p)
+    local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
+    local function reset()
+        clearPurpleHover(s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
+        local m=p.Character;local h=m and m:WaitForChild("Humanoid")
+        if h then h.Died:Connect(function() clearPurpleHover(s);s.generation+=1;s.hold=nil;s.comboUntil=0;cancelBlue(p,s) end) end
+    end
+    p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
+end
+Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
+Players.PlayerRemoving:Connect(function(p) if states[p] then clearPurpleHover(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
+]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">0</token>
+				<string name="ScriptGuid">{565CFC2C-F06B-4E6C-B1E5-C688ED4611B5}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">Combat</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003dc</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="Script" referent="6">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[-- Optional Creator Store decoration. The game also runs when permissions prevent loading.
+-- Only ParticleEmitter data is copied; imported scripts are never parented to the DataModel.
+local InsertService=game:GetService("InsertService")
+local RS=game:GetService("ReplicatedStorage")
+local templates=Instance.new("Folder");templates.Name="StoreVFX";templates.Parent=RS
+local ASSET_ID=17879749515 -- Red and Blue VFX Gojo !, @XxMurder_ProgamexX
+task.spawn(function()
+    local ok,model=pcall(function() return InsertService:LoadAsset(ASSET_ID) end)
+    if not ok then
+        templates:SetAttribute("Status","Permission unavailable; procedural fallback")
+        warn("Creator Store VFX not loaded. Open this place with the account that acquired asset "..ASSET_ID)
+        return
+    end
+    -- model remains unparented throughout inspection.
+    for _,v in model:GetDescendants() do if v:IsA("LuaSourceContainer") then v:Destroy() end end
+    local count=0
+    for _,v in model:GetDescendants() do
+        if v:IsA("ParticleEmitter") and count<8 then
+            count+=1
+            local copy=v:Clone()
+            for _,child in copy:GetChildren() do child:Destroy() end
+            copy.Name="StoreParticle"..count
+            copy.Enabled=false;copy.Rate=math.min(copy.Rate,30)
+            copy.Lifetime=NumberRange.new(math.min(copy.Lifetime.Min,1),math.min(copy.Lifetime.Max,1.6))
+            copy.Speed=NumberRange.new(math.min(copy.Speed.Min,10),math.min(copy.Speed.Max,16))
+            copy.Parent=templates
+        end
+    end
+    model:Destroy()
+    templates:SetAttribute("Status",count>0 and "Loaded" or "No particle emitters; procedural fallback")
+    templates:SetAttribute("SourceAssetId",ASSET_ID)
+end)
+]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">0</token>
+				<string name="ScriptGuid">{6B8E54BA-A9A5-4621-93D4-1550B741F927}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">StoreVFX</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003dd</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="ServerStorage" referent="RBXDD8608D5094D4F2C8E67E173891D2E43">
+		<Properties>
+			<BinaryString name="AttributesSerialize"><![CDATA[AQAAAAwAAABfX01DUFBsYWNlSWQCJAAAADk5Y2E2NmI0LWIzZjMtNDliMS05ODEzLTM3NmEy
+MjIxYzVlZg==]]></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">ServerStorage</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c7</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="VideoService" referent="RBXA7D327F2F25A4B97BAC2270E09BF7AEC">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">VideoService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d4</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="HttpService" referent="RBX004EE3B93B204AC8BDA0B2192C0FE917">
+		<Properties>
+			<bool name="HttpEnabled">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">HttpService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d5</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="Lighting" referent="0">
+		<Properties>
+			<Color3 name="Ambient">
+				<R>0.379999995</R>
+				<G>0.419999987</G>
+				<B>0.519999981</B>
+			</Color3>
+			<float name="Brightness">3.13526607</float>
+			<Color3 name="ColorShift_Bottom">
+				<R>0</R>
+				<G>0</G>
+				<B>0</B>
+			</Color3>
+			<Color3 name="ColorShift_Top">
+				<R>0</R>
+				<G>0</G>
+				<B>0</B>
+			</Color3>
+			<float name="EnvironmentDiffuseScale">0</float>
+			<float name="EnvironmentSpecularScale">0</float>
+			<float name="ExposureCompensation">0</float>
+			<token name="ExtendLightRangeTo120">0</token>
+			<Color3 name="FogColor">
+				<R>0.75</R>
+				<G>0.75</G>
+				<B>0.75</B>
+			</Color3>
+			<float name="FogEnd">100000</float>
+			<float name="FogStart">0</float>
+			<float name="GeographicLatitude">41.7332993</float>
+			<bool name="GlobalShadows">false</bool>
+			<token name="LightingStyle">1</token>
+			<Color3 name="OutdoorAmbient">
+				<R>0.5</R>
+				<G>0.540000021</G>
+				<B>0.639999986</B>
+			</Color3>
+			<bool name="Outlines">true</bool>
+			<bool name="PrioritizeLightingQuality">false</bool>
+			<float name="ShadowSoftness">0.5</float>
+			<token name="Technology">1</token>
+			<string name="TimeOfDay">13:30:00</string>
+			<BinaryString name="AttributesSerialize"><![CDATA[BQAAABQAAABSQlhfQmFja3VwQnJpZ2h0bmVzcwUAAEBAHgAAAFJCWF9CYWNrdXBFeHBvc3Vy
+ZUNvbXBlbnNhdGlvbgUAAAAAIQAAAFJCWF9MaWdodGluZ0NvbXBhdGliaWxpdHlNaWdyYXRl
+ZAMBJgAAAFJCWF9MaWdodGluZ1RlY2hub2xvZ3lVbmlmaWVkTWlncmF0aW9uAwEgAAAAUkJY
+X09yaWdpbmFsVGVjaG5vbG9neU9uRmlsZUxvYWQEAgAAAA==]]></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">Lighting</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d8</UniqueId>
+		</Properties>
+		<Item class="ColorGradingEffect" referent="RBX8C050845254C47F9ACA1BE14B5F2E8FC">
+			<Properties>
+				<token name="TonemapperPreset">1</token>
+				<bool name="Enabled">true</bool>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ColorGrading</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003f1</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="BloomEffect" referent="RBX4EBDE4C1FF18406197E426EDDD112B10">
+			<Properties>
+				<float name="Intensity">0</float>
+				<float name="Size">24</float>
+				<float name="Threshold">0.949999988</float>
+				<bool name="Enabled">true</bool>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">Bloom</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003f2</UniqueId>
+			</Properties>
+		</Item>
+	</Item>
+	<Item class="LodDataService" referent="RBX9D8478E96D0E4635BD9CF20CF3461F94">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">LodDataService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003fe</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="SerializationService" referent="RBX2032576833C94A538EAB6BEA611EE778">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">SerializationService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae1132100000450</UniqueId>
+		</Properties>
+	</Item>
+	<Item class="TestService" referent="RBXCC5945A3A0B547EABFF86DB2F4ED5EE0">
+		<Properties>
+			<bool name="AutoRuns">true</bool>
+			<string name="Description"></string>
+			<bool name="ExecuteWithStudioRun">false</bool>
+			<bool name="IsPhysicsEnvironmentalThrottled">true</bool>
+			<bool name="IsSleepAllowed">true</bool>
+			<int name="NumberOfPlayers">0</int>
+			<double name="SimulateSecondsLag">0</double>
+			<bool name="ThrottlePhysicsToRealtime">true</bool>
+			<double name="Timeout">10</double>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+			<string name="Name">TestService</string>
+			<BinaryString name="SerializedOverrides"></BinaryString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			<UniqueId name="UniqueId">50bb54df9c47e24a0ae113210000063f</UniqueId>
+		</Properties>
+	</Item>
+	<SharedStrings>
+		<SharedString md5="leDEa27wHRPaBssaK0OoqQ==">AQAAABUAAAACAAAAan8/AAUAAAAAAAADAAAAP39rIAMAAAAAAAAEAAAAf2Y/MAMAAAAAAAAF
+AAAAilY+UAMAAAAAAAAGAAAAj35fEAUAAAAAAAAHAAAAi21PEAIAAAAAAAAIAAAAZmxvgAMA
+AAAAAAAJAAAAZbDqEAYAAAAAAAAKAAAAw8faMAUAAAAAAAALAAAAiVpHkAMAAAAAAAAMAAAA
+Oi4kQAUAAAAAAAANAAAAHh4lFAMAAAAAAAAOAAAAZlw7UAUAAAAAAAAPAAAA6JxKJAMAAAAA
+AAAQAAAAc3trYAUAAAAAAAARAAAAhHtacAMAAAAAAAASAAAAgcLgAAYAAAAAAAATAAAAc4RK
+BAUAAAAAAAAUAAAAxr21cAUAAAAAAAAVAAAAzq2UNAMAAAAAAAAWAAAAlJSMRAMAAAAAAAA=</SharedString>
+		<SharedString md5="yuZpQdnvvUBOTYh1jqZ2cA=="></SharedString>
+	</SharedStrings>
 </roblox>

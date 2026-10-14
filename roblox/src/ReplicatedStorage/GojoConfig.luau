@@ -8,7 +8,7 @@ return {
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
-    Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, Range = 140 },
+    Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
     -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
     Hold = { Duration = 3 },
     Purple = {

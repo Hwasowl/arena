@@ -8,6 +8,8 @@ local Lighting=game:GetService("Lighting")
 local player=Players.LocalPlayer
 local C=require(RS:WaitForChild("GojoConfig"))
 local action=RS:WaitForChild("GojoAction")
+local aimRemote=RS:WaitForChild("GojoAim")
+local nextAimAt=0
 local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local camera=workspace.CurrentCamera
@@ -28,13 +30,13 @@ local clock=workspace.GetServerTimeNow
 local function time() return clock(workspace) end
 local KITS={
     Gojo={title="五条 悟  ·  고죠 사토루",energy="CURSED ENERGY",hint="Q / E 3초 대기 · 그 안에 다른 쪽 = 무라사키 · 같은 키 = 즉시 발사   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(17,21,35),handScale=1,
+        handScale=1,
         slots={{"Blue","Q","아오"},{"Red","E","아카"},{"Domain","R","영역전개"},{"Dash","SHIFT","대시"}}},
     Zenitsu={title="我妻 善逸  ·  아가츠마 젠이츠",energy="BREATH",hint="Q → E  전집중 후 벽력일섬 즉시 ×3   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(240,184,40),handScale=.62,
+        handScale=1,
         slots={{"Breath","Q","전집중 호흡"},{"Thunderclap","E","벽력일섬"},{"FlameGod","R","화뢰신"},{"Dash","SHIFT","대시"}}},
     Reze={title="レゼ  ·  레제",energy="GUNPOWDER",hint="R 변신(무제한) → Q 폭주대시 → 바로 E = 연계 폭발 킥 · R 다시 = 4초 뒤 대폭발   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
-        sleeve=Color3.fromRGB(225,208,197),devilSleeve=Color3.fromRGB(40,36,38),handScale=1,
+        handScale=1,
         slots={{"Rampage","Q","폭주대시"},{"Kick","E","폭발 킥"},{"BombDevil","R","폭탄의 악마"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
@@ -287,17 +289,91 @@ local function piece(list,name,size,offset,color,material,shape)
     local p=part(viewmodel,name,size,color,nil,shape);p.Material=material or Enum.Material.SmoothPlastic
     local entry={p=p,offset=offset,size=size};table.insert(list,entry);return entry
 end
-local function hand(side)
-    local h={pieces={},side=side,scale=1}
-    local skin=Color3.fromRGB(225,208,197)
-    h.sleeve=piece(h.pieces,"Sleeve",Vector3.new(.29,.75,.32),CFrame.new(0,-.42,.12)*CFrame.Angles(-.15,0,0),Color3.fromRGB(17,21,35)).p
-    piece(h.pieces,"Palm",Vector3.new(.29,.32,.12),CFrame.identity,skin)
-    -- Bomb Devil: a fuse cord hangs from each wrist with a lit tip.
-    piece(h.pieces,"Fuse",Vector3.new(.05,.4,.05),CFrame.new(side*.13,-.22,.16)*CFrame.Angles(.5,0,side*.5),Color3.fromRGB(84,62,44)).devilOnly=true
-    piece(h.pieces,"Ember",Vector3.one*.08,CFrame.new(side*.22,-.38,.27),C.Colors.Bomb,Enum.Material.Neon,Enum.PartType.Ball).devilOnly=true
-    return h
+-- The rendered arms come from the player's loaded avatar, including R6/R15 body
+-- meshes, skin colors and classic clothing. No kit-specific skin or sleeves.
+local left={scale=1,avatar={}}
+local right={scale=1,avatar={}}
+local avatarRig=nil
+local avatarDirty=true
+local avatarConnections={}
+local ARM_NAMES={Left={"Left Arm","LeftUpperArm","LeftLowerArm","LeftHand"},Right={"Right Arm","RightUpperArm","RightLowerArm","RightHand"}}
+local function rebuildAvatarArms()
+    avatarDirty=false
+    if avatarRig then avatarRig:Destroy();avatarRig=nil end
+    left.avatar={};right.avatar={}
+    local character=player.Character
+    if not character or not character:FindFirstChildOfClass("Humanoid") then return end
+    local archivable=character.Archivable;character.Archivable=true
+    local rig=character:Clone();character.Archivable=archivable
+    if not rig then return end
+    rig.Name="AvatarArms"
+    -- Keep the rig and clothing containers so Roblox renders classic shirt sleeves.
+    for _,v in rig:GetDescendants() do
+        if v:IsA("BaseScript") or v:IsA("ModuleScript") or v:IsA("Tool") or v:IsA("Accessory") or v:GetAttribute("Outfit") then
+            v:Destroy()
+        elseif v:IsA("BasePart") then
+            v.Anchored=true;v.CanCollide=false;v.CanTouch=false;v.CanQuery=false;v.CastShadow=false
+            v.LocalTransparencyModifier=0;v.Transparency=1
+        elseif v:IsA("Decal") then v.Transparency=1
+        elseif v:IsA("Humanoid") then
+            -- A display rig must never restore limb collisions or run character physics.
+            v.EvaluateStateMachine=false;v.AutoRotate=false;v.AutomaticScalingEnabled=false
+            v.RequiresNeck=false;v.BreakJointsOnDeath=false;v.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
+        end
+    end
+    for side,hd in {Left=left,Right=right} do
+        local names=ARM_NAMES[side]
+        local palm=character:FindFirstChild(side.."Hand") or character:FindFirstChild(side.." Arm")
+        if palm then
+            local grip=palm.CFrame
+            if palm.Name==side.." Arm" then grip*=CFrame.new(0,-palm.Size.Y/2+.16,0) end
+            grip*=CFrame.Angles(0,0,math.pi)
+            for _,name in names do
+                local source=character:FindFirstChild(name);local clone=rig:FindFirstChild(name)
+                if source and clone then
+                    local meshes={}
+                    for _,mesh in clone:GetChildren() do if mesh:IsA("SpecialMesh") then table.insert(meshes,{p=mesh,scale=mesh.Scale}) end end
+                    table.insert(hd.avatar,{p=clone,source=source,size=source.Size,offset=grip:ToObjectSpace(source.CFrame),transparency=source.Transparency,meshes=meshes})
+                end
+            end
+        end
+    end
+    -- Only arms are rendered. Hidden torso/root/legs would still form a humanoid
+    -- collider even with state evaluation disabled, so remove them and all joints.
+    local armParts={}
+    for _,hd in {left,right} do for _,entry in hd.avatar do armParts[entry.p]=true end end
+    for _,v in rig:GetDescendants() do
+        if v:IsA("JointInstance") or v:IsA("Constraint") or v:IsA("Animator") or (v:IsA("BasePart") and not armParts[v]) then v:Destroy() end
+    end
+    rig.Parent=viewmodel;avatarRig=rig
 end
-local left,right=hand(-1),hand(1)
+local function watchAvatar(character)
+    for _,connection in avatarConnections do connection:Disconnect() end
+    avatarConnections={};avatarDirty=true
+    local function changed(v)
+        if v:IsA("BasePart") or v:IsA("Clothing") or v:IsA("BodyColors") or v:IsA("CharacterMesh") or v:IsA("Accessory") or v:IsA("SurfaceAppearance") then avatarDirty=true end
+    end
+    table.insert(avatarConnections,character.DescendantAdded:Connect(changed))
+    table.insert(avatarConnections,character.DescendantRemoving:Connect(changed))
+    local humanoid=character:FindFirstChildOfClass("Humanoid")
+    if humanoid then table.insert(avatarConnections,humanoid.ApplyDescriptionFinished:Connect(function() avatarDirty=true end)) end
+end
+player.CharacterAdded:Connect(watchAvatar)
+player.CharacterAppearanceLoaded:Connect(function(character) if character==player.Character then avatarDirty=true end end)
+if player.Character then watchAvatar(player.Character) end
+local function showAvatarArm(hd,frame,posed,alive)
+    local size=.42*hd.scale
+    for _,entry in hd.avatar do
+        if entry.source.Parent then
+            entry.p.Size=entry.size*size
+            for _,mesh in entry.meshes do mesh.p.Scale=mesh.scale*size end
+            entry.p.Color=entry.source.Color
+            entry.p.CFrame=camera.CFrame*frame*CFrame.new(entry.offset.Position*size)*entry.offset.Rotation
+            entry.p.Transparency=alive and entry.transparency or 1
+            entry.p.LocalTransparencyModifier=0
+        else avatarDirty=true;entry.p.Transparency=1 end
+    end
+end
 -- The choker stays outside the first-person view; this invisible target guides the pin-pull pose.
 local RING_AT=CFrame.new(.05,-.635,-1.026)*CFrame.Angles(0,math.pi/2,0)
 local pinPart=part(viewmodel,"Pin",Vector3.one*.01,Color3.fromRGB(205,210,218));pinPart.Transparency=1
@@ -314,14 +390,7 @@ local boot=part(viewmodel,"Boot",Vector3.new(.2,.16,.5),Color3.fromRGB(28,26,30)
 -- Where the ring sits relative to the hooking hand, and the elbow-out hooking pose.
 local PIN_IN_HAND=CFrame.new(-.03,.17,-.07)*CFrame.Angles(0,math.pi/2,0)
 local HOOK=CFrame.Angles(-.15,-.2,1.25)
-local function scaleHand(h,s)
-    if h.scale~=s then h.scale=s;for _,entry in h.pieces do entry.p.Size=entry.size*s end end
-end
-local function pose(h,cf)
-    for _,entry in h.pieces do
-        entry.p.CFrame=camera.CFrame*cf*CFrame.new(entry.offset.Position*h.scale)*entry.offset.Rotation
-    end
-end
+local function scaleHand(h,s) h.scale=s end
 -- Zenitsu's sheathed katana. In the sword frame -Z runs from the tsuba toward the pommel, +Z into the saya.
 local katana={saya={},hilt={}}
 local gold=Color3.fromRGB(201,162,74)
@@ -364,7 +433,7 @@ for i=1,4 do
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,10);corner.Parent=b
     local stroke=Instance.new("UIStroke");stroke.Thickness=1;stroke.Parent=b
     local entry={b=b,stroke=stroke};buttons[i]=entry
-    b.Activated:Connect(function() if entry.skill then action:FireServer(entry.skill,camera.CFrame.LookVector) end end)
+    b.Activated:Connect(function() if entry.skill then action:FireServer(entry.skill,camera.CFrame.LookVector,camera.CFrame.Position) end end)
 end
 local comboLabel=label(gui,"",26,UDim2.fromScale(.5,.62),UDim2.fromOffset(420,40),Color3.fromRGB(255,224,176));comboLabel.AnchorPoint=Vector2.new(.5,.5)
 comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;comboLabel.TextStrokeColor3=Color3.fromRGB(255,122,46)
@@ -398,8 +467,7 @@ local function applyKit()
         b.BackgroundColor3=on and Color3.fromRGB(219,234,240) or Color3.fromRGB(14,21,34);b.TextColor3=on and Color3.fromRGB(16,34,54) or Color3.fromRGB(200,214,228)
     end
     for _,h in {left,right} do
-        h.sleeve.Color=kit.sleeve;h.scale=kit.handScale
-        for _,entry in h.pieces do entry.p.Size=entry.size*kit.handScale end
+        h.scale=kit.handScale
     end
     clearCastVFX();finishFlameTurn()
     cast=nil;holdState=nil;drawnUntil=0;blackout.BackgroundTransparency=1
@@ -411,7 +479,7 @@ UIS.InputBegan:Connect(function(input,processed)
     local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
-    if slot then action:FireServer(buttons[slot].skill,camera.CFrame.LookVector) end
+    if slot then action:FireServer(buttons[slot].skill,camera.CFrame.LookVector,camera.CFrame.Position) end
 end)
 action.OnClientEvent:Connect(function(s) state=s end)
 
@@ -667,7 +735,8 @@ Run:BindToRenderStep("RezeChinReset",Enum.RenderPriority.Camera.Value-1,function
 end)
 Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     camera=workspace.CurrentCamera;viewmodel.Parent=camera
-    local n=time();local bob=math.sin(n*2)*.014
+    if avatarDirty then rebuildAvatarArms() end
+    local n=time();local bob=0
     local zen=current()=="Zenitsu"
     local reze=current()=="Reze"
     local pinShown=cast and cast.kind=="BombDevil"
@@ -675,14 +744,17 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local pinGrabbed,pinHooked,chinTilt,handSize=false,false,0,KITS[current()].handScale
     local look=camera.CFrame.LookVector;local flat=Vector3.new(look.X,0,look.Z)
     local neckFrame=CFrame.lookAt(camera.CFrame.Position,camera.CFrame.Position+(flat.Magnitude>.01 and flat.Unit or Vector3.new(0,0,-1)))
-    local l=CFrame.new(-.48,-.53+bob,-.88)*CFrame.Angles(.2,.15,-.3)
-    local r=CFrame.new(.48,-.5-bob,-.88)*CFrame.Angles(.1,-.2,.3)
+    local l=CFrame.new(-.64,-.78,-1.15)*CFrame.Angles(.12,.08,-.08)
+    local r=CFrame.new(.64,-.78,-1.15)*CFrame.Angles(.12,-.08,.08)
     local swordPos,swordDir=Vector3.new(-.05,-.5+bob,-1.12),Vector3.new(.8,.25,-.55).Unit
     local push,lean=0,0
     local desiredFov=72;blur.Size=math.max(0,blur.Size-dt*24)
     local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
     local transformed=reze and m and (m:GetAttribute("BombDevilUntil") or 0)>n
-    if reze then for _,hd in {left,right} do hd.sleeve.Color=transformed and KITS.Reze.devilSleeve or KITS.Reze.sleeve end end
+    if current()=="Gojo" and (holdState or (cast and (cast.kind=="Red" or cast.kind=="Purple"))) and n>=nextAimAt then
+        nextAimAt=n+1/20
+        aimRemote:FireServer(camera.CFrame.LookVector,camera.CFrame.Position)
+    end
     if cast and not (h and h.Health>0) then clearCastVFX();finishFlameTurn();cast=nil end
     if cast then
         local a=n-cast.start;local u=math.clamp(a/cast.length,0,1)
@@ -698,7 +770,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             r=CFrame.new(.08+math.cos(angle)*radius,-.12+math.sin(angle)*radius,-.87)*CFrame.Angles(-.2,-.25,angle*.25)
             desiredFov=72-8*smoothstep(a/cfg.RiseDuration)
             -- The spheres orbit in clear view, then become one visible Purple at the launch point.
-            local focus=CFrame.lookAt(camera.CFrame.Position,camera.CFrame.Position+cast.direction)
+            local focus=camera.CFrame
             local center=(focus*CFrame.new(0,0,-cfg.OrbDistance)).Position
             if not cast.fired then
                 if a<cfg.MergeAt then
@@ -711,7 +783,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
                         for _,o in cast.orbs do o:Destroy() end;cast.orbs={}
                         cast.merged=orb(center,C.Colors.Purple,cfg.MergedRadius)
                         cast.merged.Name="HollowPurpleCharge";cast.merged.PrimaryPart.Color=Color3.fromRGB(227,192,255)
-                        burst(center,C.Colors.Purple,3);purpleRing(center,cast.direction,1)
+                        burst(center,C.Colors.Purple,3);purpleRing(center,focus.LookVector,1)
                     end
                     local charge=smoothstep((a-cfg.MergeAt)/(cfg.Windup-cfg.MergeAt))
                     cast.merged:ScaleTo(.8+.4*charge);cast.merged:PivotTo(CFrame.new(center)*focus.Rotation)
@@ -848,6 +920,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local width=camera.ViewportSize.X;scale.Scale=math.min(1,(width-28)/480)
     local handScale=math.min(1,camera.ViewportSize.X/camera.ViewportSize.Y)
     local drawn=n<drawnUntil
+    local alive=h and h.Health>0
+    local posed=zen or cast~=nil or holdHand~=nil
+    local leftFrame,rightFrame=l,r
     if zen then
         swordPos*=Vector3.new(handScale,1,1)
         local sword=CFrame.lookAt(swordPos,swordPos+swordDir)
@@ -856,21 +931,23 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             local at=Vector3.new(.32*handScale,-.38,-.92);hilt=CFrame.lookAt(at,at-Vector3.new(-.75,.06,-.66))
         end
         place(katana.saya,sword);place(katana.hilt,hilt)
-        pose(right,armFrame((hilt*GRIP).Position,RIGHT_UP))
-        pose(left,armFrame((sword*SAYA).Position,LEFT_UP))
+        rightFrame=armFrame((hilt*GRIP).Position,RIGHT_UP)
+        leftFrame=armFrame((sword*SAYA).Position,LEFT_UP)
     else
         scaleHand(right,handSize)
         if holdHand then
             holdOrb.CFrame=camera.CFrame*CFrame.new(holdHand.Position*Vector3.new(handScale,1,1))*holdHand.Rotation*CFrame.new(0,.3,0)
             holdOrb.Color=C.Colors[holdState.kind];holdOrb.Size=Vector3.one*(.16+math.sin(n*14)*.015)
         end
-        pose(left,CFrame.new(l.Position*Vector3.new(handScale,1,1))*l.Rotation)
+        leftFrame=CFrame.new(l.Position*Vector3.new(handScale,1,1))*l.Rotation
         -- While pulling the pin the hand must meet the ring exactly, so the narrow-screen squeeze is skipped.
-        pose(right,pinShown and r or CFrame.new(r.Position*Vector3.new(handScale,1,1))*r.Rotation)
+        rightFrame=pinShown and r or CFrame.new(r.Position*Vector3.new(handScale,1,1))*r.Rotation
         if pinShown then
             pinPart.CFrame=pinGrabbed and camera.CFrame*r*CFrame.new(PIN_IN_HAND.Position*handSize)*PIN_IN_HAND.Rotation or neckFrame*RING_AT*CFrame.Angles(0,0,pinHooked and math.sin(n*50)*.15 or 0)
         end
     end
+    showAvatarArm(left,leftFrame,posed,alive)
+    showAvatarArm(right,rightFrame,posed,alive)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -935,12 +1012,6 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         or reze and "변신 전 · R 폭탄의 악마 / SHIFT 대시만 사용 가능"
         or string.format("%s   %d%%",KITS[current()].energy,state.energy)
     local alive=h and h.Health>0
-    for _,hd in {left,right} do
-        for _,entry in hd.pieces do
-            local shown=alive and (not entry.devilOnly or transformed) and (not entry.pinOnly or pinShown)
-            entry.p.Transparency=shown and 0 or 1
-        end
-    end
     for _,entry in katana.saya do entry.p.Transparency=(alive and zen) and 0 or 1 end
     for _,entry in katana.hilt do entry.p.Transparency=(alive and zen and (drawn or not entry.drawnOnly)) and 0 or 1 end
 end)

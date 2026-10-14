@@ -6,6 +6,7 @@ local C=require(RS:WaitForChild("GojoConfig"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
+local aimRemote=Instance.new("RemoteEvent");aimRemote.Name="GojoAim";aimRemote.Parent=RS
 local states, blues, projectiles, domains, flights={},{},{},{},{}
 local kits={}
 for name,list in C.Kits do kits[name]={};for _,skill in list do kits[name][skill]=true end end
@@ -34,6 +35,29 @@ local function sendState(p,s)
 end
 local function validVector(v)
     return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
+end
+-- Camera samples have their own rate limit so aiming cannot swallow skill inputs.
+local function rememberAim(s,m,direction,origin)
+    if not validVector(direction) then return end
+    local head=m:FindFirstChild("Head")
+    s.aimDirection=direction.Unit;s.aimAt=clock()
+    s.aimOrigin=head and typeof(origin)=="Vector3" and (origin-head.Position).Magnitude<=12 and origin or nil
+end
+aimRemote.OnServerEvent:Connect(function(p,direction,origin)
+    local s=states[p];if not s or kitOf(p)~="Gojo" then return end
+    local n=clock()
+    if n-(s.lastAimRequest or 0)<1/30 or (not s.hold and n>=s.busyUntil) then return end
+    s.lastAimRequest=n
+    local m=character(p);if m then rememberAim(s,m,direction,origin) end
+end)
+local function releaseAim(s,m,r,fallback)
+    local head=m:FindFirstChild("Head")
+    local eye=head and head.Position or r.Position+Vector3.yAxis*1.5
+    local fresh=s.aimAt and clock()-s.aimAt<.5
+    local direction=fresh and s.aimDirection or fallback
+    local origin=fresh and s.aimOrigin
+    if not origin or (origin-eye).Magnitude>12 then origin=eye end
+    return direction,origin
 end
 local function rayParams(m)
     local p=RaycastParams.new();p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={m};return p
@@ -140,12 +164,14 @@ local function perform(p,s,m,h,r,kind,direction,instant)
         end)
     elseif kind=="Red" or kind=="Purple" then
         delayed(p,s,m,C[kind].Windup,function()
-            local cfgShot=C[kind];local origin=r.Position+direction*3
-            if kind=="Purple" then
-                -- Launch from eye level at the top of the rise, matching the visible merged sphere.
-                local head=m:FindFirstChild("Head")
-                origin=(head and head.Position or r.Position+Vector3.yAxis*1.5)+direction*cfgShot.OrbDistance
-            end
+            local cfgShot=C[kind]
+            -- Lock the current camera ray at release, after the windup and Purple's ascent.
+            local eye
+            direction,eye=releaseAim(s,m,r,direction)
+            local offset=kind=="Purple" and cfgShot.OrbDistance or 1.6
+            local obstruction=not cfgShot.PierceWorld and workspace:Raycast(eye,direction*offset,rayParams(m))
+            if obstruction then offset=math.max(0,obstruction.Distance-.1) end
+            local origin=eye+direction*offset
             local id=tostring(p.UserId)..":"..tostring(clock())
             table.insert(projectiles,{id=id,owner=p,model=m,position=origin,direction=direction,kind=kind,distance=0,hit={}})
             fx:FireAllClients("Projectile",{id=id,owner=p.UserId,position=origin,direction=direction,kind=kind,speed=cfgShot.Speed,range=cfgShot.Range})
@@ -304,13 +330,14 @@ local function perform(p,s,m,h,r,kind,direction,instant)
         end)
     end
 end
-remote.OnServerEvent:Connect(function(p,skill,aim)
+remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     local s=states[p];if not s then return end
     local n=clock()
     if n-s.lastRequest<.1 then return end;s.lastRequest=n
     if type(skill)~="string" or not kits[kitOf(p)][skill] or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
+    rememberAim(s,m,aim,aimOrigin)
     -- During a hold: the other of Blue/Red fuses both into Purple (paying its own cost), the same one fires at once.
     local hold=s.hold
     if hold and (skill=="Blue" or skill=="Red") then
@@ -349,8 +376,8 @@ remote.OnServerEvent:Connect(function(p,skill,aim)
             s.hold=nil
             local cm,ch,cr=character(p)
             if cm==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then
-                -- No fresh aim on a timeout: fire where the character faces (it turns with the first-person camera).
-                perform(p,s,cm,ch,cr,skill,cr.CFrame.LookVector,false)
+                local direction=releaseAim(s,cm,cr,aim.Unit)
+                perform(p,s,cm,ch,cr,skill,direction,false)
             end
             sendState(p,s)
         end)
@@ -394,7 +421,7 @@ RunService.Heartbeat:Connect(function(dt)
         local shot=projectiles[i];local cfg=C[shot.kind];local step=shot.direction*cfg.Speed*dt
         -- Hollow Purple travels through arena geometry, like the reference; victims still receive one hit.
         -- Its wide damage radius used to clip a nearby pillar and delete it immediately after release.
-        local hitWorld=not cfg.PierceWorld and workspace:Spherecast(shot.position,cfg.Radius,step,rayParams(shot.model)) or nil
+        local hitWorld=not cfg.PierceWorld and workspace:Spherecast(shot.position,cfg.WorldRadius or cfg.Radius,step,rayParams(shot.model)) or nil
         local segmentLength=step.Magnitude
         if hitWorld then
             local hitModel=hitWorld.Instance:FindFirstAncestorOfClass("Model")
