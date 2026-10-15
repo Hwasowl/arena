@@ -19,3 +19,11 @@
 경기장, 뷰모델 손, 캐릭터의 임시 흰 머리·안대, 훈련 표적, 전투 코드, UI, 영역 효과는 이 프로젝트용 코드로 생성합니다. 브라우저판 효과와 사운드는 자체 생성이며 Creator Store 모델을 렌더링한 결과가 아닙니다.
 
 브라우저 렌더링: Three.js 0.160.0, MIT license, https://github.com/mrdoob/three.js. 로컬 파일에 포함합니다.
+
+## 스킬 아이콘·사운드 V1 (2026-10-15)
+
+- 고죠·젠이츠·레제·샹크스: 아이콘 18개, 별도 효과음 30개. 무라사키·급강하·변신 후 궁극기·패링 같은 조건부 스킬과 공통 대시 포함.
+- [미리보기·미리듣기](assets/skill-pack-v1/index.html), [전체 파일·타이밍·생성 프롬프트](assets/skill-pack-v1/manifest.json), [사용 설명](assets/skill-pack-v1/README.md).
+- 아이콘은 내장 imagegen으로 각각 생성. 생성 원본을 `sources/`에 보관하고 업로드용 파일은 투명 여백을 정리해 512×512 PNG로 저장.
+- 효과음은 `tools/make-skill-audio.py`의 노이즈·발진음·금속 공명 합성으로 제작. 원작 대사나 음원 샘플 없음. 48kHz / 16bit PCM / 모노 WAV.
+- `InfinityArena-SkillAssets-v1.zip`에 업로드용 PNG·WAV·갤러리·ID 카탈로그를 묶음. 브라우저 게임 프리뷰와 단일 HTML에 아이콘·스킬별 효과음을 연결함. Roblox 업로드·Roblox HUD/SoundId 연결·Studio 재생은 아직 하지 않음.

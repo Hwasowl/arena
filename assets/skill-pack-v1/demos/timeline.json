@@ -1,0 +1,50 @@
+[
+  {
+    "at": 0,
+    "id": "gojo_snap"
+  },
+  {
+    "at": 0.35,
+    "id": "gojo_red_release"
+  },
+  {
+    "at": 1.35,
+    "id": "gojo_purple_release"
+  },
+  {
+    "at": 3.25,
+    "id": "zenitsu_thunderclap"
+  },
+  {
+    "at": 4.55,
+    "id": "zenitsu_flamegod"
+  },
+  {
+    "at": 5.45,
+    "id": "zenitsu_delayed_hit"
+  },
+  {
+    "at": 6.55,
+    "id": "reze_pin"
+  },
+  {
+    "at": 6.95,
+    "id": "reze_transform"
+  },
+  {
+    "at": 8.85,
+    "id": "reze_hand_blast"
+  },
+  {
+    "at": 9.8,
+    "id": "shanks_parry"
+  },
+  {
+    "at": 10.5,
+    "id": "shanks_counter"
+  },
+  {
+    "at": 11.55,
+    "id": "shanks_departure_release"
+  }
+]

@@ -11,3 +11,10 @@ body[data-char=zenitsu] .skill.combo{--accent:#ffe27a;border-color:#ffd23f88;box
 
 /* Give the brief downward rummage room without moving the combat HUD. */
 body.pocket-peek .skills{opacity:.16}body.pocket-peek .identity,body.pocket-peek .bottom-right{opacity:.2}
+
+/* Production skill artwork, with separate labels and key caps. */
+.skill-icon.asset-icon{width:58px;height:48px;margin:16px auto 0;background:none;border:0;border-radius:0;box-shadow:none;transform:none;filter:drop-shadow(0 1px 3px #0008);display:grid;place-items:center}.skill-icon.asset-icon img{display:block;width:58px;height:58px;object-fit:contain;pointer-events:none}.skill:has(.asset-icon) strong{position:relative;z-index:1}.skill:has(.asset-icon) .key{z-index:2}.skill:has(.asset-icon) .skill-type{margin-top:4px}.skill.combo .asset-icon{animation:glow 1s alternate infinite}
+#shanksChoices{position:absolute;bottom:198px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #ff617477;border-radius:6px;background:#101725ed;z-index:6}#shanksChoices[hidden]{display:none}#shanksChoices button{display:flex;align-items:center;gap:8px;background:#291722;border:1px solid #a33a4d;border-radius:4px;padding:5px 10px;font-size:11px;color:#ffdde3}#shanksChoices img{width:44px;height:44px;object-fit:contain}#shanksChoices output{font-size:13px;color:#ffc0cc;font-variant-numeric:tabular-nums;min-width:35px}
+@media(max-width:720px){.skill-icon.asset-icon{height:40px;width:50px;margin-top:14px}.skill-icon.asset-icon img{width:50px;height:50px}#shanksChoices{bottom:274px;gap:5px;padding:6px;max-width:96vw}#shanksChoices button{font-size:10px;padding:4px 7px}#shanksChoices img{width:34px;height:34px}}
+
+.skill:has(.asset-icon) .cooldown{background:#08111ca6}.skill:has(.asset-icon) small{z-index:3;text-shadow:0 1px 6px #000}

@@ -1,0 +1,20 @@
+{
+  "gojo_blue": "sources/gojo_blue.png",
+  "gojo_red": "sources/gojo_red.png",
+  "zenitsu_thunderclap": "sources/zenitsu_thunderclap.png",
+  "gojo_purple": "sources/gojo_purple.png",
+  "gojo_domain": "sources/gojo_domain.png",
+  "zenitsu_flamegod": "sources/zenitsu_flamegod.png",
+  "zenitsu_breath": "sources/zenitsu_breath.png",
+  "reze_rampage": "sources/reze_rampage.png",
+  "reze_transform": "sources/reze_transform.png",
+  "reze_dive": "sources/reze_dive.png",
+  "reze_detonation": "sources/reze_detonation.png",
+  "reze_hand_blast": "sources/reze_hand_blast.png",
+  "shanks_slash": "sources/shanks_slash.png",
+  "shanks_haki": "sources/shanks_haki.png",
+  "shanks_parry": "sources/shanks_parry.png",
+  "shanks_departure": "sources/shanks_departure.png",
+  "shared_dash": "sources/shared_dash.png",
+  "shanks_stance": "sources/shanks_stance.png"
+}
