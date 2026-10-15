@@ -3,6 +3,7 @@ const fs = require('fs'), path = require('path');
 const root = process.argv[2];
 const f = path.join(root, 'InfinityArena-Gojo.rbxlx');
 let x = fs.readFileSync(f, 'utf8');
+const newline = x.includes('\r\n') ? '\r\n' : '\n';
 const scripts = {
   GojoConfig: 'roblox/src/ReplicatedStorage/GojoConfig.luau',
   Arena: 'roblox/src/ServerScriptService/Arena.server.luau',
@@ -10,14 +11,23 @@ const scripts = {
   StoreVFX: 'roblox/src/ServerScriptService/StoreVFX.server.luau',
   Gojo: 'roblox/src/StarterPlayer/StarterPlayerScripts/Gojo.client.luau',
 };
-for (const [name, rel] of Object.entries(scripts)) {
-  const re = new RegExp('(<string name="Name">' + name + '</string>\\s*(?:<token name="RunContext">\\d+</token>\\s*)?<string name="Source"><!\\[CDATA\\[)([\\s\\S]*?)(\\]\\]></string>)');
-  const m = x.match(re);
-  if (!m) { console.log(name, 'NOT FOUND'); continue; }
-  const src = fs.readFileSync(path.join(root, rel), 'utf8');
+// Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
+// Locate each script's own Properties first so property order cannot mix sources between scripts.
+const found = new Set();
+x = x.replace(/(<Item class="(?:Script|LocalScript|ModuleScript)"[^>]*>\s*<Properties>)([\s\S]*?)(<\/Properties>)/g, (item, open, properties, close) => {
+  const name = properties.match(/<string name="Name">([^<]+)<\/string>/)?.[1];
+  if (!Object.hasOwn(scripts, name)) return item;
+  if (found.has(name)) throw new Error('Duplicate script: ' + name);
+  const source = /(<(ProtectedString|string) name="Source">)([\s\S]*?)(<\/\2>)/;
+  const match = properties.match(source);
+  if (!match) throw new Error('Source missing: ' + name);
+  const src = fs.readFileSync(path.join(root, scripts[name]), 'utf8').replace(/\r?\n/g, newline);
   if (src.includes(']]>')) throw new Error(name + ' contains ]]>');
-  console.log(name, m[2] === src ? 'already in sync' : 'updated');
-  x = x.replace(re, (_, a, _b, c) => a + src + c);
-}
+  const content = '<![CDATA[' + src + ']]>';
+  console.log(name, match[3] === content ? 'already in sync' : 'updated');
+  found.add(name);
+  return open + properties.replace(source, (_, tag, _type, _old, end) => tag + content + end) + close;
+});
+for (const name of Object.keys(scripts)) if (!found.has(name)) throw new Error('Script not found: ' + name);
 fs.writeFileSync(f, x);
 console.log('Finger/Thumb left:', (x.match(/Finger|Thumb/g) || []).length);

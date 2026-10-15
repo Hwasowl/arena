@@ -8,6 +8,7 @@ local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
 local aimRemote=Instance.new("RemoteEvent");aimRemote.Name="GojoAim";aimRemote.Parent=RS
 local states, blues, projectiles, domains, flights={},{},{},{},{}
+local doraScales,doraKnockbacks={},{}
 local kits={}
 for name,list in C.Kits do kits[name]={};for _,skill in list do kits[name][skill]=true end end
 local function kitOf(p) local name=p:GetAttribute("Character");return kits[name] and name or "Gojo" end
@@ -43,12 +44,13 @@ local function rememberAim(s,m,direction,origin)
     s.aimDirection=direction.Unit;s.aimAt=clock()
     s.aimOrigin=head and typeof(origin)=="Vector3" and (origin-head.Position).Magnitude<=12 and origin or nil
 end
-aimRemote.OnServerEvent:Connect(function(p,direction,origin)
-    local s=states[p];if not s or kitOf(p)~="Gojo" then return end
+aimRemote.OnServerEvent:Connect(function(p,direction,origin,flightInput)
+    local s=states[p];if not s or (kitOf(p)~="Gojo" and kitOf(p)~="Doraemon") then return end
     local n=clock()
-    if n-(s.lastAimRequest or 0)<1/30 or (not s.hold and n>=s.busyUntil) then return end
+    if n-(s.lastAimRequest or 0)<1/30 or (not s.hold and not s.doraFlight and n>=s.busyUntil) then return end
     s.lastAimRequest=n
     local m=character(p);if m then rememberAim(s,m,direction,origin) end
+    if s.doraFlight and typeof(flightInput)=="Vector3" and flightInput.X==flightInput.X and flightInput.Y==flightInput.Y and flightInput.Z==flightInput.Z and flightInput.Magnitude<=1.75 then s.doraFlight.input=flightInput;s.doraFlight.inputAt=n end
 end)
 local function releaseAim(s,m,r,fallback)
     local head=m:FindFirstChild("Head")
@@ -64,7 +66,16 @@ local function rayParams(m)
 end
 local function damage(owner,t,amount)
     if not t.m.Parent or t.h.Health<=0 then return end
-    t.h:TakeDamage(amount);fx:FireAllClients("Hit",{position=t.r.Position,damage=amount,owner=owner.UserId})
+    local victim=Players:GetPlayerFromCharacter(t.m)
+    local victimState=victim and states[victim]
+    if victimState and (victimState.parryUntil or 0)>clock() then
+        victimState.parryHit=true
+        return
+    end
+    local dealt=amount
+    local attacker=owner.Character
+    if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
+    t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
     s.blueUntil=0
@@ -74,7 +85,14 @@ end
 local function updateSpeed(m,h)
     local n=clock();local speed=BASE_SPEED
     if (m:GetAttribute("SlowedUntil") or 0)>n then speed*=C.FlameGod.SlowFactor end
+    local fuseStart=m:GetAttribute("DetonationSlowStart") or 0
+    local fuseEnd=m:GetAttribute("DetonationSlowUntil") or 0
+    if fuseEnd>n and fuseStart>0 then
+        local progress=math.clamp((n-fuseStart)/(fuseEnd-fuseStart),0,1)
+        speed*=1-(1-C.Detonation.SlowAtEnd)*progress
+    end
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
+    if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
     h.WalkSpeed=speed
 end
 local function setTimed(m,h,attribute,duration)
@@ -83,6 +101,12 @@ local function setTimed(m,h,attribute,duration)
 end
 -- A server-created constraint lifts the actual character, while its network owner simulates it smoothly.
 -- A one-shot server velocity is unreliable for player-owned characters and falls before Purple releases.
+local function clearDoraFlight(s)
+    local flight=s.doraFlight;if not flight then return end
+    flight.velocity:Destroy();flight.attachment:Destroy()
+    if flight.model.Parent then flight.model:SetAttribute("DoraCopterUntil",0) end
+    s.doraFlight=nil
+end
 local function clearPurpleHover(s)
     local hover=s.purpleHover
     if not hover then return end
@@ -146,13 +170,108 @@ local function delayed(p,s,m,delaySeconds,callback)
     end)
 end
 -- Starts a technique whose cost and cooldown are already paid: windup, busy time, the Cast broadcast, then the effect.
+local function stopSlide(p,s)
+    local slide=s.slide
+    if not slide then return end
+    s.slide=nil
+    slide.velocity:Destroy();slide.attachment:Destroy()
+    if slide.model.Parent and slide.humanoid.Parent then
+        slide.model:SetAttribute("SlidingUntil",0)
+        slide.humanoid.AutoRotate=slide.autoRotate
+        updateSpeed(slide.model,slide.humanoid)
+        if slide.root.Parent then
+            local v=slide.root.AssemblyLinearVelocity;local horizontal=v*Vector3.new(1,0,1)
+            if horizontal.Magnitude>BASE_SPEED then slide.root.AssemblyLinearVelocity=horizontal.Unit*BASE_SPEED+Vector3.yAxis*v.Y end
+        end
+    end
+    fx:FireAllClients("SlideEnd",{owner=p.UserId})
+end
+local function basicAttack(p,s,m,h,r,direction)
+    local cfg=C.BasicAttack;local n=clock()
+    local combo=(s.basicUntil or 0)>n and (s.basicCombo or 0)%3+1 or 1
+    local windup=cfg.Windups[combo];local duration=windup+cfg.Swing+cfg.Recoveries[combo]
+    s.basicCombo=combo;s.basicUntil=n+duration+cfg.ComboReset;s.busyUntil=n+duration
+    fx:FireAllClients("BasicAttack",{owner=p.UserId,kit=kitOf(p),combo=combo,start=n,windup=windup,swing=cfg.Swing,duration=duration,position=r.Position,direction=direction})
+    delayed(p,s,m,windup+cfg.Swing*.5,function()
+        if (m:GetAttribute("RootedUntil") or 0)>clock() then return end
+        local origin=r.Position+Vector3.yAxis*.5
+        local nearest,closest=nil,math.huge
+        for _,t in targets(m) do
+            local delta=t.r.Position-origin;local along=delta:Dot(direction)
+            if along>0 and along<=cfg.Reach and (delta-direction*along).Magnitude<=cfg.Width and delta.Magnitude<closest then
+                local obstruction=workspace:Raycast(origin,delta,rayParams(m))
+                if not obstruction or obstruction.Instance:IsDescendantOf(t.m) then nearest=t;closest=delta.Magnitude end
+            end
+        end
+        if nearest then
+            damage(p,nearest,cfg.Damages[combo])
+            if combo==3 then
+                local flat=Vector3.new(direction.X,0,direction.Z)
+                flat=flat.Magnitude>.05 and flat.Unit or Vector3.new(0,0,-1)
+                launch(nearest,flat*cfg.Knockback+Vector3.yAxis*cfg.Lift)
+            end
+            fx:FireAllClients("MeleeHit",{owner=p.UserId,position=nearest.r.Position,combo=combo,kit=kitOf(p)})
+        end
+    end)
+end
+local function beginSlide(p,s,m,h,r)
+    local cfg=C.Slide;local n=clock()
+    local horizontal=r.AssemblyLinearVelocity*Vector3.new(1,0,1)
+    if h.FloorMaterial==Enum.Material.Air or horizontal.Magnitude<cfg.MinSpeed or (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    if (s.cooldowns.Slide or 0)>n or s.energy<cfg.Cost then return end
+    local direction=horizontal.Unit
+    if workspace:Blockcast(r.CFrame,Vector3.new(2.5,2.5,2.5),direction*2.5,rayParams(m)) then return end
+    local attachment=Instance.new("Attachment");attachment.Name="SlideAttachment";attachment.Parent=r
+    local velocity=Instance.new("LinearVelocity");velocity.Name="SlideVelocity";velocity.Attachment0=attachment
+    velocity.RelativeTo=Enum.ActuatorRelativeTo.World;velocity.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector
+    velocity.ForceLimitsEnabled=true;velocity.ForceLimitMode=Enum.ForceLimitMode.PerAxis
+    velocity.MaxAxesForce=Vector3.new(1,0,1)*math.max(10000,r.AssemblyMass*1500)
+    velocity.VectorVelocity=direction*cfg.StartSpeed;velocity.Parent=r
+    s.slide={model=m,humanoid=h,root=r,attachment=attachment,velocity=velocity,direction=direction,start=n,autoRotate=h.AutoRotate}
+    s.energy-=cfg.Cost;s.cooldowns.Slide=n+cfg.Cooldown;s.busyUntil=n+cfg.Duration;s.basicUntil=0
+    m:SetAttribute("SlidingUntil",n+cfg.Duration);h.AutoRotate=false;updateSpeed(m,h)
+    Debris:AddItem(velocity,cfg.Duration+.2);Debris:AddItem(attachment,cfg.Duration+.2)
+    fx:FireAllClients("Slide",{owner=p.UserId,start=n,duration=cfg.Duration,position=r.Position,direction=direction})
+    sendState(p,s)
+end
 local function perform(p,s,m,h,r,kind,direction,instant)
     local n=clock()
-    local windup=instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
+    local rezeDive=kind=="Rampage" and (s.rezeAirUntil or 0)>n
+    local windup=kind=="Rampage" and rezeDive and .05 or instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
+    if kind=="Kick" then windup+=C.Kick.Fuse end
     s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
     if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
-    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup})
-    if kind=="Blue" then
+    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup,phase=rezeDive and "Dive" or "Rise"})
+    if kind=="Haki" then
+        local cfg=C.Haki
+        s.busyUntil=n+cfg.Windup+cfg.Tick*cfg.Pulses
+        delayed(p,s,m,cfg.Windup,function()
+            fx:FireAllClients("HakiAwaken",{owner=p.UserId,position=r.Position,duration=cfg.Tick*cfg.Pulses})
+            for pulse=1,cfg.Pulses do
+                task.delay((pulse-1)*cfg.Tick,function()
+                    if p.Character~=m or not m.Parent or h.Health<=0 then return end
+                    for _,t in targets(m) do
+                        if (t.r.Position-r.Position).Magnitude<=cfg.Radius then damage(p,t,cfg.Damage) end
+                    end
+                    fx:FireAllClients("HakiPulse",{owner=p.UserId,position=r.Position,radius=cfg.Radius,pulse=pulse})
+                end)
+            end
+        end)
+    elseif kind=="DivineDeparture" then
+        local cfg=C.DivineDeparture
+        s.busyUntil=n+cfg.Windup+.55
+        delayed(p,s,m,cfg.Windup,function()
+            local origin=r.Position+Vector3.yAxis*1.5
+            local finish=origin+direction*cfg.Distance
+            local ray=workspace:Blockcast(CFrame.lookAt(origin,origin+direction),Vector3.new(cfg.Width,4,cfg.Width),direction*cfg.Distance,rayParams(m))
+            if ray then finish=origin+direction*math.max(0,ray.Distance-.5) end
+            for _,t in targets(m) do
+                local along=math.clamp((t.r.Position-origin):Dot(direction),0,(finish-origin).Magnitude)
+                if (origin+direction*along-t.r.Position).Magnitude<=cfg.Width then damage(p,t,cfg.Damage) end
+            end
+            fx:FireAllClients("DivineDeparture",{owner=p.UserId,from=origin,to=finish,width=cfg.Width})
+        end)
+    elseif kind=="Blue" then
         cancelBlue(p,s)
         local desired=r.Position+direction*C.Blue.Range
         local result=workspace:Raycast(r.Position,direction*C.Blue.Range,rayParams(m))
@@ -258,7 +377,11 @@ local function perform(p,s,m,h,r,kind,direction,instant)
         end)
     elseif kind=="Detonation" then
         local cfg=C.Detonation
-        -- The fuse hair burns down for Windup seconds (free to move, other skills locked), then everything goes off.
+        -- The warning follows the player while movement eases down through the fuse.
+        m:SetAttribute("DetonationSlowStart",n);m:SetAttribute("DetonationSlowUntil",n+windup);updateSpeed(m,h)
+        task.delay(windup+.05,function()
+            if m.Parent and h.Parent then m:SetAttribute("DetonationSlowStart",0);m:SetAttribute("DetonationSlowUntil",0);updateSpeed(m,h) end
+        end)
         delayed(p,s,m,windup,function()
             local center=r.Position
             fx:FireAllClients("Detonation",{owner=p.UserId,position=center,radius=cfg.Radius})
@@ -270,74 +393,186 @@ local function perform(p,s,m,h,r,kind,direction,instant)
                     launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
                 end
             end
-            -- Back to human; the transformation can be used again after the recharge.
             m:SetAttribute("BombDevilUntil",0)
             s.cooldowns.BombDevil=clock()+C.BombDevil.Recharge
             sendState(p,s)
         end)
     elseif kind=="Rampage" then
         local cfg=C.Rampage
+        if rezeDive then
+            delayed(p,s,m,windup,function()
+                r.AssemblyLinearVelocity=Vector3.new(r.AssemblyLinearVelocity.X,-cfg.DiveSpeed,r.AssemblyLinearVelocity.Z)
+                local height=math.max(0,r.Position.Y-3);local gravity=workspace.Gravity
+                local impactDelay=math.max(cfg.SlamDelay,(-cfg.DiveSpeed+math.sqrt(cfg.DiveSpeed^2+2*gravity*height))/gravity)
+                task.delay(impactDelay,function()
+                    if p.Character~=m or not m.Parent or h.Health<=0 then return end
+                    local center=Vector3.new(r.Position.X,math.max(0,r.Position.Y-2.5),r.Position.Z)
+                    fx:FireAllClients("RezeSlam",{owner=p.UserId,position=center,radius=cfg.Radius,direction=direction})
+                    for _,t in targets(m) do
+                        local delta=t.r.Position-center
+                        if Vector3.new(delta.X,delta.Y*.65,delta.Z).Magnitude<=cfg.Radius then
+                            damage(p,t,cfg.Damage);launch(t,outward(center,t,direction)*cfg.Knockback+Vector3.yAxis*cfg.Lift)
+                        end
+                    end
+                end)
+                s.rezeAirUntil=0
+            end)
+        else
+            delayed(p,s,m,windup,function()
+                local flat=Vector3.new(direction.X,0,direction.Z)
+                if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+                flat=flat.Unit
+                r.AssemblyLinearVelocity=flat*cfg.RiseForwardSpeed+Vector3.yAxis*cfg.RiseSpeed
+                s.rezeAirUntil=clock()+cfg.AirWindow
+                fx:FireAllClients("RezeRise",{owner=p.UserId,position=r.Position,radius=4})
+                sendState(p,s)
+            end)
+        end
+    elseif kind=="Pocket" then
+        local cfg=C.Pocket
+        s.busyUntil=n+cfg.Windup+cfg.Recovery
+        local item=({"SmallLight","AirCannon","Dorayaki"})[math.random(1,3)]
+        delayed(p,s,m,cfg.DrawTime,function() fx:FireAllClients("DoraItem",{owner=p.UserId,item=item,position=r.Position}) end)
+        delayed(p,s,m,cfg.Windup,function()
+            local aim,origin=releaseAim(s,m,r,direction)
+            if item=="Dorayaki" then
+                local healed=math.min(cfg.Heal,h.MaxHealth-h.Health);h.Health+=healed
+                fx:FireClient(p,"DoraHeal",{amount=healed});return
+            end
+            local params=rayParams(m);local first=workspace:Raycast(origin,aim*cfg.Range,params)
+            local best,closest=nil,math.huge
+            for _,t in targets(m) do
+                local delta=t.r.Position-origin;local along=delta:Dot(aim)
+                local sight=workspace:Raycast(origin,t.r.Position-origin,params)
+                if along>0 and along<=cfg.Range and (delta-aim*along).Magnitude<=3
+                    and (not sight or sight.Instance:IsDescendantOf(t.m)) and along<closest then best=t;closest=along end
+            end
+            local finish=best and best.r.Position or first and first.Position or origin+aim*cfg.Range
+            if item=="SmallLight" then
+                if best then
+                    local victim=best.m;local record=doraScales[victim]
+                    if not record then record={generation=0,scale=victim:GetScale()};doraScales[victim]=record end
+                    record.generation+=1;local generation=record.generation
+                    victim:SetAttribute("DoraDamageUntil",clock()+cfg.ShrinkDuration)
+                    pcall(function() victim:ScaleTo(record.scale*cfg.ShrinkScale) end)
+                    task.delay(cfg.ShrinkDuration,function()
+                        if doraScales[victim]==record and record.generation==generation then
+                            if victim.Parent then pcall(function() victim:ScaleTo(record.scale) end);victim:SetAttribute("DoraDamageUntil",0) end
+                            doraScales[victim]=nil
+                        end
+                    end)
+                end
+                fx:FireAllClients("DoraShrink",{owner=p.UserId,from=origin,position=finish,duration=cfg.ShrinkDuration})
+            else
+                if best then
+                    damage(p,best,cfg.CannonDamage)
+                    local flat=Vector3.new(aim.X,0,aim.Z);flat=flat.Magnitude>.01 and flat.Unit or r.CFrame.LookVector
+                    local excluded={m};for _,other in targets(nil) do table.insert(excluded,other.m) end
+                    local wallParams=rayParams(m);wallParams.FilterDescendantsInstances=excluded
+                    doraKnockbacks[best.m]={t=best,owner=p,from=best.r.CFrame,direction=flat,start=clock(),last=0,params=wallParams}
+                    flights[best.m]=nil;setTimed(best.m,best.h,"RootedUntil",cfg.CannonTime+.05)
+                end
+                fx:FireAllClients("DoraCannon",{owner=p.UserId,from=origin,to=finish,direction=aim})
+            end
+        end)
+    elseif kind=="BambooCopter" then
+        local cfg=C.BambooCopter;s.busyUntil=n+cfg.Windup+cfg.Recovery
+        delayed(p,s,m,cfg.Windup,function()
+            local attachment=Instance.new("Attachment");attachment.Name="DoraFlightAttachment";attachment.Parent=r
+            local velocity=Instance.new("LinearVelocity");velocity.Name="DoraFlight";velocity.Attachment0=attachment
+            velocity.RelativeTo=Enum.ActuatorRelativeTo.World;velocity.MaxForce=math.max(10000,r.AssemblyMass*workspace.Gravity*8)
+            velocity.VectorVelocity=Vector3.yAxis*cfg.VerticalSpeed;velocity.Parent=r
+            s.doraFlight={model=m,root=r,attachment=attachment,velocity=velocity,start=clock(),input=Vector3.zero,inputAt=clock()}
+            Debris:AddItem(velocity,cfg.Duration+.1);Debris:AddItem(attachment,cfg.Duration+.1)
+            h:ChangeState(Enum.HumanoidStateType.Freefall);m:SetAttribute("DoraCopterUntil",clock()+cfg.Duration)
+            fx:FireAllClients("DoraFlight",{owner=p.UserId,position=r.Position,duration=cfg.Duration})
+        end)
+    elseif kind=="AnywhereDoor" then
+        local cfg=C.AnywhereDoor;s.busyUntil=n+cfg.Windup+cfg.Recovery
+        delayed(p,s,m,cfg.Windup,function()
+            local flat=Vector3.new(direction.X,0,direction.Z)
+            if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
+            flat=flat.Unit
+            local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*cfg.Distance,rayParams(m))
+            local distance=result and math.max(0,result.Distance-1) or cfg.Distance
+            local from=r.Position;r.CFrame=CFrame.lookAt(from+flat*distance,from+flat*(distance+1))
+            fx:FireAllClients("DoraDoor",{owner=p.UserId,from=from,to=r.Position,direction=flat})
+        end)
+    elseif kind=="Kick" then
+        local cfg=C.Kick
         local flat=Vector3.new(direction.X,0,direction.Z)
         if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
         flat=flat.Unit
         delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
-            for _,t in victims do
-                damage(p,t,cfg.Damage);launch(t,flat*14+Vector3.new(0,cfg.Launch,0))
-            end
-            -- Missed everything: she skids on a little further instead of stopping dead.
-            local slide=#victims==0
-            if slide then r.AssemblyLinearVelocity=flat*cfg.SlideSpeed end
-            fx:FireAllClients("Rampage",{owner=p.UserId,from=start,to=finish,delay=cfg.TrailDelay,slide=slide})
-            s.comboDir=flat;s.comboUntil=clock()+C.Kick.ComboWindow;sendState(p,s)
-            -- The gunpowder left on the path goes off on its own, even if Reze has moved on or died.
-            local length=(finish-start).Magnitude
-            task.delay(cfg.TrailDelay,function()
-                for _,t in targets(m) do
-                    local along=math.clamp((t.r.Position-start):Dot(flat),0,length)
-                    if (start+flat*along-t.r.Position).Magnitude<=cfg.TrailRadius then
-                        damage(p,t,cfg.TrailDamage);launch(t,Vector3.new(0,cfg.TrailLift,0))
-                    end
-                end
-            end)
-        end)
-    elseif kind=="Kick" then
-        local cfg=C.Kick
-        -- Combo: Rampage ended moments ago, so the kick keeps flying along its direction.
-        local combo=(s.comboUntil or 0)>n and s.comboDir~=nil
-        local flat=Vector3.new(direction.X,0,direction.Z)
-        if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
-        flat=combo and s.comboDir or flat.Unit
-        s.comboUntil=0
-        delayed(p,s,m,windup,function()
-            local struck={}
             local from=r.Position
-            local center,radius,damageAmount,knock,lift
-            if combo then
-                local _,finish,victims=dashStrike(m,r,flat,cfg.ComboDistance,cfg.Width)
-                for _,t in victims do struck[t.m]=t end
-                center=finish+flat*2.5;radius=cfg.ComboRadius;damageAmount=cfg.ComboDamage;knock=cfg.ComboKnockback;lift=cfg.ComboLift
-            else
-                center=from+flat*cfg.Reach;radius=cfg.Radius;damageAmount=cfg.Damage;knock=cfg.Knockback;lift=cfg.Lift
-            end
+            local center=from+flat*cfg.Reach+Vector3.new(0,1.5,0)
+            fx:FireAllClients("HandBlast",{owner=p.UserId,from=from,to=center,radius=cfg.Radius})
             for _,t in targets(m) do
-                if (t.r.Position-center).Magnitude<=radius then struck[t.m]=t end
-            end
-            fx:FireAllClients("Kick",{owner=p.UserId,from=from,to=center,combo=combo,radius=radius})
-            for _,t in struck do
-                damage(p,t,damageAmount);launch(t,flat*knock+Vector3.new(0,lift,0))
+                if (t.r.Position-center).Magnitude<=cfg.Radius then
+                    damage(p,t,cfg.Damage);launch(t,flat*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
+                end
             end
         end)
     end
 end
 remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     local s=states[p];if not s then return end
+    if skill=="SlideCancel" then
+        if s.slide then stopSlide(p,s);s.busyUntil=clock() end
+        return
+    end
     local n=clock()
     if n-s.lastRequest<.1 then return end;s.lastRequest=n
-    if type(skill)~="string" or not kits[kitOf(p)][skill] or not validVector(aim) then return end
+    local shanksAction=kitOf(p)=="Shanks" and (skill=="ShanksSlash" or skill=="ShanksParry")
+    if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
+    if skill=="BasicAttack" or skill=="Slide" then
+        if s.busyUntil>n or s.hold or (m:GetAttribute("RootedUntil") or 0)>n then return end
+        if skill=="BasicAttack" then basicAttack(p,s,m,h,r,aim.Unit) else beginSlide(p,s,m,h,r) end
+        return
+    end
     rememberAim(s,m,aim,aimOrigin)
+    if kitOf(p)=="Shanks" and skill=="ShanksSlash" then
+        local cfg=C.EnGarde
+        if s.enGardeUntil<=n or s.busyUntil>n then return end
+        s.enGardeUntil=0;s.busyUntil=n+.55
+        fx:FireAllClients("ShanksSlash",{owner=p.UserId,start=n,direction=aim.Unit})
+        task.delay(.2,function()
+            if p.Character~=m or not m.Parent or h.Health<=0 then return end
+            local flat=Vector3.new(aim.X,0,aim.Z);if flat.Magnitude<.05 then flat=Vector3.new(0,0,-1) end;flat=flat.Unit
+            r.AssemblyLinearVelocity=flat*65+Vector3.yAxis*16
+            local start=r.Position
+            task.delay(.08,function()
+                if p.Character~=m or not m.Parent then return end
+                local finish=r.Position
+                for _,t in targets(m) do
+                    local path=finish-start;local along=path.Magnitude>0 and math.clamp((t.r.Position-start):Dot(path.Unit),0,path.Magnitude) or 0
+                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage) end
+                end
+            end)
+        end)
+        return
+    elseif kitOf(p)=="Shanks" and skill=="ShanksParry" then
+        local cfg=C.EnGarde
+        if s.enGardeUntil<=n or s.busyUntil>n then return end
+        s.enGardeUntil=0;s.parryUntil=n+cfg.ParryWindow;s.parryHit=false;s.busyUntil=n+cfg.ParryWindow
+        fx:FireAllClients("ShanksParry",{owner=p.UserId,start=n,duration=cfg.ParryWindow})
+        task.delay(cfg.ParryWindow,function()
+            s.parryUntil=0
+            if p.Character~=m or not m.Parent or h.Health<=0 then return end
+            if s.parryHit then
+                local look=r.CFrame.LookVector;local origin=r.Position+Vector3.yAxis*1.5;local best,dist=nil,math.huge
+                for _,t in targets(m) do
+                    local delta=t.r.Position-origin;local along=delta:Dot(look)
+                    if along>0 and along<=cfg.CounterReach and (delta-look*along).Magnitude<=3 and along<dist then best=t;dist=along end
+                end
+                if best then damage(p,best,cfg.CounterDamage) end
+                fx:FireAllClients("ShanksCounter",{owner=p.UserId,position=origin+look*math.min(dist,cfg.CounterReach)})
+            else fx:FireAllClients("ShanksParryEnd",{owner=p.UserId}) end
+        end)
+        return
+    end
     -- During a hold: the other of Blue/Red fuses both into Purple (paying its own cost), the same one fires at once.
     local hold=s.hold
     if hold and (skill=="Blue" or skill=="Red") then
@@ -351,8 +586,19 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
         sendState(p,s);return
     end
     if hold and skill~="Dash" then return end
+    local rezeDive=skill=="Rampage" and (s.rezeAirUntil or 0)>n
     if s.busyUntil>n then return end
+    s.basicUntil=0
     if (skill=="Rampage" or skill=="Kick" or skill=="Detonation") and not devil(m) then return end
+    if skill=="EnGarde" then
+        if s.enGardeUntil>n then return end
+        local cfg=C.EnGarde
+        if (s.cooldowns[skill] or 0)>n or s.energy<cfg.Cost or s.busyUntil>n then return end
+        s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown;s.enGardeUntil=n+cfg.Window
+        fx:FireAllClients("ShanksEnGarde",{owner=p.UserId,untilTime=s.enGardeUntil})
+        sendState(p,s);return
+    end
+    if skill=="Rampage" and not rezeDive and (s.rezeAirUntil or 0)>0 then s.rezeAirUntil=0 end
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
     local cfg=C[skill]
@@ -360,7 +606,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if instant then
         s.charges-=1
     else
-        if (s.cooldowns[skill] or 0)>n or s.energy<cfg.Cost then return end
+        if ((s.cooldowns[skill] or 0)>n and not rezeDive) or s.energy<cfg.Cost then return end
         s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown
     end
     -- Reze pays in health, never lethally.
@@ -389,15 +635,66 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s)
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
+    clearPurpleHover(s);clearDoraFlight(s)
+    stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
 end)
 local sync=0
 RunService.Heartbeat:Connect(function(dt)
     local n=clock();sync+=dt
+    for model,k in doraKnockbacks do
+        local t=k.t;local progress=math.clamp((n-k.start)/C.Pocket.CannonTime,0,1);local distance=C.Pocket.CannonDistance*progress
+        if not model.Parent or not t.r.Parent or t.h.Health<=0 then doraKnockbacks[model]=nil
+        else
+            local previous=k.from.Position+k.direction*k.last;local step=distance-k.last
+            local wall=step>.001 and workspace:Blockcast(CFrame.new(previous),Vector3.new(1.5,2.8,1.5),k.direction*step,k.params)
+            local travelled=wall and k.last+math.max(0,wall.Distance-.08) or distance
+            local position=k.from.Position+k.direction*travelled+Vector3.yAxis*(wall and 0 or math.sin(progress*math.pi)*.8)
+            model:PivotTo(CFrame.new(position)*k.from.Rotation);t.r.AssemblyLinearVelocity=Vector3.zero;k.last=travelled
+            if wall or progress>=1 then
+                doraKnockbacks[model]=nil
+                if wall then damage(k.owner,t,C.Pocket.CannonWallDamage-C.Pocket.CannonDamage);fx:FireAllClients("DoraWallHit",{position=position,owner=k.owner.UserId}) end
+            end
+        end
+    end
     for p,s in states do
+        local speedModel,speedHumanoid=character(p)
+        if speedModel then
+            updateSpeed(speedModel,speedHumanoid)
+            local flight=s.doraFlight
+            if flight then
+                local age=n-flight.start
+                if speedModel~=flight.model or speedHumanoid.Health<=0 or age>=C.BambooCopter.Duration or kitOf(p)~="Doraemon" or (speedModel:GetAttribute("DomainLockedUntil") or 0)>n then
+                    clearDoraFlight(s)
+                else
+                    local input=n-flight.inputAt<.35 and flight.input or Vector3.zero
+                    local horizontal=Vector3.new(input.X,0,input.Z);if horizontal.Magnitude>1 then horizontal=horizontal.Unit end
+                    local vertical=age<.4 and C.BambooCopter.VerticalSpeed or math.clamp(input.Y,-1,1)*C.BambooCopter.VerticalSpeed
+                    if (speedModel:GetAttribute("RootedUntil") or 0)>n then horizontal=Vector3.zero;vertical=0 end
+                    flight.velocity.VectorVelocity=horizontal*C.BambooCopter.FlySpeed+Vector3.yAxis*vertical
+                end
+            end
+            if kitOf(p)=="Doraemon" and (speedModel:GetAttribute("DoraCopterUntil") or 0)>n then
+                local rotor=speedModel:FindFirstChild("DoraemonRotorMotor",true)
+                if rotor then rotor.Transform=CFrame.Angles(0,n*32,0) end
+            end
+        end
+        local slide
+        if slide then
+            local age=n-slide.start
+            local m,h,r=slide.model,slide.humanoid,slide.root
+            if p.Character~=m or not m.Parent or not r.Parent or h.Health<=0 or age>=C.Slide.Duration
+                or (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("RootedUntil") or 0)>n
+                or (age>.08 and h.FloorMaterial==Enum.Material.Air)
+                or workspace:Blockcast(r.CFrame,Vector3.new(2.5,2.5,2.5),slide.direction*math.max(1.5,C.Slide.StartSpeed*dt+.5),rayParams(m)) then
+                stopSlide(p,s);s.busyUntil=n
+            else
+                local u=math.clamp(age/C.Slide.Duration,0,1)
+                slide.velocity.VectorVelocity=slide.direction*(C.Slide.EndSpeed+(C.Slide.StartSpeed-C.Slide.EndSpeed)*(1-u)^2)
+            end
+        end
         local regen=C.EnergyRegen
         s.energy=math.min(C.MaxEnergy,s.energy+regen*dt)
         if sync>=.15 then sendState(p,s) end
@@ -476,14 +773,15 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 local function joined(p)
-    local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0};states[p]=s
+    local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
-        clearPurpleHover(s)
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;cancelBlue(p,s)
+        stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
+        clearPurpleHover(s);clearDoraFlight(s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() clearPurpleHover(s);s.generation+=1;s.hold=nil;s.comboUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
 Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then clearPurpleHover(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
+Players.PlayerRemoving:Connect(function(p) if states[p] then stopSlide(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)

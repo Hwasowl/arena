@@ -95,7 +95,7 @@ for _,v in {{-26,-8,5,35},{26,-12,5,40},{-34,-34,5,30},{36,-28,5,34},{0,-46,6,45
 wall(-12,2,20,2,12);wall(14,-3,2,18,12)
 
 -- Only each character's signature piece is added; the rest of the player's own avatar is left untouched.
--- Gojo: blindfold. Zenitsu: sheathed katana. Reze: choker, replaced by the Bomb Devil head while transformed.
+-- Gojo: blindfold. Zenitsu: sheathed katana. Shanks: right-hand sword and missing left arm. Reze: choker/head. Doraemon: pocket/copter.
 -- Parts tagged "Outfit" are rebuilt whenever the character or transformation changes.
 local function outfit(character,kind,fresh)
     local h=character:WaitForChild("Humanoid");h.MaxHealth=Config.MaxHealth
@@ -125,6 +125,44 @@ local function outfit(character,kind,fresh)
         attach(root,"ZenitsuSaya",Vector3.new(.22,.28,3.4),CFrame.new(-1.15,-.9,.6)*CFrame.Angles(.25,.12,0),Color3.fromRGB(43,34,51))
         attach(root,"ZenitsuTsuba",Vector3.new(.5,.5,.08),CFrame.new(-1.05,-.62,-1.0)*CFrame.Angles(.25,.12,0),Color3.fromRGB(42,37,34),Enum.Material.Metal)
         attach(root,"ZenitsuTsuka",Vector3.new(.18,.22,1.1),CFrame.new(-1.0,-.5,-1.55)*CFrame.Angles(.25,.12,0),Color3.fromRGB(241,234,216))
+    elseif kind=="Doraemon" then
+        -- A white belly patch with a horizontal, semicircular pocket sewn to the real torso.
+        local torso=character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso") or root
+        local front=-torso.Size.Z/2-.035
+        local white=Color3.fromRGB(255,253,241);local ink=Color3.fromRGB(49,58,69);local gold=Color3.fromRGB(244,206,82)
+        attach(torso,"DoraemonBelly",Vector3.new(1.65,1.65,.14),CFrame.new(0,-.08,front),white,nil,Enum.PartType.Ball)
+        local radius=.64;local opening=.06
+        for i=0,23 do
+            local y=(i+.5)*radius/24
+            local width=2*radius*math.sqrt(math.max(0,1-(y/radius)^2))
+            attach(torso,"DoraemonPocketFabric",Vector3.new(width,radius/24+.005,.075),CFrame.new(0,opening-y,front-.12),white)
+        end
+        attach(torso,"DoraemonPocketMouth",Vector3.new(1.25,.027,.045),CFrame.new(0,opening,front-.17),ink)
+        for i=0,31 do
+            local a=i*math.pi/32;local b=(i+1)*math.pi/32
+            local p1=Vector3.new(-radius*math.cos(a),opening-radius*math.sin(a),front-.163)
+            local p2=Vector3.new(-radius*math.cos(b),opening-radius*math.sin(b),front-.163)
+            attach(torso,"DoraemonPocketSeam",Vector3.new(.018,.018,(p2-p1).Magnitude+.008),CFrame.lookAt((p1+p2)/2,p2),ink)
+        end
+        local upper=character:FindFirstChild("UpperTorso") or torso
+        attach(upper,"DoraemonCollar",Vector3.new(upper.Size.X*.9,.1,.06),CFrame.new(0,upper.Size.Y/2-.1,-upper.Size.Z/2-.03),Color3.fromRGB(217,42,54))
+        attach(upper,"DoraemonBell",Vector3.new(.28,.28,.16),CFrame.new(0,upper.Size.Y/2-.28,-upper.Size.Z/2-.11),gold,Enum.Material.Metal,Enum.PartType.Ball)
+        attach(upper,"DoraemonBellSlot",Vector3.new(.018,.1,.014),CFrame.new(0,upper.Size.Y/2-.32,-upper.Size.Z/2-.195),ink)
+        local shaft=attach(head,"DoraemonRotorShaft",Vector3.new(.055,.45,.055),CFrame.new(0,head.Size.Y/2+.225,0),gold)
+        local hub=attach(head,"DoraemonRotorHub",Vector3.new(.2,.08,.2),CFrame.new(0,head.Size.Y/2+.45,0),gold,nil,Enum.PartType.Ball)
+        local blade=attach(head,"DoraemonRotorBlade",Vector3.new(1.7,.045,.2),CFrame.new(0,head.Size.Y/2+.51,0),gold)
+        shaft.Transparency=1;hub.Transparency=1;blade.Transparency=1
+        for _,v in blade:GetChildren() do if v:IsA("WeldConstraint") then v:Destroy() end end
+        local rotor=Instance.new("Motor6D");rotor.Name="DoraemonRotorMotor";rotor.Part0=head;rotor.Part1=blade;rotor.C0=CFrame.new(0,head.Size.Y/2+.51,0);rotor.Parent=blade
+    elseif kind=="Shanks" then
+        local leftArm=character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftLowerArm")
+        if leftArm then hide(leftArm) end
+        local rightArm=character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm") or character:FindFirstChild("RightHand") or root
+        local sword=CFrame.new(.08,-.1,-.28)*CFrame.Angles(math.rad(-18),0,math.rad(-22))
+        attach(rightArm,"ShanksBlade",Vector3.new(.11,.15,3.2),sword*CFrame.new(0,0,-1.45),Color3.fromRGB(215,221,230),Enum.Material.Metal)
+        attach(rightArm,"ShanksEdge",Vector3.new(.025,.035,3.05),sword*CFrame.new(-.045,-.035,-1.45),Color3.fromRGB(174,40,51),Enum.Material.Neon)
+        attach(rightArm,"ShanksGuard",Vector3.new(.62,.14,.18),sword*CFrame.new(0,0,.18),Color3.fromRGB(189,157,93),Enum.Material.Metal)
+        attach(rightArm,"ShanksGrip",Vector3.new(.14,.16,.72),sword*CFrame.new(0,0,.58),Color3.fromRGB(77,35,43),Enum.Material.SmoothPlastic)
     elseif kind=="Reze" then
         local transformed=(character:GetAttribute("BombDevilUntil") or 0)>workspace:GetServerTimeNow()
         if transformed then
@@ -166,12 +204,20 @@ local function outfit(character,kind,fresh)
 end
 local function joined(p)
     local function dress(c,fresh) outfit(c,p:GetAttribute("Character") or "Gojo",fresh) end
+    local function watchDoraRotor(c)
+        c:GetAttributeChangedSignal("DoraCopterUntil"):Connect(function()
+            local visible=(c:GetAttribute("DoraCopterUntil") or 0)>workspace:GetServerTimeNow() and p:GetAttribute("Character")=="Doraemon"
+            for _,name in {"DoraemonRotorShaft","DoraemonRotorHub","DoraemonRotorBlade"} do local rotor=c:FindFirstChild(name);if rotor then rotor.Transparency=visible and 0 or 1 end end
+        end)
+    end
     p.CharacterAdded:Connect(function(c)
+        watchDoraRotor(c)
         c:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(c) end)
         dress(c,true)
     end)
     p:GetAttributeChangedSignal("Character"):Connect(function() if p.Character then task.spawn(dress,p.Character) end end)
     if p.Character then
+        watchDoraRotor(p.Character)
         p.Character:GetAttributeChangedSignal("BombDevilUntil"):Connect(function() dress(p.Character) end)
         task.spawn(dress,p.Character,true)
     end

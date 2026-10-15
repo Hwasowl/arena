@@ -1,11 +1,17 @@
 -- Shared tuning; all combat decisions are made by Combat.server.luau.
 return {
     MaxEnergy = 100, EnergyRegen = 5, MaxHealth = 200,
+    -- Shared mouse attack: wind back, contact, then recover. One target per hit; third hit pushes it away.
+    BasicAttack = { Windups = { 0.16, 0.18, 0.24 }, Swing = 0.1, Recoveries = { 0.22, 0.24, 0.32 }, Damages = { 12, 14, 20 }, Reach = 6, Width = 2.4, ComboReset = 0.95, Knockback = 24, Lift = 8 },
+    -- Ctrl while moving on the ground. Horizontal force only, so gravity and jumping still work.
+    Slide = { Cost = 6, Cooldown = 1.4, Duration = 0.7, StartSpeed = 38, EndSpeed = 12, MinSpeed = 3, CameraDip = 1.1 },
     -- Skills each character may request; the server rejects anything outside the player's kit.
     Kits = {
         Gojo = { "Blue", "Red", "Domain", "Dash" },
         Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
+        Shanks = { "Haki", "EnGarde", "DivineDeparture", "Dash" },
+        Doraemon = { "Pocket", "BambooCopter", "AnywhereDoor", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
@@ -24,17 +30,23 @@ return {
     -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
     -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.
     FlameGod = { DragonScale = 2.5, Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.9, RecoilDelay = 1, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
-    -- Reze. Human form: only Dash and BombDevil. Pulling the choker pin transforms her with no time limit and heals
-    -- Heal of max HP (never past full); Rampage and Kick then work, each costing HpCost of max HP (never lethal).
-    -- R again is Detonation: Windup seconds later a huge blast goes off, it costs 12% HP, and she turns human again.
+    -- Reze. Q: crouch, blast upward, then press Q again during AirWindow to dive and slam. E raises the right hand
+    -- for a close forward blast. Each costs HpCost of max HP (never lethal). R starts the original moving fuse.
     -- BombDevil can be used again Recharge seconds after she reverts.
     BombDevil = { Cost = 0, Cooldown = 0, Recharge = 20, Windup = 1, Blackout = 2, Heal = 0.2, Radius = 16, Damage = 90, Knockback = 110, Lift = 55 },
-    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60 },
-    -- Rampage: a blast under the feet launches her forward; anyone on the path is blown upward, and the gunpowder
-    -- left along the path detonates TrailDelay seconds later.
-    Rampage = { Cost = 0, HpCost = 0.03, Cooldown = 5, Windup = 0.12, SlideSpeed = 55, Distance = 30, Width = 5, Damage = 45, Launch = 70, TrailDelay = 1, TrailRadius = 5.5, TrailDamage = 35, TrailLift = 45 },
-    -- Kick: a roundhouse. The right foot is raised for most of Windup, then whips right to left. Alone it goes off Reach studs in front of her; used within ComboWindow seconds of
-    -- Rampage it continues the Rampage direction as a ComboDistance dash ending in a bigger blast.
-    Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.38, Reach = 5, Radius = 6, Damage = 45, Knockback = 32, Lift = 28, ComboWindow = 1.3, ComboDistance = 18, Width = 4.5, ComboRadius = 8, ComboDamage = 85, ComboKnockback = 70, ComboLift = 36 },
-    Colors = { Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46) },
+    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60, SlowAtEnd = 0.25 },
+    -- Shanks: Haki guarantees two 10-damage pulses in a 10-stud radius. EnGarde opens a short
+    -- two-choice window: left click lunges; right click guards for one second and ripostes only if hit.
+    Haki = { Cost = 20, Cooldown = 14, Windup = 0.5, Radius = 10, Damage = 10, Tick = 1, Pulses = 2 },
+    EnGarde = { Cost = 12, Cooldown = 8, Window = 3, ParryWindow = 1, SlashDamage = 35, SlashDistance = 10, SlashWidth = 3.5, CounterDamage = 45, CounterReach = 12 },
+    DivineDeparture = { Cost = 40, Cooldown = 20, Windup = 2.5, Damage = 50, Distance = 50, Width = 5 },
+    -- Q is a two-step move: crouch for .4s and rise on a foot blast; Q again in AirWindow dives to the floor.
+    Rampage = { Cost = 0, HpCost = 0.03, Cooldown = 5, Windup = 0.4, AirWindow = 2.5, RiseSpeed = 124, RiseForwardSpeed = 24, DiveSpeed = 100, SlamDelay = 0.04, Radius = 9, Damage = 65, Knockback = 40, Lift = 34 },
+    -- E: hold the right hand up for .2s, then make a close-range explosion three studs ahead.
+    Kick = { Cost = 0, HpCost = 0.03, Cooldown = 4, Windup = 0.2, Fuse = 0.8, Reach = 3, Radius = 3.5, Damage = 55, Knockback = 38, Lift = 22 },
+    Pocket = { Cost = 12, Cooldown = 5, Windup = 1.75, DrawTime = 0.98, Recovery = 0.45, Range = 42, ShrinkDuration = 2, ShrinkScale = 0.6,
+        CannonDamage = 10, CannonWallDamage = 30, CannonDistance = 20, CannonTime = 0.38, Heal = 20 },
+    BambooCopter = { Cost = 18, Cooldown = 12, Windup = 2.05, Recovery = 0.35, Duration = 3, FlySpeed = 24, VerticalSpeed = 15 },
+    AnywhereDoor = { Cost = 28, Cooldown = 18, Windup = 2.3, Recovery = 0.35, Distance = 24 },
+    Colors = { Dora = Color3.fromRGB(48, 166, 221), Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46), Haki = Color3.fromRGB(255, 45, 67) },
 }
