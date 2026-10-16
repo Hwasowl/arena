@@ -115,6 +115,7 @@ local slideUntil=0
 local drawnUntil,fovKickUntil=0,0
 local zenBasicUntil,zenGuardSign,zenSheathPlayed=0,1,true
 local rezeLookUntil,rezeAirUntil=0,0
+local bombRecoil=nil
 local blueOrbs,shots,activeEffects={},{},{}
 local domainViews={}
 -- Replace these built-in fallbacks with the uploaded gojo_domain_inside/end/break AssetIds.
@@ -993,6 +994,29 @@ event.OnClientEvent:Connect(function(kind,data)
             end)
             announce("人間に戻る","인간으로 돌아온다 · 폭탄의 악마 재사용 20초")
         end
+    elseif kind=="BombRecoil" then
+        if data.owner==player.UserId then
+            if data.phase=="air" then
+                bombRecoil={start=data.start,phase="air",direction=data.direction};clearCastVFX();cast=nil;melee=nil;sliding=nil;attackQueued=false
+            elseif bombRecoil then
+                bombRecoil.phase="skid";bombRecoil.land=data.start
+                sound("rbxasset://sounds/impact_generic.mp3",camera.CFrame.Position,.55,.7,1)
+                sound("rbxasset://sounds/action_footsteps_plastic.mp3",camera.CFrame.Position,.4,.6,C.Detonation.SkidDuration)
+            end
+        end
+        if data.phase=="skid" then
+            bodyMotion({owner=data.owner,start=data.start,duration=C.Detonation.SkidDuration},true)
+            temporary(C.Detonation.SkidDuration,function(age)
+                local owner=Players:GetPlayerByUserId(data.owner);local root=owner and owner.Character and owner.Character:FindFirstChild("HumanoidRootPart")
+                if root and (root.Parent:GetAttribute("BombRecoilUntil") or 0)>time() and age>(data.nextDust or 0) then
+                    data.nextDust=age+.06
+                    for _,side in {-1,1} do burst(root.Position-Vector3.yAxis*2.6+root.CFrame.RightVector*side*.85,Color3.fromRGB(132,123,113),.5) end
+                end
+            end,function() end)
+        end
+    elseif kind=="BombRecoilEnd" then
+        if data.owner==player.UserId then bombRecoil=nil end
+        if bodyMoves[data.owner] then bodyMoves[data.owner].cleanup() end
     elseif kind=="Impulse" then
         local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid");local root=m and m:FindFirstChild("HumanoidRootPart")
         if h and root then
@@ -1402,6 +1426,25 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     end
     -- Skid after a Rampage that hit nothing: drop low and recover.
     if n<slideUntil then lean=math.max(lean,.9*math.clamp((slideUntil-n)/.55,0,1)) end
+    -- Block hands fly apart, then brace low as the blast carries the body backwards. Keep looking at the blast.
+    if bombRecoil then
+        if not reze or not h or h.Health<=0 or n-bombRecoil.start>C.Detonation.RecoilAirLimit+C.Detonation.SkidDuration+C.Detonation.StandDuration+.3 then
+            bombRecoil=nil
+        else
+            local a=n-bombRecoil.start;local skid=bombRecoil.phase=="skid"
+            local groundAge=skid and n-bombRecoil.land or 0
+            local stand=skid and smoothstep((groundAge-C.Detonation.SkidDuration)/C.Detonation.StandDuration) or 0
+            local kick=1-smoothstep(a/.22);local brace=smoothstep(a/.18)*(1-stand)
+            l=CFrame.new(-.64-.23*kick,-.78+.55*kick+.24*brace,-1.15+.28*kick)*CFrame.Angles(-.5*kick,.2,-.65*kick-.2*brace)
+            r=CFrame.new(.64+.23*kick,-.78+.55*kick+.24*brace,-1.15+.28*kick)*CFrame.Angles(-.5*kick,-.2,.65*kick+.2*brace)
+            lean=skid and .9*(1-stand) or -.12*kick
+            local landKick=skid and math.exp(-groundAge*17)*.075 or 0
+            local offset=CFrame.Angles(.12*kick-landKick,0,.025*math.sin(a*24)*math.exp(-a*5))
+            camera.CFrame*=offset;commonViewOffset*=offset
+            desiredFov=72+16*math.exp(-a*3)+4*brace
+            fovKickUntil=0
+        end
+    end
     -- Hold: Blue raises the right arm, Red the left, with the technique gathering in the palm.
     local holdHand=nil
     if holdState then
@@ -1425,7 +1468,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local drawn=n<drawnUntil or (zen and (melee~=nil or zenIdleDraw))
     local bladeFraction=shanks and 1 or (zen and melee and melee.drawProgress) or (zenIdleDraw and (n<zenBasicUntil and 1 or 1-smoothstep((n-zenBasicUntil)/C.ZenBasicAttack.Sheath))) or (drawn and 1 or 0)
     local alive=h and h.Health>0
-    local posed=zen or shanks or cast~=nil or melee~=nil or sliding~=nil or holdHand~=nil
+    local posed=zen or shanks or cast~=nil or melee~=nil or sliding~=nil or holdHand~=nil or bombRecoil~=nil
     local leftFrame,rightFrame=l,r
     if zen or shanks then
         swordPos*=Vector3.new(handScale,1,1)
@@ -1558,6 +1601,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     health.Text=h and string.format("HP  %d / %d",h.Health,h.MaxHealth) or "RESPAWNING"
     local locked=m and (m:GetAttribute("DomainLockedUntil") or 0)>n
     energy.Text=locked and "영역 안 · 이동 가능 / 스킬 봉인"
+        or bombRecoil and (bombRecoil.phase=="air" and "폭압 반동 · 뒤로 튕겨나는 중" or "폭압 반동 · 착지 슬라이딩 후 자세 회복")
         or slowed>0 and string.format("반동 · 이동 속도 저하 · 대시 불가  %.1f", slowed)
         or reze and transformed and "폭탄의 악마 · 지속 무제한 · Q 상승/내려찍기 · E 오른손 폭발 · R 대폭발"
         or reze and "인간 · M1 기본공격 · CTRL 슬라이딩 · SHIFT 대시 · R 변신"
@@ -1569,5 +1613,5 @@ end)
 player.CharacterAdded:Connect(function()
     clearCastVFX();PainClient.reset()
     finishFlameTurn()
-    dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
+    dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)

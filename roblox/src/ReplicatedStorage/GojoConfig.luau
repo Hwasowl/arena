@@ -38,7 +38,8 @@ return {
     -- for a close forward blast. Each costs HpCost of max HP (never lethal). R starts the original moving fuse.
     -- BombDevil can be used again Recharge seconds after she reverts.
     BombDevil = { Cost = 0, Cooldown = 0, Recharge = 20, Windup = 1, Blackout = 2, Heal = 0.2, Radius = 16, Damage = 90, Knockback = 110, Lift = 55 },
-    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60, SlowAtEnd = 0.25 },
+    Detonation = { Cost = 0, Cooldown = 0, Windup = 4, HpCost = 0.12, Radius = 30, Damage = 170, Knockback = 130, Lift = 60, SlowAtEnd = 0.25,
+        RecoilSpeed = 40, RecoilLift = 30, RecoilAirLimit = 1.4, SkidSpeed = 30, SkidDuration = 0.7, StandDuration = 0.3 },
     -- Shanks: Haki guarantees two 10-damage pulses in a 10-stud radius. EnGarde opens a short
     -- two-choice window: left click lunges; right click guards for one second and ripostes only if hit.
     Haki = { Cost = 20, Cooldown = 14, Windup = 0.5, Radius = 10, Damage = 10, Tick = 1, Pulses = 2 },

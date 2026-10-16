@@ -98,12 +98,14 @@ local function updateSpeed(m,h)
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
+    local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
+    if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
     local held=(m:GetAttribute("PainHeldUntil") or 0)>n
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or (m:GetAttribute("PainNoJumpUntil") or 0)>n
+    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -215,6 +217,60 @@ local function stopSlide(p,s)
         end
     end
     fx:FireAllClients("SlideEnd",{owner=p.UserId})
+end
+-- Detonation's own recoil: server physics, then a grounded braking skid. No extra damage or invulnerability.
+local function clearBombRecoil(p,s)
+    local b=s.bombRecoil;if not b then return end
+    s.bombRecoil=nil;b.velocity:Destroy();b.attachment:Destroy()
+    if b.model.Parent and b.humanoid.Parent then
+        b.model:SetAttribute("BombRecoilUntil",0);b.humanoid.AutoRotate=b.autoRotate;updateSpeed(b.model,b.humanoid)
+    end
+    if b.root.Parent then
+        local v=b.root.AssemblyLinearVelocity;b.root.AssemblyLinearVelocity=Vector3.yAxis*v.Y
+        if not b.root.Anchored then pcall(function() b.root:SetNetworkOwnershipAuto() end) end
+    end
+    s.busyUntil=math.min(s.busyUntil,clock())
+    fx:FireAllClients("BombRecoilEnd",{owner=p.UserId})
+end
+local function beginBombRecoil(p,s,m,h,r)
+    clearBombRecoil(p,s)
+    local cfg=C.Detonation;local n=clock()
+    local back=-r.CFrame.LookVector*Vector3.new(1,0,1);back=back.Magnitude>.01 and back.Unit or Vector3.zAxis
+    local attachment=Instance.new("Attachment");attachment.Name="BombRecoilAttachment";attachment.Parent=r
+    local velocity=Instance.new("LinearVelocity");velocity.Name="BombRecoilVelocity";velocity.Attachment0=attachment
+    velocity.RelativeTo=Enum.ActuatorRelativeTo.World;velocity.VelocityConstraintMode=Enum.VelocityConstraintMode.Vector
+    velocity.ForceLimitsEnabled=true;velocity.ForceLimitMode=Enum.ForceLimitMode.PerAxis
+    velocity.MaxAxesForce=Vector3.new(1,0,1)*math.max(10000,r.AssemblyMass*1500)
+    velocity.VectorVelocity=back*cfg.RecoilSpeed;velocity.Parent=r
+    pcall(function() r:SetNetworkOwner(nil) end)
+    local autoRotate=h.AutoRotate
+    h:ChangeState(Enum.HumanoidStateType.Freefall);h.AutoRotate=false
+    r.AssemblyLinearVelocity=back*cfg.RecoilSpeed+Vector3.yAxis*cfg.RecoilLift
+    s.bombRecoil={model=m,humanoid=h,root=r,attachment=attachment,velocity=velocity,direction=back,start=n,autoRotate=autoRotate,params=rayParams(m)}
+    s.busyUntil=n+cfg.RecoilAirLimit+cfg.SkidDuration+cfg.StandDuration
+    m:SetAttribute("BombRecoilUntil",s.busyUntil);updateSpeed(m,h)
+    Debris:AddItem(velocity,cfg.RecoilAirLimit+cfg.SkidDuration+cfg.StandDuration+.5)
+    Debris:AddItem(attachment,cfg.RecoilAirLimit+cfg.SkidDuration+cfg.StandDuration+.5)
+    fx:FireAllClients("BombRecoil",{owner=p.UserId,start=n,phase="air",direction=back})
+end
+local function updateBombRecoil(p,s,n,dt)
+    local b=s.bombRecoil;if not b then return end
+    local m,h,r=b.model,b.humanoid,b.root;local cfg=C.Detonation
+    if p.Character~=m or not m.Parent or not r.Parent or h.Health<=0 or (m:GetAttribute("RootedUntil") or 0)>n
+        or (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n then clearBombRecoil(p,s);return end
+    local age=n-b.start
+    local speed=b.blocked and 0 or (b.land and cfg.SkidSpeed*(1-math.clamp((n-b.land)/cfg.SkidDuration,0,1))^2 or cfg.RecoilSpeed)
+    if speed>0 and workspace:Blockcast(r.CFrame,Vector3.new(2.5,2.5,2.5),b.direction*(speed*dt+1),b.params) then
+        b.blocked=true;speed=0;r.AssemblyLinearVelocity=Vector3.yAxis*r.AssemblyLinearVelocity.Y
+    end
+    b.velocity.VectorVelocity=b.direction*speed
+    local ground=workspace:Raycast(r.Position,-Vector3.yAxis*(h.HipHeight+r.Size.Y/2+.45),b.params)
+    if not b.land and age>.12 and ((ground and r.AssemblyLinearVelocity.Y<=1) or age>=cfg.RecoilAirLimit) then
+        if not ground then clearBombRecoil(p,s);return end
+        b.land=n
+        fx:FireAllClients("BombRecoil",{owner=p.UserId,start=n,phase="skid",direction=b.direction})
+    end
+    if b.land and n-b.land>=cfg.SkidDuration+cfg.StandDuration then clearBombRecoil(p,s) end
 end
 local function basicAttack(p,s,m,h,r,direction)
     local kit=kitOf(p)
@@ -443,6 +499,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             end
             m:SetAttribute("BombDevilUntil",0)
             s.cooldowns.BombDevil=clock()+C.BombDevil.Recharge
+            beginBombRecoil(p,s,m,h,r)
             sendState(p,s)
         end)
     elseif kind=="Rampage" then
@@ -737,7 +794,7 @@ selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
     clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p)
-    stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
+    stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
@@ -782,6 +839,7 @@ RunService.Heartbeat:Connect(function(dt)
                 if rotor then rotor.Transform=CFrame.Angles(0,n*32,0) end
             end
         end
+        updateBombRecoil(p,s,n,dt)
         local slide
         if slide then
             local age=n-slide.start
@@ -875,13 +933,13 @@ Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,d
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
-        stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
+        stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
         clearPurpleHover(s);clearDoraFlight(s)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
 Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then stopSlide(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
+Players.PlayerRemoving:Connect(function(p) if states[p] then stopSlide(p,states[p]);clearBombRecoil(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
