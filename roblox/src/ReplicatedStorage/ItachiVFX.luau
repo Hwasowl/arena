@@ -257,6 +257,17 @@ function VFX.amaterasu(data)
     sparks.Size=NumberSequence.new(.14,0);sparks.Lifetime=NumberRange.new(.5,1);sparks.Speed=NumberRange.new(4,9);sparks.SpreadAngle=Vector2.new(35,35)
     sparks.Rate=0;sparks.Parent=glow
     local light=Instance.new("PointLight");light.Color=COLORS.Crimson;light.Brightness=0;light.Range=24;light.Parent=glow
+    -- Black fire: tongues from the fire texture drawn dark (no light emission) with a crimson licking rim on top.
+    local fireBed=part("ItachiFireBed",Vector3.new(1,.2,1),COLORS.Black,CFrame.new(center+Vector3.yAxis*.3));fireBed.Transparency=1
+    local blackFire=Instance.new("ParticleEmitter");blackFire.Texture="rbxasset://textures/particles/fire_main.dds"
+    blackFire.Color=ColorSequence.new(COLORS.Black,Color3.fromRGB(20,4,6));blackFire.LightEmission=0;blackFire.LightInfluence=0
+    blackFire.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,1.6),NumberSequenceKeypoint.new(.5,2.4),NumberSequenceKeypoint.new(1,0)})
+    blackFire.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.6),NumberSequenceKeypoint.new(.2,.05),NumberSequenceKeypoint.new(1,1)})
+    blackFire.Lifetime=NumberRange.new(.5,1);blackFire.Speed=NumberRange.new(3,6);blackFire.Acceleration=Vector3.yAxis*4
+    blackFire.RotSpeed=NumberRange.new(-40,40);blackFire.Rotation=NumberRange.new(-20,20);blackFire.SpreadAngle=Vector2.new(8,8)
+    blackFire.EmissionDirection=Enum.NormalId.Top;blackFire.Rate=0;blackFire.Parent=fireBed
+    local rimFire=blackFire:Clone();rimFire.Color=ColorSequence.new(COLORS.Crimson,COLORS.Blood);rimFire.LightEmission=.4
+    rimFire.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,1.1),NumberSequenceKeypoint.new(1,0)});rimFire.Parent=fireBed
     local burn=nil
     local flames={}
     local e=run(cfg.Gone+.05,function(a)
@@ -288,10 +299,13 @@ function VFX.amaterasu(data)
         light.Brightness=a<cfg.Ignite and 0 or (2+.6*math.sin(a*13))*fade
         ash.Rate=a>=cfg.Ignite and 30*k*fade*detail(center) or 0
         sparks.Rate=a>=cfg.Ignite and 40*k*fade*detail(center) or 0
+        fireBed.Size=Vector3.new(r*1.7+.1,.2,r*1.7+.1)
+        blackFire.Rate=a>=cfg.Ignite and (40+120*k)*fade*detail(center) or 0
+        rimFire.Rate=a>=cfg.Ignite and (15+45*k)*fade*detail(center) or 0
         if burn then local s=burn:FindFirstChildOfClass("Sound");if s then s.Volume=.55*fade end end
     end,function()
         for i,f in flames do if type(i)=="number" then releaseFlame(f) end end
-        marker:Destroy();scorch:Destroy();glow:Destroy()
+        marker:Destroy();scorch:Destroy();glow:Destroy();fireBed:Destroy()
         if burn then burn:Destroy() end
         fieldsByKey[key]=nil
     end,start)
@@ -352,26 +366,42 @@ function VFX.susanoo(model,data)
         end
     end
     for i=0,7 do add(chakraPart("SusanooSpine",Vector3.new(1.1,.85,1)*H,Enum.PartType.Block),"spine",cfg.Upper+i*.03,.15,CFrame.new(0,(1.6+i*1.4)*H,2.8*H)) end
-    add(chakraPart("SusanooTorso",Vector3.new(12,10,8)*H,Enum.PartType.Ball),"torso",1.3,.3,CFrame.new(0,12*H,1.2*H),.55)
-    add(chakraPart("SusanooHead",Vector3.new(4.2,4.6,4.2)*H,Enum.PartType.Ball),"head",1.6,.2,CFrame.new(0,19*H,.6*H))
-    add(chakraPart("SusanooNose",Vector3.new(.6,.6,3)*H,Enum.PartType.Block),"head",1.62,.2,CFrame.new(0,18.8*H,-2.6*H))
-    add(chakraPart("SusanooJaw",Vector3.new(3.2,1.2,2.4)*H,Enum.PartType.Block),"head",1.64,.2,CFrame.new(0,16.9*H,-.4*H))
-    for _,x in {-1,1} do add(chakraPart("SusanooHorn",Vector3.new(.5,3,.5)*H,Enum.PartType.Block),"head",1.66,.2,CFrame.new(x*1.4*H,21.6*H,1*H)*CFrame.Angles(-.45,0,x*.4)) end
+    add(chakraPart("SusanooTorso",Vector3.new(12,10,8)*H,Enum.PartType.Ball),"torso",1.0,.25,CFrame.new(0,12*H,1.2*H),.55)
+    add(chakraPart("SusanooHead",Vector3.new(4.2,4.6,4.2)*H,Enum.PartType.Ball),"head",1.15,.2,CFrame.new(0,19*H,.6*H))
+    add(chakraPart("SusanooNose",Vector3.new(.6,.6,3)*H,Enum.PartType.Block),"head",1.17,.2,CFrame.new(0,18.8*H,-2.6*H))
+    add(chakraPart("SusanooJaw",Vector3.new(3.2,1.2,2.4)*H,Enum.PartType.Block),"head",1.19,.2,CFrame.new(0,16.9*H,-.4*H))
+    for _,x in {-1,1} do add(chakraPart("SusanooHorn",Vector3.new(.5,3,.5)*H,Enum.PartType.Block),"head",1.21,.2,CFrame.new(x*1.4*H,21.6*H,1*H)*CFrame.Angles(-.45,0,x*.4)) end
     s.eyes={}
     for _,x in {-1,1} do local e=neonPart("SusanooEye",Vector3.new(.7,.35,.2)*H,Enum.PartType.Block,COLORS.Gold);table.insert(s.eyes,{p=e,offset=CFrame.new(x*.9*H,19.3*H,-2*H)}) end
     -- Arms: shoulder ball, upper arm, forearm, hand with four fingers and a thumb. Posed every frame.
     local function arm(side)
         local a={side=side}
-        a.shoulder=add(chakraPart("SusanooShoulder",Vector3.one*3*H,Enum.PartType.Ball),"arms",1.35,.18,nil)
-        a.upper=add(chakraPart("SusanooArm",Vector3.new(1.5,7,1.5)*H,Enum.PartType.Block),"arms",1.42,.2,nil)
-        a.fore=add(chakraPart("SusanooArm",Vector3.new(1.3,6.5,1.3)*H,Enum.PartType.Block),"arms",1.5,.2,nil)
-        a.hand=add(chakraPart("SusanooHand",Vector3.new(2.6,2.8,1.1)*H,Enum.PartType.Block),"hands",1.58,.2,nil)
+        a.shoulder=add(chakraPart("SusanooShoulder",Vector3.one*3*H,Enum.PartType.Ball),"arms",.95,.15,nil)
+        a.upper=add(chakraPart("SusanooArm",Vector3.new(1.5,7,1.5)*H,Enum.PartType.Block),"arms",1.0,.15,nil)
+        a.fore=add(chakraPart("SusanooArm",Vector3.new(1.3,6.5,1.3)*H,Enum.PartType.Block),"arms",1.05,.15,nil)
+        a.hand=add(chakraPart("SusanooHand",Vector3.new(2.6,2.8,1.1)*H,Enum.PartType.Block),"hands",1.1,.15,nil)
         a.fingers={}
-        for f=1,4 do table.insert(a.fingers,add(chakraPart("SusanooFinger",Vector3.new(.45,1.8,.45)*H,Enum.PartType.Block),"hands",1.6+f*.02,.15,nil)) end
-        a.thumb=add(chakraPart("SusanooThumb",Vector3.new(.5,1.4,.5)*H,Enum.PartType.Block),"hands",1.66,.15,nil)
+        for f=1,4 do table.insert(a.fingers,add(chakraPart("SusanooFinger",Vector3.new(.45,1.8,.45)*H,Enum.PartType.Block),"hands",1.12+f*.02,.12,nil)) end
+        a.thumb=add(chakraPart("SusanooThumb",Vector3.new(.5,1.4,.5)*H,Enum.PartType.Block),"hands",1.2,.12,nil)
         return a
     end
     s.L=arm(-1);s.R=arm(1)
+    -- Chakra burns: red Fire on the big parts and rising flame tongues from the torso.
+    s.fires={}
+    for _,e in s.parts do
+        local big=e.stage=="torso" or e.stage=="head" and e.p.Name=="SusanooHead" or e.p.Name=="SusanooShoulder" or e.p.Name=="SusanooArm" or e.p.Name=="SusanooHand"
+        if big then
+            local f=Instance.new("Fire");f.Color=Color3.fromRGB(255,60,30);f.SecondaryColor=COLORS.Crimson
+            f.Size=math.clamp(e.p.Size.Magnitude*.45,2,18);f.Heat=12;f.Enabled=false;f.Parent=e.p
+            table.insert(s.fires,{f=f,e=e})
+        end
+    end
+    s.flames=Instance.new("ParticleEmitter");s.flames.Texture="rbxasset://textures/particles/fire_main.dds"
+    s.flames.Color=ColorSequence.new(Color3.fromRGB(255,120,60),COLORS.Crimson);s.flames.LightEmission=1
+    s.flames.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,3*H),NumberSequenceKeypoint.new(1,0)});s.flames.Transparency=NumberSequence.new(.2,1)
+    s.flames.Lifetime=NumberRange.new(.5,.9);s.flames.Speed=NumberRange.new(4,8);s.flames.Acceleration=Vector3.yAxis*6;s.flames.SpreadAngle=Vector2.new(40,40)
+    s.flames.EmissionDirection=Enum.NormalId.Top;s.flames.Rate=0
+    for _,e in s.parts do if e.stage=="torso" then s.flames.Parent=e.p end end
     -- Yata Mirror: a gold rim and a red flowing face, carried by the left hand.
     s.mirrorFace=chakraPart("YataMirror",Vector3.new(.3,11,11)*H,Enum.PartType.Cylinder,Color3.fromRGB(255,90,60))
     s.mirrorRim=neonPart("YataMirrorRim",Vector3.new(.25,11.8,11.8)*H,Enum.PartType.Cylinder,COLORS.Gold)
@@ -389,29 +419,51 @@ function VFX.susanoo(model,data)
         local root=rootOf(model);if not root then return end
         local flatDir=s.direction or Vector3.new(0,0,-1)
         local base=CFrame.lookAt(root.Position-Vector3.yAxis*3,root.Position-Vector3.yAxis*3+flatDir)
-        local lean=-.12*smoothstep(window(a,cfg.Aim,cfg.Thrust))*(1-smoothstep(window(a,5.35,5.9)))
-        local body=base*CFrame.Angles(lean,0,0)
-        local fadeAll=smoothstep(window(a,5.6,6.1));local ribsFade=smoothstep(window(a,6.0,6.35))
+        local function lerp(x,y,t) return x+(y-x)*t end
+        local lower=smoothstep(window(a,cfg.SealEnd,cfg.SealEnd+.55))
+        local st=cfg.Strikes
+        local lean=(-.12*smoothstep(window(a,cfg.Aim,cfg.Thrust))-.1*bump(a,st[1].Windup,st[1].Time+.2)-.16*bump(a,st[3].Windup+.1,st[3].Time+.25))*(1-lower)
+        -- Right-arm keys for the three smashes before the blade: {time, shoulder pitch, elbow, yaw (+ = left), roll, body twist}.
+        local K={{0,.25,.45,0,.15,0},{st[1].Windup,.25,.45,0,.15,0},{st[1].Windup+.17,.15,1.9,-.25,.2,-.25},{st[1].Time,1.5,.05,-.05,.12,.1},
+            {st[2].Windup,1.0,.5,-.3,.3,0},{st[2].Windup+.18,1.35,.25,-1.05,.55,-.35},{st[2].Time,1.35,.2,1.0,.4,.35},
+            {st[3].Windup,1.1,.6,.3,.2,0},{st[3].Windup+.2,2.9,.5,0,.1,0},{st[3].Time,.95,.05,0,.1,0},{cfg.Blade,.25,.45,0,.15,0}}
+        local key={.25,.45,0,.15,0}
+        if a<cfg.Blade then
+            local i=1;while i<#K-1 and a>=K[i+1][1] do i+=1 end
+            local k0,k1=K[i],K[i+1];local u=window(a,k0[1],k1[1])
+            local hitKey=k1[1]==st[1].Time or k1[1]==st[2].Time or k1[1]==st[3].Time
+            u=hitKey and 1-(1-u)^3 or smoothstep(u)
+            for j=1,5 do key[j]=lerp(k0[j+1],k1[j+1],u) end
+        end
+        local twist=key[5]*(1-lower)
+        local body=base*CFrame.Angles(0,twist,0)*CFrame.Angles(lean,0,0)
+        local fadeAll=smoothstep(window(a,cfg.End-.8,cfg.End-.3));local ribsFade=smoothstep(window(a,cfg.End-.4,cfg.End-.05))
         for _,e in s.parts do
             local k=smoothstep(window(a,e.at,e.at+e.dur))*(e.stage=="ribs" and 1-ribsFade or 1-fadeAll)
             e.p.Transparency=1-(1-e.alpha)*k
             if e.offset then e.p.CFrame=body*e.offset end
+            e.k=k
             if e.stage=="ribs" and k>0 and not e.played then e.played=true;if math.random()<.35 then VFX.sound("Crack",root.Position,.35,1,1.3) end end
         end
-        for _,e in s.eyes do e.p.CFrame=body*e.offset;e.p.Transparency=1-smoothstep(window(a,1.65,1.8))*(1-fadeAll) end
-        if a>=1.05 and not s.flags.ring then
+        for _,e in s.eyes do e.p.CFrame=body*e.offset;e.p.Transparency=1-smoothstep(window(a,1.2,1.35))*(1-fadeAll) end
+        for _,f in s.fires do f.f.Enabled=(f.e.k or 0)>.4 and a<cfg.End-.4 end
+        s.flames.Rate=a>=1.0 and a<cfg.End-.4 and 60*detail(root.Position) or 0
+        if a>=.95 and not s.flags.ring then
             s.flags.ring=true
             local ring=part("SusanooRing",Vector3.new(.1,2,2),COLORS.Red,CFrame.new(root.Position-Vector3.yAxis*2.9)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder)
             run(.9,function(b) local k=b/.9;ring.Size=Vector3.new(.1,4+22*k,4+22*k);ring.Transparency=.2+.8*k end,function() ring:Destroy() end)
         end
         -- Arm angles (positive pitch swings a hanging arm forward).
-        local mUp=smoothstep(window(a,cfg.Mirror,cfg.Mirror+.4))*(1-smoothstep(window(a,5.5,5.95)))
+        local mUp=smoothstep(window(a,cfg.Mirror,cfg.Mirror+.4))*(1-smoothstep(window(a,cfg.SealEnd+.15,cfg.SealEnd+.6)))
         local raise=smoothstep(window(a,cfg.Blade,cfg.Blade+.5));local pull=smoothstep(window(a,cfg.Aim,cfg.Thrust))
-        local thrust=1-(1-window(a,cfg.Thrust,cfg.Thrust+.25))^4;local lower=smoothstep(window(a,5.35,5.9))
-        local function lerp(x,y,t) return x+(y-x)*t end
-        local rSh=lerp(lerp(lerp(.25,1,raise),.25,pull),1.55,thrust);local rEl=lerp(lerp(lerp(.45,1.5,raise),1.9,pull),.05,thrust)
-        rSh=lerp(rSh,.25,lower);rEl=lerp(rEl,.45,lower)
-        local poses={[-1]={sh=.25+.95*mUp,el=.45-.1*mUp,yaw=0,roll=-.15+.3*mUp},[1]={sh=rSh,el=rEl,yaw=-.35*pull*(1-thrust),roll=.15}}
+        local thrust=1-(1-window(a,cfg.Thrust,cfg.Thrust+.25))^4
+        local rSh,rEl,rYaw,rRoll=key[1],key[2],key[3],key[4]
+        if a>=cfg.Blade then
+            rSh=lerp(lerp(lerp(.25,1,raise),.25,pull),1.55,thrust);rEl=lerp(lerp(lerp(.45,1.5,raise),1.9,pull),.05,thrust)
+            rYaw=-.35*pull*(1-thrust);rRoll=.15
+        end
+        rSh=lerp(rSh,.25,lower);rEl=lerp(rEl,.45,lower);rYaw=lerp(rYaw,0,lower);rRoll=lerp(rRoll,.15,lower)
+        local poses={[-1]={sh=.25+.95*mUp,el=.45-.1*mUp,yaw=0,roll=-.15+.3*mUp},[1]={sh=rSh,el=rEl,yaw=rYaw,roll=rRoll}}
         for _,A in {s.L,s.R} do
             local P=poses[A.side]
             local sh=body*CFrame.new(A.side*7.4*H,13.4*H,1*H)*CFrame.Angles(0,P.yaw,0)*CFrame.Angles(P.sh,0,P.roll*A.side)
@@ -426,7 +478,9 @@ function VFX.susanoo(model,data)
             A.handFrame=hand
         end
         -- Mirror on the left hand, its face turned forward; ripples when hit.
-        local mk=smoothstep(window(a,cfg.Mirror+.1,cfg.Mirror+.5))*(1-smoothstep(window(a,5.5,5.8)))
+        local mk=smoothstep(window(a,cfg.Mirror+.1,cfg.Mirror+.5))*(1-smoothstep(window(a,cfg.SealEnd+.15,cfg.SealEnd+.45)))
+        -- Thinner while the right arm smashes through the space in front of it.
+        mk*=1-.7*smoothstep(window(a,cfg.Smash-.1,cfg.Smash+.1))*(1-smoothstep(window(a,cfg.Blade-.1,cfg.Blade+.2)))
         -- The cylinder's axis (X) is turned along the forearm, so the face looks where the arm points.
         local mf=s.L.handFrame*CFrame.new(0,-3.2*H,-1.4*H)*CFrame.Angles(0,0,math.pi/2)*CFrame.Angles(a*.6,0,0)
         s.mirrorFace.CFrame=mf;s.mirrorRim.CFrame=mf*CFrame.new(.05,0,0)
@@ -459,8 +513,8 @@ function VFX.susanoo(model,data)
         local len=12*H*form
         if a>=cfg.Thrust then len=lerp(12*H,full,1-(1-window(a,cfg.Thrust,cfg.Tip))^3) end
         if not tr and a>=cfg.Tip then len=lerp(full,12*H,smoothstep(window(a,cfg.Tip+.1,cfg.StrikeEnd+.2))) end
-        if tr and a>=cfg.Seal then len=lerp(full,9*H,smoothstep(window(a,cfg.SealEnd,5.7))) end
-        local bk=form*(1-smoothstep(window(a,5.35,5.7)))
+        if tr and a>=cfg.Seal then len=lerp(full,9*H,smoothstep(window(a,cfg.SealEnd,cfg.SealEnd+.35))) end
+        local bk=form*(1-smoothstep(window(a,cfg.SealEnd,cfg.SealEnd+.35)))
         local dir=CFrame.lookAt(hand.Position,aimPoint)
         s.blade.Size=Vector3.new(.7+.15*math.sin(a*11),.7+.15*math.sin(a*11),math.max(.05,len));s.blade.CFrame=dir*CFrame.new(0,0,-len/2)
         s.bladeGlow.Size=Vector3.new(1.7,1.7,math.max(.05,len));s.bladeGlow.CFrame=s.blade.CFrame
@@ -492,6 +546,29 @@ function VFX.susanoo(model,data)
         if ultras[owner]==s then ultras[owner]=nil end
     end,start)
     return s
+end
+-- One smash landing: a burst of red flame and gold light at the fist (the hammer splits the ground with a ring),
+-- and a flash on everyone it hit.
+function VFX.susanooSmash(owner,index,point,targets)
+    local s=ultras[owner]
+    local at=point
+    if s and s.R.handFrame and index~=3 then at=s.R.handFrame.Position end
+    if index==3 then
+        local ring=part("SusanooQuake",Vector3.new(.1,4,4),COLORS.Red,CFrame.new(point-Vector3.yAxis*2.8)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder)
+        run(.6,function(b) local k=b/.6;ring.Size=Vector3.new(.1,4+30*k,4+30*k);ring.Transparency=.15+.85*k end,function() ring:Destroy() end)
+    end
+    local burst=part("SusanooSmash",Vector3.one*3,COLORS.Gold,CFrame.new(at),Enum.PartType.Ball)
+    local fire=part("SusanooSmashFire",Vector3.one*4,COLORS.Red,CFrame.new(at),Enum.PartType.Ball)
+    local big=index==3 and 1.5 or 1
+    run(.4,function(b) local k=b/.4;burst.Size=Vector3.one*(3+9*k)*big;burst.Transparency=.1+.9*k;fire.Size=Vector3.one*(4+14*k)*big;fire.Transparency=.3+.7*k end,function() burst:Destroy();fire:Destroy() end)
+    for _,m in targets or {} do
+        local r=rootOf(m)
+        if r then
+            local f=part("SusanooSmashHit",Vector3.one*2,Color3.fromRGB(255,200,140),CFrame.new(r.Position),Enum.PartType.Ball)
+            run(.3,function(b) local k=b/.3;f.Size=Vector3.one*(2+5*k);f.Transparency=k;f.Color=COLORS.Gold:Lerp(COLORS.Red,k) end,function() f:Destroy() end)
+        end
+    end
+    VFX.sound("Impact",at,1,2,index==3 and .8 or 1)
 end
 function VFX.susanooThrust(owner,target)
     local s=ultras[owner];if not s then return end

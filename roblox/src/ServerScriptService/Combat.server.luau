@@ -955,7 +955,7 @@ Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,d
 AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
 Itachi.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
-    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf})
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf,launch=launch})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()

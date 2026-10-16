@@ -34,12 +34,22 @@ return {
         EntryDamage = 10, TickDamage = 6, Tick = 1, MaxTicks = 5,        -- 10 + 5 x 6 = 40 per target at most
         Slow = 0.8, CasterSpeed = 0.5, Busy = 0.85,
     },
-    -- R: Susanoo forms around the caster, the Yata Mirror guards the front, the Totsuka Blade thrusts and seals.
+    -- R: Susanoo forms around the caster, the Yata Mirror guards the front, the right arm smashes everything in front
+    -- three times (punch, sweep, overhead hammer), then the Totsuka Blade thrusts and seals the first body ahead.
+    -- 24 + 24 + 30 + 10 + 15 = 103 on a target that takes every hit.
     Susanoo = {
         Cooldown = 90,
-        Ribs = 0.6, Upper = 1.1, Mirror = 1.8, Blade = 2.5, Aim = 3.2, Thrust = 3.65, Tip = 3.9, StrikeEnd = 4.15,
-        Seal = 4.6, SealHit = 5.0, SealEnd = 5.35, MirrorBreak = 5.5, End = 6.4, SealFor = 1.8,
-        Reach = 35, Width = 4, Damage1 = 55, Damage2 = 25,
+        Ribs = 0.5, Upper = 0.9, Mirror = 1.4, Smash = 1.6,
+        Blade = 3.2, Aim = 3.7, Thrust = 4.0, Tip = 4.2, StrikeEnd = 4.45,
+        Seal = 4.8, SealHit = 5.15, SealEnd = 5.5, MirrorBreak = 5.65, End = 6.6, SealFor = 1.8,
+        -- Each smash: when it lands, damage, half-angle of the frontal arc (degrees), knockback (out, up) in studs/s.
+        Strikes = {
+            { Windup = 1.6, Time = 1.85, Damage = 24, Arc = 55, Out = 12, Up = 18, Name = "Punch" },
+            { Windup = 2.15, Time = 2.45, Damage = 24, Arc = 85, Out = 12, Up = 18, Name = "Sweep" },
+            { Windup = 2.75, Time = 3.05, Damage = 30, Arc = 50, Out = 15, Up = 36, Name = "Hammer" },
+        },
+        StrikeRange = 28, StrikeHeight = 12,
+        Reach = 35, Width = 4, Damage1 = 10, Damage2 = 15,
         MirrorReduction = 0.6, MirrorArc = 75,           -- frontal half-angle in degrees
         Height = 14, Hand = Vector3.new(5.5, 6, -3.5),   -- right hand relative to the caster's root (studs)
         LiftHeight = 3, SealPoint = 0.55,                -- the victim is drawn to this fraction of the blade

@@ -1930,8 +1930,10 @@ window.ItachiPreview = function (A) {
     crow: { chance: .2, icd: 25, back: 12 * S, total: .85, damage: 12 },
     q: { range: 35 * S, angle: 12, damage: 12, bind: 1.4, failCd: 1.5, prep: .3, eye: .55, world: .9, wave: 1.35, crack: 1.5, end: 1.95 },
     e: { range: 65 * S, radius: 20 * S, start: 3 * S, aim: .2, ignite: .55, spread: .8, full: 1.5, burnEnd: 6, gone: 6.7, entry: 10, tick: 6, ticks: 5, slow: .8, flameH: 5 * S },
-    r: { ribs: .6, upper: 1.1, mirror: 1.8, blade: 2.5, aim: 3.2, thrust: 3.65, tip: 3.9, strikeEnd: 4.15, seal: 4.6, sealHit: 5.0, sealEnd: 5.35, end: 6.4, sealFor: 1.8,
-      reach: 35 * S, width: 2.4, d1: 55, d2: 25, guard: .4 },
+    // R: Susanoo forms, smashes everything in front three times, then the Totsuka Blade thrusts and seals one target.
+    r: { ribs: .5, upper: .9, mirror: 1.4, s1w: 1.6, s1: 1.85, s2w: 2.15, s2: 2.45, s3w: 2.75, s3: 3.05,
+      blade: 3.2, aim: 3.7, thrust: 4.0, tip: 4.2, strikeEnd: 4.45, seal: 4.8, sealHit: 5.15, sealEnd: 5.5, end: 6.6, sealFor: 1.8,
+      reach: 35 * S, width: 2.4, strikeR: 28 * S, hits: [24, 24, 30], arcs: [55, 85, 50], d1: 10, d2: 15, guard: .4 },
   };
   const RED = 0xd8141c, DEEP = 0x5a0006, GOLD = 0xffc24a, BLACK = 0x060607;
 
@@ -1980,6 +1982,15 @@ window.ItachiPreview = function (A) {
     g.strokeStyle = 'rgba(255,214,120,.95)'; for (const [rr, w] of [[.96, 6], [.78, 3], [.5, 3], [.2, 2]]) { g.lineWidth = w; g.beginPath(); g.arc(c, c, c * rr - 3, 0, 7); g.stroke(); }
     g.lineWidth = 2.5; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; g.beginPath(); g.moveTo(c + Math.cos(a) * c * .52, c + Math.sin(a) * c * .52); g.quadraticCurveTo(c + Math.cos(a + .14) * c * .66, c + Math.sin(a + .14) * c * .66, c + Math.cos(a + .05) * c * .76, c + Math.sin(a + .05) * c * .76); g.stroke(); }
   });
+
+  // A flame tongue: a white teardrop with a soft edge, tinted per use (black for Amaterasu, red for Susanoo).
+  const flameTex = canvasTex(128, (g, w, h) => {
+    const grd = g.createRadialGradient(w / 2, h * .74, 2, w / 2, h * .62, w * .55);
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.5, 'rgba(255,255,255,.8)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.beginPath(); g.moveTo(w * .52, 1);
+    g.bezierCurveTo(w * .6, h * .28, w * .98, h * .5, w * .84, h * .8); g.bezierCurveTo(w * .72, h * .99, w * .28, h * .99, w * .16, h * .8);
+    g.bezierCurveTo(w * .02, h * .52, w * .42, h * .34, w * .52, 1); g.fill();
+  }, 64, 128);
 
   // ---------- effect bookkeeping ----------
   const fxs = [], live = new Set(), SHARED = new Set();
@@ -2457,11 +2468,24 @@ window.ItachiPreview = function (A) {
     }
     return { error: '65스터드 안에 바닥이 없습니다 · 지면을 바라보세요' };
   }
+  // A flame tongue: a round bulb at the base tapering to a wavy, curling tip (not a cone).
   const FLAME_GEO = (() => {
-    const g = new T.ConeGeometry(.5, 1, 7, 5, true); g.translate(0, .5, 0); const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) { const y = p.getY(i), tw = y * 1.6; const x = p.getX(i), z = p.getZ(i); p.setXYZ(i, x * Math.cos(tw) - z * Math.sin(tw) + Math.sin(y * 5) * .06 * y, y, x * Math.sin(tw) + z * Math.cos(tw)); }
+    const pts = [];
+    for (let i = 0; i <= 14; i++) { const y = i / 14; const r = y < .22 ? .5 * Math.pow(Math.sin(y / .22 * Math.PI / 2), .6) : .5 * Math.pow(1 - (y - .22) / .78, 1.25); pts.push(new T.Vector2(Math.max(.001, r), y)); }
+    const g = new T.LatheGeometry(pts, 10); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i), tw = y * 2.2; const x = p.getX(i), z = p.getZ(i); p.setXYZ(i, x * Math.cos(tw) - z * Math.sin(tw) + Math.sin(y * 4) * .12 * y, y, x * Math.sin(tw) + z * Math.cos(tw)); }
     g.computeVertexNormals(); return g;
   })(); SHARED.add(FLAME_GEO);
+  // Flames lick upward: each instance sways and swells along its height; black core with a dark red rim.
+  const FLAME_VS = 'uniform float uTime;varying float vY;varying vec3 vN;varying vec3 vV;void main(){vec3 p=position;mat4 m=modelMatrix;\n#ifdef USE_INSTANCING\nm=modelMatrix*instanceMatrix;\n#endif\nvec4 c=m*vec4(0.,0.,0.,1.);float ph=c.x*1.7+c.z*2.3;float y=p.y;p.x+=sin(y*5.-uTime*7.+ph)*.2*y;p.z+=cos(y*4.-uTime*6.+ph*1.3)*.16*y;p.xz*=1.+.18*sin(uTime*11.+ph+y*8.)*y;vec4 w=m*vec4(p,1.);vY=y;vN=normalize(mat3(m)*normal);vV=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}';
+  function flameCore() {
+    return new T.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: FLAME_VS,
+      fragmentShader: 'uniform float uTime;varying float vY;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.-abs(dot(normalize(vN),vV)),1.6);float band=.5+.5*sin(vY*14.-uTime*9.);vec3 c=mix(vec3(.012,.004,.006),vec3(.42,.015,.03),clamp(f*.95+band*.18*vY,0.,1.));gl_FragColor=vec4(c,1.);}' });
+  }
+  function flameHalo() {
+    return new T.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: FLAME_VS, transparent: true, depthWrite: false, side: T.BackSide,
+      fragmentShader: 'uniform float uTime;varying float vY;varying vec3 vN;varying vec3 vV;void main(){float band=.6+.4*sin(vY*11.-uTime*8.);gl_FragColor=vec4(vec3(.55,.02,.04),.6*(1.-vY*.7)*band);}' });
+  }
   function beginAmaterasu(c) {
     const aim = aimGround();
     if (aim.error) { c.fail = true; c.duration = .05; A.cooldowns.amaterasu = 0; A.toast('아마테라스 미발동 · ' + aim.error); return; }
@@ -2501,8 +2525,8 @@ window.ItachiPreview = function (A) {
       list.push({ p, d, rim, h, w: big ? rnd(.45, .8) : rnd(.22, .45), born, die: E.burnEnd + (1 - rim) * (E.gone - E.burnEnd - .1) + rnd(0, .08), ph: rnd(0, 6), f: rnd(6, 11) });
     }
     const n = list.length;
-    const core = new T.InstancedMesh(FLAME_GEO, new T.MeshBasicMaterial({ color: BLACK }), n);
-    const halo = new T.InstancedMesh(FLAME_GEO, new T.MeshBasicMaterial({ color: 0x8c0a10, transparent: true, opacity: .55, depthWrite: false, side: T.BackSide }), n);
+    const core = new T.InstancedMesh(FLAME_GEO, flameCore(), n);
+    const halo = new T.InstancedMesh(FLAME_GEO, flameHalo(), n);
     core.frustumCulled = halo.frustumCulled = false; core.instanceMatrix.setUsage(T.DynamicDrawUsage); halo.instanceMatrix.setUsage(T.DynamicDrawUsage);
     keep(core); keep(halo);
     // Scorched ground under the fire.
@@ -2510,7 +2534,15 @@ window.ItachiPreview = function (A) {
     const scorch = keep(new T.Mesh(new T.ShapeGeometry(shape), new T.MeshBasicMaterial({ color: 0x0a0606, transparent: true, opacity: 0, depthWrite: false })));
     scorch.rotation.x = Math.PI / 2; scorch.scale.y = -1; scorch.position.copy(center).setY(.02);
     const glowDisc = keep(sprite(glowTex, 0x7a0008, 0, false)); glowDisc.position.copy(center).setY(.6); glowDisc.scale.setScalar(R * 2.4);
-    return { center, start, list, core, halo, scorch, glowDisc, reach, hits: new Map(), dummy: new T.Object3D(), nextEmber: 0, flags: {} };
+    // Black flame sheets over the tongues: billboards that flicker and sway, a dark red rim behind each.
+    const sheets = keep(new T.Group()), tongues = [];
+    const tall = list.filter(f => f.h > .9 * S || Math.random() < .12).sort(() => Math.random() - .5).slice(0, 90);
+    for (const f of tall) {
+      const rim = new T.Sprite(new T.SpriteMaterial({ map: flameTex, color: 0x8a0610, transparent: true, depthWrite: false, opacity: 0 })); rim.renderOrder = 3;
+      const core = new T.Sprite(new T.SpriteMaterial({ map: flameTex, color: 0x050304, transparent: true, depthWrite: false, opacity: 0 })); core.renderOrder = 4;
+      sheets.add(rim, core); tongues.push({ f, rim, core, ph: rnd(0, 6), s: rnd(1.1, 1.8) });
+    }
+    return { center, start, list, core, halo, scorch, glowDisc, sheets, tongues, reach, hits: new Map(), dummy: new T.Object3D(), nextEmber: 0, flags: {} };
   }
   // Damage, slow and visuals of one fire field. Damage: first entry 10 once per field, then 6 every second inside, 5 at most.
   function updateField(F, dt) {
@@ -2526,6 +2558,14 @@ window.ItachiPreview = function (A) {
       D.scale.set(f.w * k * 1.32, f.h * k * fl * 1.12, f.w * k * 1.32); D.updateMatrix(); F.halo.setMatrixAt(i, D.matrix);
     }
     F.core.instanceMatrix.needsUpdate = F.halo.instanceMatrix.needsUpdate = true;
+    F.core.material.uniforms.uTime.value = F.halo.material.uniforms.uTime.value = A.time;
+    for (const g of F.tongues) {
+      const f = g.f; let k = seg(a, f.born, f.born + .22); k = outP(k, 2) * (1 - ease(seg(a, f.die - .1, f.die + .25)));
+      const fl = .8 + .2 * Math.sin(A.time * 9 + g.ph) + .1 * Math.sin(A.time * 21 + g.ph * 2), h = Math.max(.01, f.h * g.s * k * fl), w = h * .5;
+      g.core.position.copy(f.p).setY(f.p.y + h * .46); g.core.scale.set(w, h, 1); g.core.material.opacity = .92 * Math.min(1, k * 1.5);
+      g.rim.position.copy(g.core.position).setY(g.core.position.y + h * .02); g.rim.scale.set(w * 1.28, h * 1.1, 1); g.rim.material.opacity = .7 * Math.min(1, k * 1.5);
+      g.core.material.rotation = g.rim.material.rotation = Math.sin(A.time * 3 + g.ph) * .14;
+    }
     const life = seg(a, E.ignite, E.full) * (1 - seg(a, E.burnEnd, E.gone));
     F.scorch.material.opacity = .75 * outP(seg(a, E.ignite, E.full), 2) * (1 - seg(a, E.gone - .2, E.gone + .5));
     F.glowDisc.material.opacity = .45 * life;
@@ -2553,7 +2593,7 @@ window.ItachiPreview = function (A) {
         h.inside = true; t.itBurnUntil = A.time + .1;
       } else if (h) { h.inside = false; if (A.time - h.last >= 1) h.last = A.time - .999; }
     }
-    if (a >= E.gone + .6) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); return false; }
+    if (a >= E.gone + .6) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); kill(F.sheets); return false; }
     return true;
   }
   // A few black tongues licking up around a burning dummy's feet (the fire on the ground stays the main thing).
@@ -2569,8 +2609,10 @@ window.ItachiPreview = function (A) {
   function chakra(color = 0xff2b2b, edge = 0xffb070, opacity = .5) {
     return new T.ShaderMaterial({
       uniforms: { uColor: { value: new T.Color(color) }, uEdge: { value: new T.Color(edge) }, uOp: { value: opacity }, uK: { value: 0 }, uTime: { value: 0 } },
-      vertexShader: 'varying vec3 vN;varying vec3 vV;varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);vV=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}',
-      fragmentShader: 'uniform vec3 uColor;uniform vec3 uEdge;uniform float uOp;uniform float uK;uniform float uTime;varying vec3 vN;varying vec3 vV;varying vec3 vW;void main(){float f=pow(1.-abs(dot(normalize(vN),vV)),2.);float flow=.5+.5*sin(vW.y*2.6-uTime*5.+sin(vW.x*1.7+uTime*1.3)*2.);float form=smoothstep(uK-.25,uK,fract(vW.y*.35+flow*.15));vec3 c=mix(uColor*(.6+.35*flow),uEdge,f*.85);float a=uOp*(.35+.65*f+.12*flow)*uK*(1.-form*(1.-uK));gl_FragColor=vec4(c,clamp(a,0.,1.));}',
+      // Chakra burns like fire: the surface licks upward (vertex wobble along the normal) and bright tongues of
+      // flame run up through it; the rim glows gold.
+      vertexShader: 'uniform float uTime;varying vec3 vN;varying vec3 vV;varying vec3 vW;void main(){vec4 w0=modelMatrix*vec4(position,1.);float fl=(sin(w0.y*3.1-uTime*7.+w0.x*2.3)*.5+.5)*(sin(w0.y*1.7-uTime*4.3+w0.z*2.9)*.5+.5);vec3 p=position+normal*fl*.14;vec4 w=modelMatrix*vec4(p,1.);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);vV=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}',
+      fragmentShader: 'uniform vec3 uColor;uniform vec3 uEdge;uniform float uOp;uniform float uK;uniform float uTime;varying vec3 vN;varying vec3 vV;varying vec3 vW;void main(){float f=pow(1.-abs(dot(normalize(vN),vV)),2.);float n1=sin(vW.y*3.2-uTime*8.+sin(vW.x*2.1+uTime*1.7)*2.)*.5+.5;float n2=sin(vW.y*6.1-uTime*11.+vW.z*3.3+sin(vW.x*4.+uTime*2.)*1.5)*.5+.5;float flame=n1*n2;float form=smoothstep(uK-.25,uK,fract(vW.y*.35+n1*.15));vec3 c=mix(uColor*(.5+.6*flame),uEdge,clamp(f*.8+flame*.4,0.,1.));float a=uOp*(.28+.6*f+.55*flame)*uK*(1.-form*(1.-uK));gl_FragColor=vec4(c,clamp(a,0.,1.));}',
       transparent: true, depthWrite: false, side: T.DoubleSide,
     });
   }
@@ -2584,23 +2626,23 @@ window.ItachiPreview = function (A) {
       const r = 1.25 - Math.abs(i - 2) * .06; add(new T.TorusGeometry(r, .075 - i * .004, 6, 28, 2.74), 'ribs', CFG.r.ribs + i * .07, .18, null, [Math.PI / 2, 0, 0], null, w);
     }
     for (let i = 0; i < 8; i++) add(new T.BoxGeometry(.32, .26, .3), 'spine', CFG.r.upper + i * .03, .15, [0, .5 + i * .58, 1.35]);
-    add(new T.SphereGeometry(2.6, 22, 14, 0, Math.PI * 2, 0, Math.PI * .62), 'torso', 1.3, .3, [0, 4.1, .7], null, [1.25, 1, .85], g, chakra(0xff2424, 0xffa060, .32));
+    add(new T.SphereGeometry(2.6, 22, 14, 0, Math.PI * 2, 0, Math.PI * .62), 'torso', 1.0, .25, [0, 4.1, .7], null, [1.25, 1, .85], g, chakra(0xff2424, 0xffa060, .32));
     const head = new T.Group(); g.add(head); head.position.set(0, 7.25, .55);
-    add(new T.SphereGeometry(1.05, 20, 14), 'head', 1.6, .2, null, null, [1, 1.12, 1.05], head);
-    add(new T.ConeGeometry(.22, 1.3, 10), 'head', 1.62, .2, [0, -.05, -1.35], [-Math.PI / 2, 0, 0], null, head);           // the long nose
-    add(new T.BoxGeometry(1.3, .45, .9), 'head', 1.64, .2, [0, -.85, -.35], null, null, head);                               // jaw
-    for (const s of [-1, 1]) add(new T.ConeGeometry(.16, 1.2, 8), 'head', 1.66, .2, [s * .55, .95, .3], [-.5, 0, s * .4], null, head);
+    add(new T.SphereGeometry(1.05, 20, 14), 'head', 1.15, .2, null, null, [1, 1.12, 1.05], head);
+    add(new T.ConeGeometry(.22, 1.3, 10), 'head', 1.17, .2, [0, -.05, -1.35], [-Math.PI / 2, 0, 0], null, head);           // the long nose
+    add(new T.BoxGeometry(1.3, .45, .9), 'head', 1.19, .2, [0, -.85, -.35], null, null, head);                               // jaw
+    for (const s of [-1, 1]) add(new T.ConeGeometry(.16, 1.2, 8), 'head', 1.21, .2, [s * .55, .95, .3], [-.5, 0, s * .4], null, head);
     const eyesS = []; for (const s of [-1, 1]) { const e = sprite(glowTex, 0xffd080, 0, true); e.position.set(s * .38, .1, -.92); e.scale.setScalar(.6); head.add(e); eyesS.push(e); }
     const mkArm = s => {
-      const sh = new T.Group(); g.add(sh); sh.position.set(s * 3.1, 5.6, .45);
-      add(new T.SphereGeometry(.95, 16, 12), 'arms', 1.35, .18, null, null, null, sh);
-      add(new T.CylinderGeometry(.55, .45, 2.9, 14), 'arms', 1.42, .2, [0, -1.45, 0], null, null, sh);
+      const sh = new T.Group(); g.add(sh); sh.position.set(s * 3.1, 5.6, .45); sh.rotation.order = 'YXZ';   // yaw swings the raised arm sideways
+      add(new T.SphereGeometry(.95, 16, 12), 'arms', .95, .15, null, null, null, sh);
+      add(new T.CylinderGeometry(.55, .45, 2.9, 14), 'arms', 1.0, .15, [0, -1.45, 0], null, null, sh);
       const el = new T.Group(); sh.add(el); el.position.y = -2.9;
-      add(new T.CylinderGeometry(.45, .4, 2.6, 14), 'arms', 1.5, .2, [0, -1.3, 0], null, null, el);
+      add(new T.CylinderGeometry(.45, .4, 2.6, 14), 'arms', 1.05, .15, [0, -1.3, 0], null, null, el);
       const hand = new T.Group(); el.add(hand); hand.position.y = -2.75;
-      add(new T.BoxGeometry(1.05, 1.15, .45), 'hands', 1.58, .2, null, null, null, hand);
-      for (let i = 0; i < 4; i++) add(new T.CapsuleGeometry(.13, .65, 4, 8), 'hands', 1.6 + i * .02, .15, [(-.36 + i * .24) * s, -.95, -.05], [.35, 0, 0], null, hand);
-      add(new T.CapsuleGeometry(.15, .5, 4, 8), 'hands', 1.66, .15, [s * .62, -.25, -.2], [0, 0, s * .8], null, hand);
+      add(new T.BoxGeometry(1.05, 1.15, .45), 'hands', 1.1, .15, null, null, null, hand);
+      for (let i = 0; i < 4; i++) add(new T.CapsuleGeometry(.13, .65, 4, 8), 'hands', 1.12 + i * .02, .12, [(-.36 + i * .24) * s, -.95, -.05], [.35, 0, 0], null, hand);
+      add(new T.CapsuleGeometry(.15, .5, 4, 8), 'hands', 1.2, .12, [s * .62, -.25, -.2], [0, 0, s * .8], null, hand);
       return { sh, el, hand, s };
     };
     const L = mkArm(-1), R = mkArm(1);
@@ -2620,40 +2662,97 @@ window.ItachiPreview = function (A) {
     c.dir = A.flatForward(); c.duration = CFG.r.end + .05; c.state = 'Casting';
     if (su) disposeSusanoo();
     su = buildSusanoo(); su.g.position.copy(basePos).setY(0); su.g.rotation.y = A.yaw;
-    A.title('須佐能乎', '스사노오 · 토츠카의 검', '갈비뼈 → 상반신 → 야타의 거울(전방 피해 60%↓) → 토츠카의 검 찌르기 55 → 봉인 25 · 총 80', '#ff3b3b');
+    c.yaw0 = A.yaw;
+    A.title('須佐能乎', '스사노오 · 토츠카의 검', '형성 → 야타의 거울(전방 피해 60%↓) → 전방 강타 24 · 24 · 30 → 토츠카의 검 찌르기 10 → 봉인 15', '#ff3b3b');
     sfx.eye(); sfx.hum();
+  }
+  // Right-arm keyframes for the three smashes: [time, shoulder pitch, elbow, shoulder yaw (+ = left), roll, body twist].
+  function armKeys(a) {
+    const R = CFG.r;
+    const K = [[0, .25, .45, 0, .15, 0], [R.s1w, .25, .45, 0, .15, 0], [R.s1w + .17, .15, 1.9, -.25, .2, -.25], [R.s1, 1.5, .05, -.05, .12, .1],
+      [R.s2w, 1.0, .5, -.3, .3, 0], [R.s2w + .18, 1.35, .25, -1.05, .55, -.35], [R.s2, 1.35, .2, 1.0, .4, .35],
+      [R.s3w, 1.1, .6, .3, .2, 0], [R.s3w + .2, 2.9, .5, 0, .1, 0], [R.s3, .95, .05, 0, .1, 0], [R.blade, .25, .45, 0, .15, 0]];
+    if (a >= K[K.length - 1][0]) return K[K.length - 1].slice(1);
+    let i = 0; while (i < K.length - 2 && a >= K[i + 1][0]) i++;
+    const [t0, ...p] = K[i], [t1, ...q] = K[i + 1];
+    const hitKey = t1 === R.s1 || t1 === R.s2 || t1 === R.s3, k = hitKey ? outP(seg(a, t0, t1), 3) : ease(seg(a, t0, t1));
+    return p.map((v, j) => mix(v, q[j], k));
+  }
+  // One smash: every body in front (within reach and the arc, not behind a wall, not sealed) takes the hit once.
+  function susanooSmash(c, i, fist) {
+    const R = CFG.r, dmg = R.hits[i], arc = R.arcs[i] * Math.PI / 180, me = basePos.clone().setY(0), dir = c.dir;
+    let n = 0;
+    for (const t of targets) {
+      if (!alive(t) || t === attacker || binds.get(t)?.kind === 'seal' || binds.get(t)?.kind === 'sealed') continue;
+      const rel = t.g.position.clone().setY(0).sub(me), d = rel.length();
+      if (d > R.strikeR || d < .2 || Math.acos(clamp(rel.clone().normalize().dot(dir), -1, 1)) > arc) continue;
+      if (A.wallOnRay(me.clone().setY(1), rel.clone().normalize(), d)) continue;
+      A.hit(t, dmg, '#ff6a4a'); n++;
+      if (!t.locked) { const push = rel.normalize(); t.vel = push.multiplyScalar(i === 2 ? 3 : 2.5).add(V(0, i === 2 ? 7 : 3.5, 0)); }
+      glowAt(t.g.position.clone().setY(1.4), 0xff4020, 1.6, .3, 1.5, .9);
+    }
+    const ground = me.clone().addScaledVector(dir, i === 2 ? 6 : 7).setY(.08);
+    const at = i === 2 ? ground : fist;
+    glowAt(at, 0xffb060, i === 2 ? 5 : 3.5, .35, 1.6, .9); glowAt(at, 0xff2a1a, i === 2 ? 8 : 6, .5, 1.2, .7);
+    ring(i === 2 ? ground : at, i === 2 ? UP : dir, i === 2 ? 9 : 6, 0xff3020, .55, .08, .9, 1);
+    for (let k = 0; k < (i === 2 ? 22 : 12); k++) puff(ground.clone().add(V(rnd(-3, 3), 0, rnd(-3, 3))), rnd(1.4, 2.6), rnd(.7, 1.1), V(rnd(-2, 2), rnd(.5, 2), rnd(-2, 2)), 0x2a1010, .5);
+    if (i === 1) for (let k = 0; k < 18; k++) { const ang = -1 + k / 17 * 2, p = me.clone().add(V(0, 3.2, 0)).addScaledVector(dir.clone().applyAxisAngle(UP, ang), 7); const e = sprite(flameTex, k % 3 ? 0xff2a1a : GOLD, .9, true); e.position.copy(p); e.scale.set(1.2, 2.4, 1); fx(e, .4, (o, u) => { o.material.opacity = .9 * (1 - u); o.position.y += .03; }); }
+    sfx.impact(); A.hitstop(i === 2 ? 110 : 70); shake(i === 2 ? .22 : .14); A.flash('#ff6040', i === 2 ? .3 : .2);
+    say(['스사노오 강타 · ', '스사노오 휩쓸기 · ', '스사노오 내려치기 · '][i] + dmg + (n ? '' : ' · 빗나감'), .8);
+  }
+  // Rising tongues of red chakra flame from random parts of the formed body.
+  function flameTongues(s, a) {
+    const shown = s.parts.filter(p => p.x.visible); if (!shown.length || a > CFG.r.end - .3) return;
+    for (let k = 0; k < 12; k++) {
+      const p = shown[Math.floor(Math.random() * shown.length)].x; const w = p.getWorldPosition(V());
+      const r = (p.geometry.boundingSphere || (p.geometry.computeBoundingSphere(), p.geometry.boundingSphere)).radius * p.getWorldScale(V()).x;
+      w.add(V(rnd(-r, r), rnd(-r * .5, r * .5), rnd(-r, r)));
+      const e = sprite(flameTex, Math.random() < .25 ? 0xff9a3a : 0xff2418, .85, true); e.position.copy(w);
+      const sz = rnd(.8, 1.7) * (1 + r * .15), v = V(rnd(-.3, .3), rnd(3, 5.5), rnd(-.3, .3)), rot = rnd(-.3, .3); e.material.rotation = rot;
+      fx(e, rnd(.35, .6), (o, u, d) => { o.position.addScaledVector(v, d); const g = Math.sin(u * Math.PI); o.scale.set(sz * (1 - u * .5), sz * 2 * g + .01, 1); o.material.opacity = .85 * (1 - u); });
+    }
   }
   function stageK(p, a) { return ease(seg(a, p.at, p.at + p.dur)); }
   function updateSusanoo(c, a, dt) {
     const R = CFG.r, s = su; if (!s) return;
-    c.state = a < R.ribs ? 'Casting' : a < R.mirror ? 'SusanooForming' : a < R.blade ? 'Shielding' : a < R.thrust ? 'BladeCharging' : a < R.strikeEnd ? 'Striking' : a < R.sealEnd && c.target ? 'Sealing' : 'Recovering';
-    const fadeAll = ease(seg(a, 5.6, 6.1)), ribsFade = ease(seg(a, 6.0, 6.35));
+    c.state = a < R.ribs ? 'Casting' : a < R.mirror ? 'SusanooForming' : a < R.s1w ? 'Shielding' : a < R.blade ? 'Smashing' : a < R.thrust ? 'BladeCharging' : a < R.strikeEnd ? 'Striking' : a < R.sealEnd && c.target ? 'Sealing' : 'Recovering';
+    const fadeAll = ease(seg(a, R.end - .8, R.end - .3)), ribsFade = ease(seg(a, R.end - .4, R.end - .05));
     for (const p of s.parts) {
       const k = stageK(p, a) * (p.stage === 'ribs' ? 1 - ribsFade : 1 - fadeAll);
       p.x.material.uniforms.uK.value = k; p.x.material.uniforms.uTime.value = A.time; p.x.visible = k > .01;
       if (p.stage === 'ribs' && a < p.at + p.dur + .02 && a >= p.at && !p.played) { p.played = true; if (p.x.parent.scale.x > 0) sfx.rib(); }
     }
-    for (const e of s.eyesS) e.material.opacity = ease(seg(a, 1.65, 1.8)) * (1 - fadeAll);
+    for (const e of s.eyesS) e.material.opacity = ease(seg(a, 1.2, 1.35)) * (1 - fadeAll);
     // Ground ring when the ribcage closes; the rise sound with the upper body.
-    if (a >= 1.05 && !c.flags.ring) { c.flags.ring = true; ring(basePos.clone().setY(.06), UP, 6, 0xff2a2a, .6, .06, .9, 1); for (let i = 0; i < 10; i++) puff(basePos.clone().setY(.2).add(V(rnd(-2, 2), 0, rnd(-2, 2))), 1.6, .8, V(rnd(-1.5, 1.5), .3, rnd(-1.5, 1.5)), 0x2a0a0a, .4); }
+    if (a >= .95 && !c.flags.ring) { c.flags.ring = true; ring(basePos.clone().setY(.06), UP, 6, 0xff2a2a, .6, .06, .9, 1); for (let i = 0; i < 10; i++) puff(basePos.clone().setY(.2).add(V(rnd(-2, 2), 0, rnd(-2, 2))), 1.6, .8, V(rnd(-1.5, 1.5), .3, rnd(-1.5, 1.5)), 0x2a0a0a, .4); }
     if (a >= R.upper && !c.flags.rise) { c.flags.rise = true; sfx.rise(); }
     // Chakra drifting up around the caster.
-    if (a < 5.8 && Math.random() < .6) { const e = sprite(glowTex, Math.random() < .5 ? 0xff2020 : 0x600000, 1, true); e.position.copy(basePos).setY(rnd(.2, 2.5)).add(V(rnd(-1.4, 1.4), 0, rnd(-1.4, 1.4))); e.scale.setScalar(rnd(.08, .18)); const v = V(0, rnd(.8, 2), 0); fx(e, .9, (o, u, d) => { o.position.addScaledVector(v, d); o.material.opacity = 1 - u; }); }
+    if (a < R.end - .6 && Math.random() < .6) { const e = sprite(glowTex, Math.random() < .5 ? 0xff2020 : 0x600000, 1, true); e.position.copy(basePos).setY(rnd(.2, 2.5)).add(V(rnd(-1.4, 1.4), 0, rnd(-1.4, 1.4))); e.scale.setScalar(rnd(.08, .18)); const v = V(0, rnd(.8, 2), 0); fx(e, .9, (o, u, d) => { o.position.addScaledVector(v, d); o.material.opacity = 1 - u; }); }
     // Arm motion. Rest: arms hang forward. Mirror: left arm up and forward. Blade: right hand raised, drawn back, thrust.
     const L = s.L, Rr = s.R;
-    const mUp = ease(seg(a, R.mirror, R.mirror + .4)) * (1 - ease(seg(a, 5.5, 5.95)));
+    const mUp = ease(seg(a, R.mirror, R.mirror + .4)) * (1 - ease(seg(a, R.sealEnd + .15, R.sealEnd + .6)));
     L.sh.rotation.set(.25 + .95 * mUp, 0, -.15 + .3 * mUp); L.el.rotation.set(.45 - .1 * mUp, 0, 0); L.hand.rotation.set(0, 0, 0);
-    const raise = ease(seg(a, R.blade, R.blade + .5)), pull = ease(seg(a, R.aim, R.thrust)), thrust = outP(seg(a, R.thrust, R.thrust + .25), 4), lowerR = ease(seg(a, 5.35, 5.9));
-    let shX = mix(.25, 1.0, raise), elX = mix(.45, 1.5, raise), shY = 0;
-    shX = mix(shX, .25, pull); elX = mix(elX, 1.9, pull); shY = -.35 * pull;
-    shX = mix(shX, 1.55, thrust); elX = mix(elX, .05, thrust); shY = mix(shY, .12, thrust);
-    Rr.sh.rotation.set(mix(shX, .25, lowerR), mix(shY, 0, lowerR), .15); Rr.el.rotation.set(mix(elX, .45, lowerR), 0, 0);
-    s.g.rotation.x = mix(0, -.12, pull) * (1 - thrust * .5) * (1 - lowerR);
+    const raise = ease(seg(a, R.blade, R.blade + .5)), pull = ease(seg(a, R.aim, R.thrust)), thrust = outP(seg(a, R.thrust, R.thrust + .25), 4), lowerR = ease(seg(a, R.sealEnd, R.sealEnd + .55));
+    // Before the blade: a straight punch, a sweep from right to left, an overhead hammer into the ground.
+    let [shX, elX, shY, shZ, twist] = armKeys(a);
+    if (a >= R.blade) {
+      shX = mix(.25, 1.0, raise); elX = mix(.45, 1.5, raise); shY = 0; shZ = .15; twist = 0;
+      shX = mix(shX, .25, pull); elX = mix(elX, 1.9, pull); shY = -.35 * pull;
+      shX = mix(shX, 1.55, thrust); elX = mix(elX, .05, thrust); shY = mix(shY, .12, thrust);
+    }
+    Rr.sh.rotation.set(mix(shX, .25, lowerR), mix(shY, 0, lowerR), mix(shZ, .15, lowerR)); Rr.el.rotation.set(mix(elX, .45, lowerR), 0, 0);
+    s.g.rotation.y = c.yaw0 + twist;
+    s.g.rotation.x = (mix(0, -.12, pull) * (1 - thrust * .5) - .1 * bump(a, R.s1w, R.s1 + .2) - .16 * bump(a, R.s3w + .1, R.s3 + .25)) * (1 - lowerR);
+    for (let i = 0; i < 3; i++) if (a >= [R.s1, R.s2, R.s3][i] && !c.flags['smash' + i]) { c.flags['smash' + i] = true; s.g.updateMatrixWorld(true); susanooSmash(c, i, Rr.hand.getWorldPosition(V())); }
+    // Fire: tongues of red chakra flame rising off the whole body.
+    flameTongues(s, a);
     // Mirror: its surface flows; it shatters into red motes at the end.
-    s.mirrorFace.material.opacity = .85 * ease(seg(a, R.mirror + .15, R.mirror + .55)) * (1 - ease(seg(a, 5.5, 5.8)));
-    s.mirrorFace.rotation.z = A.time * .6; s.mirrorRim.material.uniforms.uK.value = ease(seg(a, R.mirror + .1, R.mirror + .45)) * (1 - ease(seg(a, 5.5, 5.8))); s.mirrorRim.material.uniforms.uTime.value = A.time;
+    // The mirror thins while the right arm smashes through the space in front of it, so the hits stay readable.
+    const thin = 1 - .75 * ease(seg(a, R.s1w - .1, R.s1w + .1)) * (1 - ease(seg(a, R.blade - .1, R.blade + .2)));
+    s.mirrorFace.material.opacity = .85 * thin * ease(seg(a, R.mirror + .15, R.mirror + .55)) * (1 - ease(seg(a, R.sealEnd + .15, R.sealEnd + .45)));
+    s.mirrorFace.rotation.z = A.time * .6; s.mirrorRim.material.uniforms.uK.value = ease(seg(a, R.mirror + .1, R.mirror + .45)) * (1 - ease(seg(a, R.sealEnd + .15, R.sealEnd + .45))); s.mirrorRim.material.uniforms.uTime.value = A.time;
     if (a >= R.mirror + .2 && !c.flags.mirror) { c.flags.mirror = true; sfx.mirror(); say('야타의 거울 · 전방 피해 60% 감소', 1.5); }
-    if (a >= 5.5 && !c.flags.mirrorBreak) { c.flags.mirrorBreak = true; const p = s.mirrorG.getWorldPosition(V()); for (let i = 0; i < 40; i++) { const e = sprite(glowTex, 0xff3020, 1, true); e.position.copy(p).add(V(rnd(-2, 2), rnd(-2, 2), rnd(-.3, .3))); e.scale.setScalar(rnd(.15, .35)); const v = V(rnd(-1, 1), rnd(0, 2), rnd(-1, 1)); fx(e, rnd(.6, 1.1), (o, u, d) => { o.position.addScaledVector(v, d); o.material.opacity = 1 - u; }); } sfx.fade(); }
+    if (a >= R.sealEnd + .15 && !c.flags.mirrorBreak) { c.flags.mirrorBreak = true; const p = s.mirrorG.getWorldPosition(V()); for (let i = 0; i < 40; i++) { const e = sprite(glowTex, 0xff3020, 1, true); e.position.copy(p).add(V(rnd(-2, 2), rnd(-2, 2), rnd(-.3, .3))); e.scale.setScalar(rnd(.15, .35)); const v = V(rnd(-1, 1), rnd(0, 2), rnd(-1, 1)); fx(e, rnd(.6, 1.1), (o, u, d) => { o.position.addScaledVector(v, d); o.material.opacity = 1 - u; }); } sfx.fade(); }
     // Blade: liquid gathers at the right hand, stretches into a sword, extends on the thrust.
     s.g.updateMatrixWorld(true);
     const hand = Rr.hand.getWorldPosition(V()).add(V(0, -1, 0));
@@ -2673,8 +2772,8 @@ window.ItachiPreview = function (A) {
     let len = 5.5 * form;
     if (a >= R.thrust) len = mix(5.5, full, outP(seg(a, R.thrust, R.tip), 3));
     if (!c.target && a >= R.tip) len = mix(full, 5.5, ease(seg(a, R.tip + .1, R.strikeEnd + .2)));
-    if (c.target && a >= R.seal) len = mix(full, 4.5, ease(seg(a, R.sealEnd, 5.7)));
-    const bladeK = form * (1 - ease(seg(a, 5.35, 5.7)));
+    if (c.target && a >= R.seal) len = mix(full, 4.5, ease(seg(a, R.sealEnd, R.sealEnd + .35)));
+    const bladeK = form * (1 - ease(seg(a, R.sealEnd, R.sealEnd + .35)));
     s.blade.visible = bladeK > .01; s.blade.position.copy(hand); s.blade.lookAt(a >= R.aim - .1 ? aimPt : hand.clone().addScaledVector(c.dir, 5).add(V(0, 2.5 * (1 - pull), 0)));
     s.bladeCore.scale.set(1 + .3 * Math.sin(A.time * 9), 1 + .3 * Math.sin(A.time * 9), Math.max(.01, len)); s.bladeCore.position.z = 0;
     s.bladeCore.scale.y = Math.max(.01, len); s.bladeCore.scale.x = s.bladeCore.scale.z = 1 + .15 * Math.sin(A.time * 11);
@@ -2689,7 +2788,7 @@ window.ItachiPreview = function (A) {
         A.hit(t, R.d1, '#ffcf6a'); sfx.impact(); A.hitstop(90); shake(.18); A.flash('#ffd8a0', .35);
         glowAt(aimPt, 0xffffff, 2.5, .3, 2, 1); glowAt(aimPt, GOLD, 4, .5, 1.5, .8); ring(aimPt, c.dir, 4, 0xff3020, .5, .1, .95);
         binds.set(t, { until: A.time + 3, kind: 'seal' }); t.locked = true; t.vel = null; t.g.userData.cannonUntil = Infinity; c.sealFrom = t.g.position.clone(); c.home = t.g.position.clone().setY(0);
-        say('토츠카의 검 적중 · 55', 1);
+        say('토츠카의 검 적중 · ' + R.d1 + ' · 봉인', 1);
       } else { c.missed = true; c.target = null; A.toast('토츠카의 검 빗나감 · 봉인 없음'); A.cooldowns.susanoo = Math.max(A.cooldowns.susanoo, A.time + 90 - (A.time - c.start)); sfx.whoosh(); }
     }
     if (t && c.flags.tip) {
@@ -2712,7 +2811,9 @@ window.ItachiPreview = function (A) {
     const dir = c.dir, side = V().crossVectors(dir, UP).normalize(), me = basePos.clone();
     const shots = [
       [R.upper, R.mirror, me.clone().addScaledVector(dir, -9).add(V(0, 5.5, 0)).addScaledVector(side, 1.5), me.clone().add(V(0, 4.5, 0)).addScaledVector(dir, 2)],
-      [R.mirror, R.blade, me.clone().addScaledVector(dir, -3.2).addScaledVector(side, -1.8).add(V(0, 1.6, 0)), me.clone().addScaledVector(dir, 8).add(V(0, 2.8, 0))],
+      [R.mirror, R.s1w, me.clone().addScaledVector(dir, -8).addScaledVector(side, 3.5).add(V(0, 4.5, 0)), me.clone().addScaledVector(dir, 8).add(V(0, 1.5, 0))],
+      // The three smashes from the striking-arm flank, ahead of Susanoo: the arm, the fist and the targets in one frame.
+      [R.s1w, R.blade, me.clone().addScaledVector(side, -13).addScaledVector(dir, 5).add(V(0, 5, 0)), me.clone().addScaledVector(dir, 6).add(V(0, 3.2, 0))],
       [R.blade, R.aim, me.clone().addScaledVector(side, 10).addScaledVector(dir, 1.5).add(V(0, 2.4, 0)), hand.clone().addScaledVector(dir, 2).setY(4)],
     ];
     if (c.target && c.flags.tip) { const mid = basePos.clone().lerp(c.home || basePos, .55).setY(3); shots.push([R.strikeEnd, R.sealEnd + .2, mid.clone().addScaledVector(side, 11).add(V(0, 3, 0)), mid]); }
@@ -2720,14 +2821,14 @@ window.ItachiPreview = function (A) {
     for (const [from, to, p, l] of shots) { const k = ease(seg(a, from - .05, from + .2)) * (1 - ease(seg(a, to - .2, to + .05))); if (k > w) { w = k; pos = p; look = l; } }
     c.cine = w; c.shotPos = pos; c.shotLook = look;
     // First-person arms lower slowly and stay low; the head bows at the start and nods at the end.
-    const low = ease(seg(a, 0, .6)) * (1 - ease(seg(a, 6.0, 6.4)));
+    const low = ease(seg(a, 0, .6)) * (1 - ease(seg(a, R.end - .4, R.end)));
     poseArm(arms.r, lerpPose(REST, LOW, low)); poseArm(arms.l, lerpPose(L_REST, mirror(LOW), low));
-    camera.rotation.x += -.16 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, .6, 1.1))) - .1 * bump(a, 6.0, 6.4);
-    camera.position.y -= .2 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, 5.8, 6.3)));
+    camera.rotation.x += -.16 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, .6, 1.1))) - .1 * bump(a, R.end - .4, R.end);
+    camera.position.y -= .2 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, R.end - .6, R.end - .1)));
     camera.fov = 66 - 6 * ease(seg(a, R.aim, R.thrust)) * (1 - ease(seg(a, R.thrust, R.tip))) + 10 * bump(a, R.thrust, R.strikeEnd);
-    vign = Math.max(vign, .6 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, 5.6, 6.3))));
+    vign = Math.max(vign, .6 * ease(seg(a, 0, .6)) * (1 - ease(seg(a, R.end - .8, R.end - .1))));
     red = Math.max(red, .35 * ease(seg(a, .1, .6)) * (1 - ease(seg(a, 1, 1.4))) + .25 * bump(a, R.aim, R.strikeEnd));
-    glow = Math.max(glow, 1 - ease(seg(a, 5.8, 6.3)));
+    glow = Math.max(glow, 1 - ease(seg(a, R.end - .6, R.end - .1)));
     eyeFlash = Math.max(eyeFlash, .45 * bump(a, .3, .75));
     vortex = c.target && c.flags.tip ? ease(seg(a, R.strikeEnd, R.seal)) * (1 - ease(seg(a, R.sealEnd - .1, R.sealEnd + .3))) : 0;
   }
@@ -2880,7 +2981,7 @@ window.ItachiPreview = function (A) {
     $('qBtn').querySelector('.skill-type').textContent = c?.type === 'tsukuyomi' ? (c.fail ? '대상 없음' : c.flags.bind ? '환술 · 구속 ' + Math.max(0, CFG.q.end - (now - c.start)).toFixed(1) + '초' : '사륜안 활성화') : '35스터드 · 12° · 12 + 구속 1.4초';
     const F = fields[fields.length - 1];
     $('eBtn').querySelector('.skill-type').textContent = F ? '흑염 ' + Math.max(0, CFG.e.gone - (now - F.start)).toFixed(1) + '초 남음' : '바라본 지면 · 반경 20 흑염';
-    $('rBtn').querySelector('.skill-type').textContent = c?.type === 'susanoo' ? ({ Casting: '만화경 사륜안', SusanooForming: '스사노오 형성', Shielding: '야타의 거울', BladeCharging: '토츠카의 검', Striking: '찌르기', Sealing: '봉인', Recovering: c.missed ? '빗나감 · 소멸' : '소멸' }[c.state] || '') : '거울 방어 → 토츠카 찌르기 · 80';
+    $('rBtn').querySelector('.skill-type').textContent = c?.type === 'susanoo' ? ({ Casting: '만화경 사륜안', SusanooForming: '스사노오 형성', Shielding: '야타의 거울', Smashing: '전방 3연타', BladeCharging: '토츠카의 검', Striking: '찌르기', Sealing: '봉인', Recovering: c.missed ? '빗나감 · 소멸' : '소멸' }[c.state] || '') : '전방 3연타 → 토츠카 봉인 · 103';
     $('qBtn').classList.toggle('combo', !!F && !c);
     const d = $('debuff'); d.classList.add('on');
     d.textContent = passive ? '까마귀 분신 · 공격 무효 · 후방 이동'
@@ -2896,13 +2997,13 @@ window.ItachiPreview = function (A) {
     if (c?.itachi) { c.duration = 0; c.killed = true; }
     passive = null; arms.r.k = arms.l.k = 1;
     for (const [t] of [...binds]) { releaseBind(t); t.g.scale.setScalar(1); if (t.hp > 0) t.g.visible = true; }
-    clearWorld(); disposeSusanoo(); for (const F of fields.splice(0)) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); } stopBurn();
+    clearWorld(); disposeSusanoo(); for (const F of fields.splice(0)) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); kill(F.sheets); } stopBurn();
     A.toast('시전자 사망 테스트 · 스킬·구속·화염을 모두 해제하고 체력을 되돌렸습니다'); A.flash('#000000', .5); A.hp = 200;
   }
   function reset() {
     for (const e of fxs.splice(0)) kill(e.obj); crows.length = 0;
     clearWorld(); disposeSusanoo();
-    for (const F of fields.splice(0)) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); }
+    for (const F of fields.splice(0)) { kill(F.core); kill(F.halo); kill(F.scorch); kill(F.glowDisc); kill(F.sheets); }
     for (const o of [...live]) kill(o);
     stopBurn();
     for (const [t] of binds) { t.locked = false; t.g.userData.cannonUntil = 0; } binds.clear();

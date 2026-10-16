@@ -317,6 +317,10 @@ function ItachiClient.onEvent(kind,data)
     elseif kind=="ItachiSusanoo" then
         if model then VFX.susanoo(model,data) end
         if mine then cast={kind="Susanoo",start=data.start,direction=data.direction};combo.untilTime=0 end
+    elseif kind=="ItachiSusanooSmash" then
+        VFX.susanooSmash(data.owner,data.index,data.point,data.targets)
+        if mine then kick(data.index==3 and .3 or .18,.25) end
+        for _,t in data.targets or {} do if t==me and me then kick(.22,.25) end end
     elseif kind=="ItachiSusanooThrust" then
         VFX.susanooThrust(data.owner,data.target)
         if mine and cast and cast.kind=="Susanoo" then cast.target=data.target end
@@ -492,13 +496,14 @@ function ItachiClient.render(dt,info)
             if a>cfg.End+.1 or (cast.ended and n-cast.ended>.3) then cast=nil;revealBody(nil,false)
             else
                 -- 0-.6 head down, arms lowered slowly, both eyes Mangekyo, red pressure. They stay low.
-                local low=smoothstep(window(a,0,.6))*(1-smoothstep(window(a,6.0,6.4)))
+                local low=smoothstep(window(a,0,.6))*(1-smoothstep(window(a,cfg.End-.4,cfg.End)))
                 R=blend(R,LOW(1),low);L=blend(L,LOW(-1),low)
-                env.commonLook(CFrame.Angles(-.16*smoothstep(window(a,0,.6))*(1-smoothstep(window(a,.6,1.1)))-.1*bump(a,6.0,6.4),0,0))
+                env.commonLook(CFrame.Angles(-.16*smoothstep(window(a,0,.6))*(1-smoothstep(window(a,.6,1.1)))-.1*bump(a,cfg.End-.4,cfg.End),0,0))
                 o.vignette=.6*low;o.red=.35*bump(a,.1,1.2)+.25*bump(a,cfg.Aim,cfg.StrikeEnd);o.eye=math.max(o.eye,.45*bump(a,.3,.75))
                 VFX.eyeGlow(m,1)
                 out.fov=72-6*smoothstep(window(a,cfg.Aim,cfg.Thrust))*(1-window(a,cfg.Thrust,cfg.Tip))+10*bump(a,cfg.Thrust,cfg.StrikeEnd)
-                -- Cinematic: rear shot while Susanoo rises, over the shoulder for the mirror, side shot of the blade,
+                -- Cinematic: rear shot while Susanoo rises, over the shoulder for the mirror, a flank shot ahead of
+                -- the striking arm for the three smashes, side shot of the blade,
                 -- first person to aim and thrust, a side shot of the seal, then first person again.
                 local root=VFX.rootOf(m)
                 local dir=cast.direction or Vector3.new(0,0,-1)
@@ -506,7 +511,8 @@ function ItachiClient.render(dt,info)
                 if root then
                     local shots={
                         {cfg.Upper,cfg.Mirror,-dir*15+Vector3.yAxis*9+side*2.5,root.Position+Vector3.yAxis*8+dir*3},
-                        {cfg.Mirror,cfg.Blade,-dir*5.5-side*3+Vector3.yAxis*3,root.Position+Vector3.yAxis*5+dir*14},
+                        {cfg.Mirror,cfg.Smash,-dir*5.5-side*3+Vector3.yAxis*3,root.Position+Vector3.yAxis*5+dir*14},
+                        {cfg.Smash,cfg.Blade,side*22+dir*8+Vector3.yAxis*8,root.Position+Vector3.yAxis*5+dir*10},
                         {cfg.Blade,cfg.Aim,side*17+dir*2.5+Vector3.yAxis*4,root.Position+Vector3.yAxis*7+dir*3},
                     }
                     if cast.target and a>=cfg.Tip then

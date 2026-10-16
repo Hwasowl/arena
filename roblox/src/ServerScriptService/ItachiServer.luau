@@ -328,11 +328,35 @@ local function susanoo(p,s,m,h,r,aim)
     ultras[p]={p=p,s=s,model=m,h=h,r=r,start=n,direction=direction,base=base,generation=s.generation,flags={}}
     ctx.fx:FireAllClients("ItachiSusanoo",{owner=p.UserId,start=n,direction=direction,position=r.Position})
 end
+-- One smash: every character in the frontal arc, within range and height, in sight and not sealed, is hit once.
+local function smash(p,u,i,strike)
+    local cfg=I.Susanoo
+    local origin=u.r.Position;local params=worldParams()
+    local hits={}
+    for _,t in ctx.targets(u.model) do
+        local rel=t.r.Position-origin;local planar=Vector3.new(rel.X,0,rel.Z)
+        if planar.Magnitude<=cfg.StrikeRange and math.abs(rel.Y)<=cfg.StrikeHeight and not isSealed(t.m,now())
+            and (planar.Magnitude<1 or planar.Unit:Dot(u.direction)>=math.cos(math.rad(strike.Arc)))
+            and lineOfSight(origin+Vector3.yAxis*2,t.r.Position,params) then
+            ctx.damage(p,t,strike.Damage,"Ultimate")
+            if alive(t) then
+                local out=planar.Magnitude>1 and planar.Unit or u.direction
+                ctx.launch(t,out*strike.Out+Vector3.yAxis*strike.Up)
+            end
+            table.insert(hits,t.m)
+        end
+    end
+    ctx.fx:FireAllClients("ItachiSusanooSmash",{owner=p.UserId,start=u.start,index=i,targets=hits,
+        point=origin+u.direction*(i==3 and 10 or 12)})
+end
 local function stepUltra(p,u,n)
     local cfg=I.Susanoo;local a=n-u.start
     if not stillCaster(p,u.s,u.model,u.generation) or u.h.Health<=0 then endUltra(p,"caster");return end
     if a>=cfg.End then endUltra(p,"done");return end
     local f=u.flags
+    for i,strike in cfg.Strikes do
+        if a>=strike.Time and not f["smash"..i] then f["smash"..i]=true;smash(p,u,i,strike) end
+    end
     if a>=cfg.Thrust and not f.pick then
         f.pick=true
         local origin=u.r.Position
