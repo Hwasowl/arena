@@ -198,6 +198,26 @@ local function outfit(character,kind,fresh)
             attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
             attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
         end
+    elseif kind=="Kizaru" then
+        for _,side in {-1,1} do
+            local lens=attach(head,"KizaruAmberLens",Vector3.new(.55,.32,.055),CFrame.new(side*.32,.08,-head.Size.Z/2-.06),Color3.fromRGB(185,125,44),Enum.Material.Glass)
+            lens.Transparency=.25
+            attach(head,"KizaruGlassesRim",Vector3.new(.59,.035,.065),CFrame.new(side*.32,.25,-head.Size.Z/2-.07),Color3.fromRGB(210,182,97),Enum.Material.Metal)
+        end
+        attach(head,"KizaruBridge",Vector3.new(.15,.035,.065),CFrame.new(0,.13,-head.Size.Z/2-.07),Color3.fromRGB(210,182,97),Enum.Material.Metal)
+    elseif kind=="Okkotsu" then
+        -- Only the katana and engagement ring: preserve the player's own avatar.
+        local hand=character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm") or root
+        local right=character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm") or root
+        for i=0,15 do
+            local a=i*math.pi/8;local b=(i+1)*math.pi/8
+            local p1=Vector3.new(.08+math.cos(a)*.072,-hand.Size.Y*.3, -.18+math.sin(a)*.072)
+            local p2=Vector3.new(.08+math.cos(b)*.072,-hand.Size.Y*.3, -.18+math.sin(b)*.072)
+            attach(hand,"OkkotsuRing",Vector3.new(.025,.025,(p2-p1).Magnitude+.008),CFrame.lookAt((p1+p2)/2,p2),Color3.fromRGB(242,207,117),Enum.Material.Metal)
+        end
+        attach(right,"OkkotsuGrip",Vector3.new(.14,.75,.14),CFrame.new(0,-.1,-.1),Color3.fromRGB(27,28,39))
+        attach(right,"OkkotsuGuard",Vector3.new(.55,.06,.32),CFrame.new(0,.3,-.1),Color3.fromRGB(173,156,116),Enum.Material.Metal)
+        attach(right,"OkkotsuBlade",Vector3.new(.14,3.2,.055),CFrame.new(0,1.93,-.1),Color3.fromRGB(222,235,242),Enum.Material.Metal)
     elseif kind=="Pain" then
         -- Rinnegan: concentric purple rings on both eyes (alternating light/dark discs, a dark pupil in the middle).
         -- Clients brighten PainEyeGlow when a technique is cast. Akatsuki sleeves with black nails on both forearms.

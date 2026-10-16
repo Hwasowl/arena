@@ -829,6 +829,8 @@ local nextAimAt=0
 local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local PainClient=require(script.Parent:WaitForChild("PainClient"))
+local KizaruClient=require(script.Parent:WaitForChild("KizaruClient"))
+local OkkotsuClient=require(script.Parent:WaitForChild("OkkotsuClient"))
 local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
@@ -941,6 +943,10 @@ local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
 local clock=workspace.GetServerTimeNow
 local function time() return clock(workspace) end
 local KITS={
+    Kizaru={title="黄猿 · 키자루",energy="LIGHT",hint="Q 손끝 레이저 · E 빛의 발차기 · R 야사카니의 곡옥 · SHIFT 야타의 거울",handScale=1,
+        slots={{"LightLaser","Q","손끝 레이저"},{"LightKick","E","빛의 발차기"},{"LightJewels","R","야사카니의 곡옥"},{"LightMirror","SHIFT","야타의 거울"}}},
+    Okkotsu={title="乙骨 憂太  ·  옷코츠 유타",energy="CURSED ENERGY",hint="Q 반전술식 (회복 후 공격력 -30%) · E 차원문 리카 휘둘러치기 · R 칼 수납 → 수인 → 함께 순애포   /   SHIFT 대시",handScale=1,
+        slots={{"ReverseCursed","Q","반전술식"},{"RikaStrike","E","리카 휘둘러치기"},{"PureLove","R","순애"},{"Dash","SHIFT","대시"}}},
     Gojo={title="五条 悟  ·  고죠 사토루",energy="CURSED ENERGY",hint="Q / E 3초 대기 · 그 안에 다른 쪽 = 무라사키 · 같은 키 = 즉시 발사   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
         handScale=1,
         slots={{"Blue","Q","아오"},{"Red","E","아카"},{"Domain","R","영역전개"},{"Dash","SHIFT","대시"}}},
@@ -965,7 +971,7 @@ local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
 local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if string.sub(kind,1,5)=="Light" then return Color3.fromRGB(255,220,119) end if kind=="ReverseCursed" then return Color3.fromRGB(112,255,203) end if kind=="RikaStrike" or kind=="PureLove" then return Color3.fromRGB(227,139,203) end if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
@@ -1465,10 +1471,10 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(630,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(810,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight"} do
+local PICK_NAMES={Kizaru="키자루",Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Okkotsu="옷코츠"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Okkotsu","Kizaru"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
     b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
@@ -1481,12 +1487,15 @@ local function announce(name,sub)
 end
 PainClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce,blur=blur})
 AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+KizaruClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+OkkotsuClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
+    comboLabel.TextColor3=name=="Okkotsu" and Color3.fromRGB(239,181,222) or Color3.fromRGB(255,224,176)
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or C.Colors.Blue
-    PainClient.reset();AllMightClient.reset()
+    energy.TextColor3=name=="Okkotsu" and colorOf("ReverseCursed") or name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or C.Colors.Blue
+    PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -1510,11 +1519,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) then return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local attackButton=Instance.new("TextButton");attackButton.Name="BasicAttackButton"
@@ -1532,7 +1541,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Nine]="Kizaru",[Enum.KeyCode.Eight]="Okkotsu"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -1560,6 +1569,8 @@ UIS.JumpRequest:Connect(function()
 end)
 
 event.OnClientEvent:Connect(function(kind,data)
+    if string.sub(kind,1,6)=="Kizaru" then KizaruClient.onEvent(kind,data);return end
+    if string.sub(kind,1,7)=="Okkotsu" then OkkotsuClient.onEvent(kind,data);return end
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
     if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
     if kind=="BasicAttack" then
@@ -2288,6 +2299,11 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if AllMightClient.busy() then desiredFov=mightOut.fov end
         desiredFov+=mightOut.fovAdd
     end
+    local kizaruOut=KizaruClient.render(dt,current()=="Kizaru",h~=nil and h.Health>0)
+    if kizaruOut then l=kizaruOut.left;r=kizaruOut.right;desiredFov=kizaruOut.fov end
+    local isOkkotsu=current()=="Okkotsu"
+    local okkotsuOut=OkkotsuClient.render(dt,{isOkkotsu=isOkkotsu,alive=h~=nil and h.Health>0,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,sliding=sliding~=nil})
+    if okkotsuOut and OkkotsuClient.busy() then desiredFov=okkotsuOut.fov end
     if n<fovKickUntil then desiredFov=94 end
     if h then h.CameraOffset=h.CameraOffset:Lerp(Vector3.new(0,-1.3*lean,0),math.min(1,dt*10)) end
     camera.FieldOfView+=(desiredFov-camera.FieldOfView)*math.min(1,dt*8)
@@ -2297,7 +2313,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local drawn=n<drawnUntil or (zen and (melee~=nil or zenIdleDraw))
     local bladeFraction=shanks and 1 or (zen and melee and melee.drawProgress) or (zenIdleDraw and (n<zenBasicUntil and 1 or 1-smoothstep((n-zenBasicUntil)/C.ZenBasicAttack.Sheath))) or (drawn and 1 or 0)
     local alive=h and h.Health>0
-    local posed=zen or shanks or cast~=nil or melee~=nil or sliding~=nil or holdHand~=nil or bombRecoil~=nil
+    local posed=kizaruOut~=nil or zen or shanks or cast~=nil or melee~=nil or sliding~=nil or holdHand~=nil or bombRecoil~=nil
     local leftFrame,rightFrame=l,r
     if zen or shanks then
         swordPos*=Vector3.new(handScale,1,1)
@@ -2360,8 +2376,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         entry.p.Color=entry.source.Color;entry.p.Transparency=(isDora and alive) and entry.source.Transparency or 1
     end
     if doraTool and dora.tools[doraTool] then dora.show(dora.tools[doraTool],true);dora.tools[doraTool]:PivotTo(camera.CFrame*doraToolFrame) end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isOkkotsu)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isOkkotsu)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -2436,13 +2452,14 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         or slowed>0 and string.format("반동 · 이동 속도 저하 · 대시 불가  %.1f", slowed)
         or reze and transformed and "폭탄의 악마 · 지속 무제한 · Q 상승/내려찍기 · E 오른손 폭발 · R 대폭발"
         or reze and "인간 · M1 기본공격 · CTRL 슬라이딩 · SHIFT 대시 · R 변신"
+        or (okkotsuOut and okkotsuOut.weakened and string.format("공격력 -30%% · 반전술식 후유증  %.1f초",okkotsuOut.weakened))
         or string.format("%s   %d%%",KITS[current()].energy,state.energy)
     local alive=h and h.Health>0
     for _,entry in katana.saya do entry.p.Transparency=(alive and zen) and 0 or 1 end
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();PainClient.reset();AllMightClient.reset()
+    clearCastVFX();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)
@@ -3110,7 +3127,279 @@ return AllMightClient
 					<UniqueId name="UniqueId">8106f0ceb77e32d556109b0cad6d7340</UniqueId>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX986E4ABE680BCFEC581E9FD130CF8656">
+			<Item class="ModuleScript" referent="RBX_OkkotsuClient"><Properties><string name="Name">OkkotsuClient</string><ProtectedString name="Source"><![CDATA[-- Roblox block hands only. Server owns healing, weakness, hit timing and cancellation.
+local RS=game:GetService("ReplicatedStorage")
+local Players=game:GetService("Players")
+local Lighting=game:GetService("Lighting")
+local K=require(RS:WaitForChild("OkkotsuConfig"))
+local VFX=require(RS:WaitForChild("OkkotsuVFX"))
+local P=K.Colors
+local player=Players.LocalPlayer
+local O={};local env;local arms={};local views={};local transient={};local cast;local weakUntil=0
+local shakeUntil,shakePower=0,0
+local grade=Instance.new("ColorCorrectionEffect");grade.Name="OkkotsuCinematic";grade.Enabled=false;grade.Parent=Lighting
+local root=Instance.new("Folder");root.Name="OkkotsuLocalFX";root.Parent=workspace
+local function clock() return workspace:GetServerTimeNow() end
+local function smooth(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function seg(a,b,c) return smooth((a-b)/(c-b)) end
+local function part(parent,name,size,color,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.Shape=shape or Enum.PartType.Block;p.Material=material or Enum.Material.SmoothPlastic
+    p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.Parent=parent
+    return p
+end
+local function model(name,parent) local m=Instance.new("Model");m.Name=name;m.Parent=parent or root;return m end
+local function add(list,parent,name,size,cf,color,shape,material)
+    local p=part(parent,name,size,color,shape,material);table.insert(list,{p=p,cf=cf});return p
+end
+local function line(list,parent,from,to,width,color)
+    local d=(to-from).Magnitude
+    return add(list,parent,"Tendon",Vector3.new(width,width,d+.01),CFrame.lookAt((from+to)/2,to),color,Enum.PartType.Block)
+end
+local function put(list,frame,alpha,scale)
+    scale=scale or 1
+    for _,x in list do
+        x.p.CFrame=frame*CFrame.new(x.cf.Position*scale)*x.cf.Rotation
+        if not x.size then x.size=x.p.Size end;x.p.Size=x.size*math.max(.001,scale);x.p.Transparency=alpha or 0
+    end
+end
+local function effect(life,update,cleanup) table.insert(transient,{born=clock(),life=life,update=update,cleanup=cleanup}) end
+local nextMote=0
+local saya={};local healRings={};local healCore;local healLight
+local function buildArm(side)
+    local m=model("OkkotsuBlockHand",env.viewmodel);local fixed={};local skin=Color3.fromRGB(215,180,163)
+    add(fixed,m,"Sleeve",Vector3.new(.25,.66,.27),CFrame.new(0,-.35,.035),Color3.fromRGB(17,23,35))
+    add(fixed,m,"BlockHand",Vector3.new(.21,.23,.13),CFrame.new(0,.075,0),skin)
+    if side<0 then
+        for i=0,19 do local a=i*math.pi/10;local b=(i+1)*math.pi/10
+            line(fixed,m,Vector3.new(.015+math.cos(a)*.024,.11+math.sin(a)*.024,.073),Vector3.new(.015+math.cos(b)*.024,.11+math.sin(b)*.024,.073),.008,P.Gold)
+        end
+        add(fixed,m,"RingGem",Vector3.new(.018,.024,.012),CFrame.new(.015,.13,.078),Color3.fromRGB(220,201,235),Enum.PartType.Ball,Enum.Material.Metal)
+    end
+    local a={m=m,fixed=fixed,sword={}}
+    if side>0 then
+        add(a.sword,m,"Grip",Vector3.new(.065,.25,.06),CFrame.new(0,.08,0),Color3.fromRGB(20,24,36))
+        for i=0,6 do add(a.sword,m,"Wrap",Vector3.new(.05,.012,.005),CFrame.new(0,-.02+i*.032,.034)*CFrame.Angles(0,0,i%2==0 and .5 or -.5),Color3.fromRGB(204,198,189)) end
+        add(a.sword,m,"Guard",Vector3.new(.26,.036,.16),CFrame.new(0,.23,0),P.Gold,Enum.PartType.Ball,Enum.Material.Metal)
+        add(a.sword,m,"Blade",Vector3.new(.045,1.26,.014),CFrame.new(0,.87,0),Color3.fromRGB(211,226,233),nil,Enum.Material.Metal)
+        add(a.sword,m,"Edge",Vector3.new(.006,1.26,.017),CFrame.new(-.024,.87,0),Color3.fromRGB(241,252,255),nil,Enum.Material.Neon)
+    end
+    return a
+end
+local function arm(a,frame,visible,swordVisible,fraction)
+    local cf=workspace.CurrentCamera.CFrame*frame;local alpha=visible and 0 or 1;put(a.fixed,cf,alpha)
+    local source=player.Character and (player.Character:FindFirstChild(a==arms[1] and "LeftHand" or "RightHand") or player.Character:FindFirstChild(a==arms[1] and "Left Arm" or "Right Arm"))
+    if source then for _,entry in a.fixed do if entry.p.Name=="BlockHand" then entry.p.Color=source.Color end end end
+    local sf=cf*CFrame.new(0,.14,0)*CFrame.Angles(-math.pi/2,0,0);put(a.sword,sf,visible and swordVisible and 0 or 1)
+    fraction=fraction or 1
+    for _,entry in a.sword do if entry.p.Name=="Blade" or entry.p.Name=="Edge" then
+        entry.p.Size=Vector3.new(entry.size.X,math.max(.001,entry.size.Y*fraction),entry.size.Z)
+        entry.p.CFrame=sf*CFrame.new(entry.cf.Position.X,.23+(entry.cf.Position.Y-.23)*fraction,entry.cf.Position.Z)
+    end end
+end
+local function avatarSword(m,hidden)
+    if not m then return end
+    for _,p in m:GetChildren() do if p:IsA("BasePart") and (p.Name=="OkkotsuBlade" or p.Name=="OkkotsuGrip" or p.Name=="OkkotsuGuard") then p.LocalTransparencyModifier=hidden and 1 or 0 end end
+end
+local function actorFrame(m,direction)
+    local head=m and m:FindFirstChild("Head");local rootPart=m and m:FindFirstChild("HumanoidRootPart")
+    if not head or not rootPart then return end
+    local flat=Vector3.new(direction.X,0,direction.Z);if flat.Magnitude<.01 then flat=rootPart.CFrame.LookVector else flat=flat.Unit end
+    return CFrame.lookAt(head.Position,head.Position+flat)
+end
+function O.init(e)
+    env=e;arms={buildArm(-1),buildArm(1)}
+    local m=model("OkkotsuSaya",e.viewmodel)
+    add(saya,m,"Scabbard",Vector3.new(.075,1.2,.06),CFrame.new(0,-.58,0),Color3.fromRGB(19,21,34))
+    add(saya,m,"ScabbardMouth",Vector3.new(.11,.05,.09),CFrame.new(0,.02,0),Color3.fromRGB(142,124,100),Enum.PartType.Ball,Enum.Material.Metal)
+    local lattice=model("ReverseCursedLattice",e.viewmodel)
+    for i=1,3 do
+        healRings[i]={}
+        for j=0,23 do
+            local a=j*math.pi/12;local b=(j+1)*math.pi/12
+            local p=line(healRings[i],lattice,Vector3.new(math.cos(a)*.14,math.sin(a)*.14,0),Vector3.new(math.cos(b)*.14,math.sin(b)*.14,0),.005,P.Heal);p.Material=Enum.Material.Neon
+        end
+    end
+    healCore=part(lattice,"HealingLight",Vector3.one*.01,P.Heal);healCore.Transparency=1
+    healLight=Instance.new("PointLight");healLight.Color=P.Heal;healLight.Range=3;healLight.Brightness=0;healLight.Parent=healCore
+end
+function O.busy() return cast~=nil and clock()<cast.start+cast.duration end
+function O.onEvent(kind,d)
+    local own=d.owner==player.UserId
+    if kind=="OkkotsuCast" then
+        if own then
+            cast=d
+            env.announce(d.skill=="ReverseCursed" and "反転術式 · 반전술식" or d.skill=="PureLove" and "리카, 힘을 빌려줘" or "차원문 · 리카 휘둘러치기",d.skill=="ReverseCursed" and "최대 HP 50% 회복 · 공격력 -30% 10초" or d.skill=="PureLove" and "칼 수납 → 수인 → 함께 순애포" or "정면 5칸 · 왼쪽으로 쓸어 밀쳐냄")
+        end
+        if d.skill=="ReverseCursed" then VFX.sound("heal",d.position) end
+        if d.skill=="PureLove" then if views[d.owner] then views[d.owner].rig.m:Destroy() end;views[d.owner]={data=d,rig=VFX.newRig()} end
+    elseif kind=="OkkotsuHeal" then
+        VFX.motes(d.position,P.Heal,26,true);VFX.ring(d.position-Vector3.yAxis*2.5,4,1,P.Heal);VFX.sound("release",d.position)
+        if own then weakUntil=d.untilTime end
+    elseif kind=="OkkotsuMark" then VFX.claw(d)
+    elseif kind=="OkkotsuClaw" then
+        VFX.motes(d.position,P.Aura,20,false);VFX.sound("hit",d.position)
+        if own then shakeUntil=clock()+.32;shakePower=.075 end
+    elseif kind=="OkkotsuLock" then
+        local finish=d.position+d.direction*K.PureLove.Range
+        local p=part(root,"PureLoveWarning",Vector3.new(.025,.025,(finish-d.position).Magnitude),P.Aura);p.Material=Enum.Material.Neon;p.CFrame=CFrame.lookAt((d.position+finish)/2,finish)
+        effect(d.delay,function(u) p.Transparency=.7+.15*math.sin(u*12) end,function() p:Destroy() end)
+        VFX.sound("charge",d.position)
+    elseif kind=="OkkotsuBeam" then
+        local v=views[d.owner];local m=Players:GetPlayerByUserId(d.owner);m=m and m.Character
+        local cf=actorFrame(m,d.direction)
+        local faceOrigin=v and v.faceOrigin or (cf and (cf*CFrame.new(.2,3,-2)).Position) or d.position+Vector3.yAxis*3
+        local hand=own and (workspace.CurrentCamera.CFrame*CFrame.new(.065,.02,-1)).Position or (cf and (cf*CFrame.new(.1,0,-1.5)).Position) or d.position
+        VFX.beam(d,faceOrigin,hand)
+        if own then shakeUntil=clock()+.85;shakePower=.075 end
+    elseif kind=="OkkotsuEnd" then
+        if own then cast=nil end
+        local v=views[d.owner];if v then v.rig.m:Destroy();views[d.owner]=nil end
+        local owner=Players:GetPlayerByUserId(d.owner);avatarSword(owner and owner.Character,false);VFX.cancel(d.owner)
+    end
+end
+function O.render(dt,info)
+    local n=clock();local visible=info.isOkkotsu and info.alive;local out={fov=72}
+    if cast and n>=cast.start+cast.duration then cast=nil end
+    local bob=info.moving and math.sin(n*10)*.012 or math.sin(n*1.8)*.005
+    local restL=CFrame.new(-.38,-.48+bob,-.76)*CFrame.Angles(.12,.2,-.28)
+    local restR=CFrame.new(.42,-.4-bob,-.78)*CFrame.Angles(.12,-.18,.3)
+    local l,r=restL,restR;local swordVisible=true;local fraction=1;local healK=0;local healAge=0;local healScale=.3
+    if visible and info.melee and not cast then
+        local me=info.melee;local a=n-me.start;local p=seg(a,0,me.windup);local hit=seg(a,me.windup,me.windup+me.swing);local k=1-seg(a,me.windup+me.swing,me.duration)
+        r=CFrame.new(.42+(.2*p-.85*hit)*k,-.4+(.14*p-.3*hit)*k,-.78)*CFrame.Angles(.12,-.18+(.7*p-1.5*hit)*k,.3+(.7*p-1.8*hit)*k)
+    end
+    if visible and cast then
+        local a=n-cast.start
+        if cast.skill=="ReverseCursed" then
+            local lift=seg(a,0,.48);local release=seg(a,1.15,1.8);local k=lift*(1-release)
+            healK=k;healAge=a;healScale=.3+.7*lift
+            l=CFrame.new(-.38+.23*k,-.48+.29*k,-.76+.17*k)*CFrame.Angles(.12-.85*k,.2+.25*k,-.28+.5*k)
+            r=CFrame.new(.42+.13*k,-.4-.25*k,-.78)*CFrame.Angles(.12-.38*k,-.18,.3+.25*k)
+            env.commonLook(CFrame.Angles(-.1*k,0,0));out.fov=72-5*k+4*seg(a,1.15,1.3)*(1-release)
+            if n>=nextMote and a<1.18 then
+                nextMote=n+.075;local center=(workspace.CurrentCamera.CFrame*CFrame.new(-.13,-.11,-.6)).Position
+                VFX.motes(center,P.Heal,3,true)
+                if a>.2 and math.floor(a/.2)~=math.floor((a-dt)/.2) then VFX.ring(center,.3,.35,P.Heal) end
+            end
+        elseif cast.skill=="RikaStrike" then
+            local prep=seg(a,0,.16)*(1-seg(a,.76,1.05));local sweep=seg(a,.5,.74)*(1-seg(a,.78,1.08))
+            l=CFrame.new(-.38-.08*prep-.12*sweep,-.48+.16*prep+.04*sweep,-.76-.1*prep)*CFrame.Angles(.12-.35*prep,.2,-.28-.15*prep-.5*sweep)
+            env.commonLook(CFrame.Angles(.035*prep,0,-.045*sweep))
+            out.fov=72+3*prep+5*sweep-5*seg(a,.82,1.12)
+        else
+            local k=seg(a,.8,1.25);local push=seg(a,3.1,3.2)*(1-seg(a,3.5,4.05));local back=seg(a,4.05,4.55);local h=k*(1-back)
+            r=restR:Lerp(CFrame.new(.065,-.22,-.91)*CFrame.Angles(.04,-.12,-.035),h)*CFrame.new(0,-push*.025,-push*.15)
+            l=restL:Lerp(CFrame.new(-.12,-.37,-.79)*CFrame.Angles(.2,-.45,-1.1),h)
+            if a<.8 then
+                local sheath=seg(a,0,.72)
+                r=restR:Lerp(CFrame.new(-.34,-.68,-.61)*CFrame.Angles(-.15,-.18,-1.1),sheath)
+                l=CFrame.new(-.43,-.65,-.63)*CFrame.Angles(.15,.1,-.9)
+            end
+            swordVisible=a<.8 or a>4.05;fraction=a<.8 and 1-seg(a,.25,.72) or seg(a,4.05,4.55)
+            local recoil=seg(a,3.1,3.18)*(1-seg(a,3.35,4.2))
+            env.commonLook(CFrame.Angles(.3*seg(a,1.05,1.8)*(1-seg(a,2.7,3.08))-.035*recoil,0,0))
+            out.fov=72-7*seg(a,.85,1.4)*(1-seg(a,2.8,3.1))+13*recoil
+        end
+    end
+    grade.Enabled=visible and cast~=nil
+    if grade.Enabled then
+        local a=n-cast.start;local heal=cast.skill=="ReverseCursed";local k=cast.skill=="PureLove" and seg(a,.75,1.9)*(1-seg(a,3.9,4.6)) or .3*seg(a,0,.6)*(1-seg(a,1.3,1.8))
+        grade.TintColor=Color3.new(1,1,1):Lerp(heal and P.Heal or Color3.fromRGB(222,190,221),k*.18);grade.Brightness=-.1*k;grade.Contrast=.14*k;grade.Saturation=-.2*k
+    end
+    if visible and n<shakeUntil then local k=(shakeUntil-n)/.85;env.commonLook(CFrame.new(0,math.sin(n*87)*shakePower*.25*k,0)*CFrame.Angles(0,0,math.sin(n*73)*shakePower*k)) end
+    if info.sliding then l*=CFrame.new(0,-.1,0);r*=CFrame.new(0,-.1,0) end
+    arm(arms[1],l,visible,false,1);arm(arms[2],r,visible,swordVisible,fraction)
+    put(saya,workspace.CurrentCamera.CFrame*CFrame.new(-.48,-.7,-.6)*CFrame.Angles(.12,0,-.9),visible and 0 or 1)
+    local healFrame=workspace.CurrentCamera.CFrame*CFrame.new(-.13,-.11,-.6)*CFrame.Angles(healAge*.6,-healAge*2.5,healAge)
+    for i,ring in healRings do put(ring,healFrame*CFrame.Angles((i-1)*.8,(i-1)*.6,i-1),1-.5*healK,healScale) end
+    healCore.CFrame=healFrame;healLight.Brightness=1.2*healK
+    for id,v in views do
+        local d=v.data;local a=n-d.start;local owner=Players:GetPlayerByUserId(id);local m=owner and owner.Character;local h=m and m:FindFirstChildOfClass("Humanoid");local cf=actorFrame(m,d.direction)
+        if not cf or not h or h.Health<=0 or owner:GetAttribute("Character")~="Okkotsu" or a>d.duration then
+            v.rig.m:Destroy();avatarSword(m,false);views[id]=nil
+        else
+            avatarSword(m,a>.8 and a<4.05)
+            if a>=.72 and not v.sheath then v.sheath=true;VFX.sound("sheath",cf.Position) end
+            if a>=.92 and not v.manifest then
+                v.manifest=true;VFX.sound("manifest",cf.Position)
+                VFX.portal(cf.Position-d.direction*1.2+Vector3.yAxis*1.3,-d.direction)
+            end
+            v.faceOrigin=VFX.poseRig(v.rig,cf,a)
+            if a>1.8 and a<3.1 and math.floor(a/.12)~=math.floor((a-dt)/.12) then VFX.motes(cf.Position+d.direction*4,P.Aura,3,true) end
+        end
+    end
+    for i=#transient,1,-1 do local f=transient[i];local u=(n-f.born)/f.life;if u>=1 then f.cleanup();table.remove(transient,i) else f.update(u) end end
+    VFX.render()
+    local weaken=math.max(weakUntil,(player.Character and player.Character:GetAttribute("OkkotsuWeakenedUntil")) or 0)-n
+    if visible and weaken>0 then out.weakened=weaken end
+    return out
+end
+function O.reset()
+    cast=nil;weakUntil=0;shakeUntil=0;grade.Enabled=false
+    for id,v in views do v.rig.m:Destroy();local owner=Players:GetPlayerByUserId(id);avatarSword(owner and owner.Character,false) end;views={}
+    for _,f in transient do f.cleanup() end;transient={};VFX.reset();avatarSword(player.Character,false)
+end
+return O
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_KizaruClient"><Properties><string name="Name">KizaruClient</string><ProtectedString name="Source"><![CDATA[local Players=game:GetService("Players")
+local Debris=game:GetService("Debris")
+local Tween=game:GetService("TweenService")
+local C=require(game:GetService("ReplicatedStorage"):WaitForChild("GojoConfig"))
+local M={};local env;local cast;local boot;local glow;local cross={};local gold=Color3.fromRGB(255,215,80)
+local function now() return workspace:GetServerTimeNow() end
+local function smooth(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function part(name,size,parent,color)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color or gold;p.Material=Enum.Material.Neon
+    p.Anchored=true;p.CanCollide=false;p.CanQuery=false;p.CanTouch=false;p.CastShadow=false;p.Parent=parent;return p
+end
+local function sound(at,charge)
+    local p=part("LightSound",Vector3.one*.1,workspace);p.CFrame=CFrame.new(at);p.Transparency=1
+    local s=Instance.new("Sound");s.SoundId=charge and "rbxasset://sounds/electronicpingshort.mp3" or "rbxasset://sounds/impact_generic.mp3";s.Volume=.55;s.PlaybackSpeed=charge and 1.7 or 1.2;s.RollOffMaxDistance=95;s.Parent=p;s:Play();Debris:AddItem(p,3)
+end
+function M.init(e)
+    env=e;boot=part("KizaruRightBoot",Vector3.new(.26,.32,.62),e.viewmodel,Color3.fromRGB(40,37,29));boot.Material=Enum.Material.SmoothPlastic
+    glow=part("LightCore",Vector3.one*.11,e.viewmodel,Color3.fromRGB(255,252,226));glow.Shape=Enum.PartType.Ball
+    cross={part("LightCrossH",Vector3.new(.9,.018,.018),e.viewmodel),part("LightCrossV",Vector3.new(.018,.9,.018),e.viewmodel)};M.reset()
+end
+function M.reset() cast=nil;if boot then boot.Transparency=1;glow.Transparency=1;for _,p in cross do p.Transparency=1 end end end
+function M.busy() return cast~=nil end
+function M.onEvent(kind,d)
+    local own=d.owner==Players.LocalPlayer.UserId
+    if kind=="KizaruCast" then
+        sound(d.position,true)
+        if own then cast=d;env.announce(({LightLaser="손끝 레이저",LightKick="빛의 속도로 차여본 적 있나?",LightJewels="야사카니의 곡옥",LightMirror="야타의 거울"})[d.skill],"빛을 모은다 → 순간 방출") end
+    elseif kind=="KizaruEnd" and own then M.reset()
+    elseif kind=="KizaruBeam" then
+        local distance=math.max(.01,d.distance);local endPoint=d.position+d.direction*distance
+        local beam=part("KizaruLight",Vector3.new(d.skill=="LightKick" and .4 or .12,.12,distance),workspace)
+        beam.CFrame=CFrame.lookAt(d.position+d.direction*distance/2,endPoint)
+        Tween:Create(beam,TweenInfo.new(.3),{Transparency=1}):Play();Debris:AddItem(beam,.32)
+        local blast=part("LightImpact",Vector3.one*.3,workspace);blast.Shape=Enum.PartType.Ball;blast.Position=endPoint
+        Tween:Create(blast,TweenInfo.new(.35),{Size=Vector3.one*(d.skill=="LightKick" and 6 or 2),Transparency=1}):Play();Debris:AddItem(blast,.4);sound(endPoint,false)
+    end
+end
+function M.render(dt,selected,alive)
+    if not selected or not alive then M.reset();return end
+    if not cast then return end
+    local a=now()-cast.start;local cfg=C[cast.skill];if a>=cfg.Duration then M.reset();return end
+    local wind=smooth(a/cfg.Windup);local release=smooth((a-cfg.Windup)/.12);local back=smooth((a-cfg.Windup-.18)/(cfg.Duration-cfg.Windup-.18));local k=wind*(1-back)
+    local cam=workspace.CurrentCamera;local l=CFrame.new(-.45,-.45,-.85);local r=CFrame.new(.28,-.3+.32*k,-.9-.22*k)*CFrame.Angles(-.35*k,0,.12)
+    local core=CFrame.new(.28,.18*k,-1.15-.22*k);local fov=66
+    boot.Transparency=1
+    if cast.skill=="LightKick" then
+        boot.Transparency=0;boot.CFrame=cam.CFrame*CFrame.new(.58-1.15*release,-1.1+.95*wind-.9*back,-.65-.6*wind)*CFrame.Angles(-.5*wind,.7-1.7*release,-.25+.65*wind-1.35*release)
+        core=cam.CFrame:ToObjectSpace(boot.CFrame*CFrame.new(0,.05,-.32));r=CFrame.new(.65,-.28,-.65)*CFrame.Angles(.2,.2,.55)
+        env.commonLook(CFrame.Angles(0,(.04*wind-.09*release)*(1-back),(.065*wind-.15*release)*(1-back)));fov=66-5*wind+17*release*(1-back)
+    elseif cast.skill=="LightJewels" then
+        l=CFrame.new(-.36,-.1+.16*k,-.86)*CFrame.Angles(.1,0,-.65);r=CFrame.new(.36,-.1+.16*k,-.86)*CFrame.Angles(.1,0,.65);core=CFrame.new(.36,.12,-.88);fov=66-7*k
+    elseif cast.skill=="LightMirror" then l=CFrame.new(-.24,-.22,-1);fov=66+25*release*(1-back) end
+    glow.CFrame=cam.CFrame*core;glow.Transparency=1-k
+    for _,p in cross do p.CFrame=cam.CFrame*core*CFrame.Angles(0,0,a*.5);p.Transparency=1-k end
+    return {left=l,right=r,fov=fov}
+end
+return M
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX986E4ABE680BCFEC581E9FD130CF8656">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<ProtectedString name="Source"><![CDATA[-- Tendo Pain on the client: first-person Akatsuki arms (sleeves, red clouds, black nails, moving fingers),
@@ -3914,6 +4203,8 @@ return {
     Slide = { Cost = 6, Cooldown = 1.4, Duration = 0.7, StartSpeed = 38, EndSpeed = 12, MinSpeed = 3, CameraDip = 1.1 },
     -- Skills each character may request; the server rejects anything outside the player's kit.
     Kits = {
+        Kizaru = {"LightLaser","LightKick","LightJewels","LightMirror"},
+        Okkotsu = { "ReverseCursed", "RikaStrike", "PureLove", "Dash" },
         Gojo = { "Blue", "Red", "Domain", "Dash" },
         Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
@@ -3924,6 +4215,10 @@ return {
         -- All Might: tuning and judgement live in AllMightConfig / AllMightServer.
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
     },
+    LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
+    LightKick = {Cost=24,Cooldown=8,Windup=.85,Duration=1.4,Damage=65,Range=12,Width=2.4},
+    LightJewels = {Cost=55,Cooldown=28,Windup=1.25,Duration=2.8,Damage=12,Range=80,Width=1.25},
+    LightMirror = {Cost=12,Cooldown=6,Windup=.45,Duration=.85,Range=24},
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
     -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
@@ -4596,7 +4891,199 @@ return VFX
 				<UniqueId name="UniqueId">b6fc8d551771f1dc8e06102ae46f79ec</UniqueId>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBXFAAF6B71733A789194C8BB46EA4F2A71">
+		<Item class="ModuleScript" referent="RBX_OkkotsuVFX"><Properties><string name="Name">OkkotsuVFX</string><ProtectedString name="Source"><![CDATA[-- Local presentation only. Roblox block hands, articulated limbs, two energy sources.
+local RS=game:GetService("ReplicatedStorage")
+local Debris=game:GetService("Debris")
+local K=require(RS:WaitForChild("OkkotsuConfig"));local P=K.Colors
+local VFX={};local S=1/.6
+local folder=Instance.new("Folder");folder.Name="OkkotsuSpectralFX";folder.Parent=workspace
+local effects,claws={},{}
+local function now() return workspace:GetServerTimeNow() end
+local function smooth(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function seg(a,b,c) return smooth((a-b)/(c-b)) end
+VFX.seg=seg
+local function part(parent,name,size,color,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.Material=material or Enum.Material.SmoothPlastic;p.Shape=shape or Enum.PartType.Block
+    p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.Parent=parent;return p
+end
+local function model(name) local m=Instance.new("Model");m.Name=name;m.Parent=folder;return m end
+local function add(list,m,name,size,at,color,shape,material)
+    local p=part(m,name,size,color,shape,material);table.insert(list,{p=p,at=at,size=size});return p
+end
+local function line(list,m,a,b,width,color)
+    return add(list,m,"BoneRidge",Vector3.new(width,width,(b-a).Magnitude),CFrame.lookAt((a+b)/2,b),color,Enum.PartType.Block)
+end
+local function swept(list,m,points,width,color)
+    local control={};for i,p in points do control[i]=p end
+    local total=(#control-1)*5;local prev
+    local function sample(t)
+        local x=math.min(#control-1,t*(#control-1));local i=math.floor(x)+1;local u=x-math.floor(x)
+        if i>=#control then i=#control-1;u=1 end
+        local p0=control[math.max(1,i-1)];local p1=control[i];local p2=control[i+1];local p3=control[math.min(#control,i+2)]
+        return (p1*2+(-p0+p2)*u+(p0*2-p1*5+p2*4-p3)*u*u+(-p0+p1*3-p2*3+p3)*u*u*u)*.5
+    end
+    for i=0,total do
+        local t=i/total;local here=sample(t)
+        if prev then
+            local d=(here-prev).Magnitude;local w=width*(.05+.95*(1-t)^.8)
+            local p=part(m,"FlowingHairLock",Vector3.new(d,w,w),color,Enum.PartType.Cylinder)
+            p.CFrame=CFrame.lookAt((here+prev)/2,here)*CFrame.Angles(0,math.pi/2,0)
+            table.insert(list,{p=p,at=p.CFrame,size=p.Size})
+        end
+        prev=here
+    end
+end
+local function place(list,cf,alpha,scale)
+    scale=scale or S
+    for _,v in list do v.p.Size=v.size*scale;v.p.CFrame=cf*CFrame.new(v.at.Position*scale)*v.at.Rotation;v.p.Transparency=alpha or 0 end
+end
+local function effect(life,update,cleanup,owner)
+    local f={born=now(),life=life,update=update,cleanup=cleanup,owner=owner};table.insert(effects,f);return f
+end
+function VFX.sound(kind,pos)
+    local id,speed,vol="rbxasset://sounds/impact_generic.mp3",.5,.65
+    if kind=="sheath" then id="rbxasset://sounds/swordunsheath.wav";speed=.7;vol=.4
+    elseif kind=="heal" or kind=="release" then id="rbxasset://sounds/electronicpingshort.wav";speed=kind=="heal" and .6 or 1.3;vol=.4
+    elseif kind=="manifest" or kind=="charge" then id="rbxasset://sounds/action_falling.mp3";speed=kind=="manifest" and .25 or .65;vol=.7 end
+    local anchor=part(folder,"Audio",Vector3.one*.02,P.Ink);anchor.Transparency=1;anchor.Position=pos
+    local sound=Instance.new("Sound");sound.SoundId=id;sound.PlaybackSpeed=speed;sound.Volume=vol;sound.RollOffMaxDistance=150;sound.Parent=anchor;sound:Play();Debris:AddItem(anchor,5)
+end
+function VFX.ring(pos,radius,life,color)
+    local m=model("CursedPressure");local list={};color=color or P.Aura
+    for i=0,47 do local a=i*math.pi/24;local b=(i+1)*math.pi/24;local p=line(list,m,Vector3.new(math.cos(a),0,math.sin(a)),Vector3.new(math.cos(b),0,math.sin(b)),.015,color);p.Material=Enum.Material.Neon end
+    effect(life,function(u) place(list,CFrame.new(pos),.25+.75*u,radius*(.5+.5*u)) end,function() m:Destroy() end)
+end
+function VFX.portal(pos,direction)
+    if not pos then return end
+    local cf=CFrame.lookAt(pos,pos-direction);local m=model("RikaDimensionalRift");local list={}
+    local void=add(list,m,"RiftVoid",Vector3.new(1.12,1.92,.05),CFrame.new(0,0,.04),Color3.fromRGB(20,8,28));void.Material=Enum.Material.Neon
+    local function oval(rx,ry,count,width,color,phase)
+        local points={};for i=0,count do local a=i*math.pi*2/count+phase;points[i+1]=Vector3.new(math.cos(a)*rx,math.sin(a)*ry,0) end
+        for i=1,count do local p=line(list,m,points[i],points[i+1],width,color);p.Material=Enum.Material.Neon end
+    end
+    oval(.64,1.04,36,.055,Color3.fromRGB(185,91,175),0)
+    oval(.55,.91,28,.018,Color3.fromRGB(242,213,238),.06)
+    oval(.37,.71,20,.022,Color3.fromRGB(124,65,133),.12)
+    effect(1.05,function(u)
+        local open=smooth(math.min(1,u/.18));local close=1-smooth((u-.66)/.34)
+        place(list,cf,1-.92*open*close,.5*(.22+.78*open)*(1-.08*math.max(0,u-.75)))
+    end,function() m:Destroy() end)
+end
+function VFX.motes(pos,color,count,inward)
+    for i=1,count do
+        local p=part(folder,"CurseMote",Vector3.one*(.05+math.random()*.055),color,Enum.PartType.Ball,Enum.Material.Neon)
+        local offset=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5)*3
+        effect(.55+math.random()*.25,function(u) p.Position=pos+offset*(inward and (1-u)^2 or u);p.Transparency=math.sin(u*math.pi)*-.75+1 end,function() p:Destroy() end)
+    end
+end
+local function trail(a,b,color,width,life)
+    if (b-a).Magnitude<.01 then return end
+    local p=part(folder,"CurseTrail",Vector3.new(width,width,(b-a).Magnitude),color,nil,Enum.Material.Neon);p.CFrame=CFrame.lookAt((a+b)/2,b)
+    effect(life,function(u) p.Transparency=u end,function() p:Destroy() end)
+end
+local function newArm(m)
+    local a={fixed={},palm={}}
+    a.upper=part(m,"RikaDrapedSleeve",Vector3.one,P.Bone,Enum.PartType.Cylinder)
+    a.fore=part(m,"RikaForearmSleeve",Vector3.one,Color3.fromRGB(222,217,214),Enum.PartType.Cylinder)
+    a.elbow=part(m,"RikaElbowFold",Vector3.one,Color3.fromRGB(202,197,195),Enum.PartType.Ball)
+    a.shoulder=part(m,"RikaMantleShoulder",Vector3.one,P.Bone,Enum.PartType.Ball)
+    -- A single smooth block fist; Roblox Rika has no separate fingers.
+    add(a.palm,m,"RikaBlockFist",Vector3.new(.36,.38,.26),CFrame.new(0,-.12,0),P.Bone)
+    return a
+end
+local function bone(p,a,b,width,alpha)
+    p.Size=Vector3.new((b-a).Magnitude,width,width);p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.Angles(0,math.pi/2,0);p.Transparency=alpha
+end
+local function poseArm(a,cf,shoulder,elbow,wrist,alpha,forward)
+    local s=(cf*CFrame.new(shoulder*S)).Position;local e=(cf*CFrame.new(elbow*S)).Position;local w=(cf*CFrame.new(wrist*S)).Position
+    bone(a.upper,s,e,.45*S,alpha);bone(a.fore,e,w,.32*S,alpha)
+    a.elbow.Size=Vector3.one*.28*S;a.elbow.CFrame=CFrame.new(e);a.elbow.Transparency=alpha
+    a.shoulder.Size=Vector3.one*.34*S;a.shoulder.CFrame=CFrame.new(s);a.shoulder.Transparency=alpha
+    local f=cf:VectorToWorldSpace(forward or Vector3.new(0,-.2,-1))
+    local frame=CFrame.lookAt(w,w+f)*CFrame.Angles(math.pi/2,0,0)
+    place(a.palm,frame,alpha)
+    return w
+end
+function VFX.newRig()
+    local m=model("RikaBehindCaster");local body,head={},{ }
+    add(body,m,"ShadowedRobe",Vector3.new(2.15,2.9,1.15),CFrame.new(0,-.65,2.08),P.Ink,Enum.PartType.Ball)
+    add(body,m,"PaleShoulderMantle",Vector3.new(2.65,1.05,1.24),CFrame.new(0,.18,1.93),Color3.fromRGB(203,199,199),Enum.PartType.Ball)
+    for _,side in {-1,1} do
+        add(body,m,"DrapedSleeve",Vector3.new(1.18,2.05,1.08),CFrame.new(side*.84,-.66,2.08)*CFrame.Angles(0,0,side*.12),P.Bone,Enum.PartType.Ball)
+        swept(body,m,{Vector3.new(side*.54,.26,1.45),Vector3.new(side*.86,-.2,1.36),Vector3.new(side*1.08,-.92,1.57),Vector3.new(side*1.18,-1.62,2.03)},.11,Color3.fromRGB(229,225,222))
+        swept(body,m,{Vector3.new(side*.24,-.18,1.36),Vector3.new(side*.32,-.8,1.38),Vector3.new(side*.53,-1.48,1.7),Vector3.new(side*.7,-2.03,2.15)},.05,P.Ink)
+    end
+    local shell=add(head,m,"SmoothTaperedCranium",Vector3.one,CFrame.identity,P.Bone)
+    local shape=Instance.new("SpecialMesh");shape.MeshType=Enum.MeshType.Sphere;shape.Scale=Vector3.new(.82,1.5,.76);shape.Parent=shell
+    -- Keep Rika's face completely smooth and blank: no eyes, nose, mouth, teeth, or jaw pieces.
+    for _,side in {-1,1} do
+        swept(head,m,{Vector3.new(side*.04,.55,-.28),Vector3.new(side*.24,.98,-.42),Vector3.new(side*.62,1.46,-.3),Vector3.new(side*1.1,1.58,-.05),Vector3.new(side*1.58,1.23,.22),Vector3.new(side*1.88,.78,.38),Vector3.new(side*1.72,.35,.45)},.17,side<0 and P.Bone or Color3.fromRGB(190,185,184))
+        swept(head,m,{Vector3.new(side*.18,.47,-.4),Vector3.new(side*.48,.83,-.52),Vector3.new(side*1,1.06,-.35),Vector3.new(side*1.55,.88,-.1),Vector3.new(side*1.9,.45,.24)},.13,Color3.fromRGB(129,124,132))
+        swept(head,m,{Vector3.new(side*.1,.52,.34),Vector3.new(side*.38,.96,.58),Vector3.new(side*.8,1.44,.83),Vector3.new(side*1.35,1.32,1.07),Vector3.new(side*1.82,.81,1.28),Vector3.new(side*1.65,.34,1.34)},.16,side<0 and Color3.fromRGB(190,185,184) or P.Bone)
+        swept(head,m,{Vector3.new(side*.15,.62,-.45),Vector3.new(side*.42,1.05,-.39),Vector3.new(side*.86,1.42,-.2),Vector3.new(side*1.36,1.35,.08),Vector3.new(side*1.78,.82,.36)},.025,Color3.fromRGB(242,238,233))
+    end
+    swept(head,m,{Vector3.new(-.22,.68,-.28),Vector3.new(-.5,1.12,-.25),Vector3.new(-.52,1.58,-.13),Vector3.new(-.18,1.85,-.02),Vector3.new(.42,1.72,.12),Vector3.new(.93,1.36,.3),Vector3.new(1.35,.93,.45)},.16,P.Bone)
+    swept(head,m,{Vector3.new(.02,.64,-.38),Vector3.new(.36,1.08,-.45),Vector3.new(.78,1.42,-.25),Vector3.new(1.23,1.48,.02),Vector3.new(1.67,1.14,.3),Vector3.new(1.9,.68,.5)},.13,Color3.fromRGB(190,185,184))
+    swept(head,m,{Vector3.new(0,.5,.4),Vector3.new(.18,1,.72),Vector3.new(.55,1.52,1),Vector3.new(1,1.7,1.22),Vector3.new(1.46,1.35,1.4),Vector3.new(1.8,.9,1.5)},.14,Color3.fromRGB(129,124,132))
+    local arms={newArm(m),newArm(m)}
+    for i=0,8 do local side=i%2==0 and -1 or 1;swept(body,m,{Vector3.new(side*.12,-.42,2.38),Vector3.new(side*(.36+i*.025),-1.12,2.63),Vector3.new(side*(.62+i*.04),-1.98,3.03),Vector3.new(side*(.86+i*.05),-2.5,3.32)},.035+(i%3)*.012,i%2==0 and P.Ink or Color3.fromRGB(94,84,99)) end
+    return {m=m,body=body,head=head,arms=arms,neck={part(m,"NeckBase",Vector3.one,P.Bone,Enum.PartType.Cylinder),part(m,"NeckNape",Vector3.one,P.Bone,Enum.PartType.Cylinder)}}
+end
+function VFX.poseRig(v,cf,a)
+    local reveal=seg(a,1.05,1.85);local fade=1-seg(a,3.85,4.6);local alpha=1-reveal*fade;local lean=seg(a,1.1,2)
+    place(v.body,cf*CFrame.new(0,-.8*(1-reveal)*S,0),alpha)
+    local head=cf*CFrame.new(Vector3.new(.12-.72*lean,1.95-.82*lean+.1*seg(a,2.65,3.12),1.8-5.25*lean+seg(a,2.65,3.12))*S)*CFrame.Angles(.6-.8*seg(a,2.65,3.12),math.pi*(1-seg(a,2.65,3.12))-.15,0)
+    local arch=(cf*CFrame.new(0,3.2*S,-.3*S)).Position;local nape=(head*CFrame.new(0,.65*S,.48*S)).Position
+    bone(v.neck[1],(cf*CFrame.new(0,.95*S,S)).Position,arch,.5*S,alpha);bone(v.neck[2],arch,nape,.4*S,alpha)
+    place(v.head,head,alpha)
+    for i,arm in v.arms do local s=i==1 and -1 or 1;poseArm(arm,cf,Vector3.new(s*1.05,.62,1.7),Vector3.new(s*1.72,.25,.95),Vector3.new(s*(1.22-.08*lean),-.2,.34),alpha,Vector3.new(-s*.12,-.18,-1)) end
+    return (head*CFrame.new(0,-.08*S,-.48*S)).Position
+end
+function VFX.claw(data)
+    local old=claws[data.owner];if old then old.dead=true end
+    local portal=data.portal or data.position-data.direction*1.3+Vector3.yAxis*1.3;VFX.portal(portal,data.direction)
+    local m=model("RikaPortalSwing");local arm=newArm(m);local cf=CFrame.lookAt(portal,portal+data.direction);local hit=cf:PointToObjectSpace(data.position)/S;local swept=hit+Vector3.new(-1.25,0,0);local start=Vector3.new(0,0,.16);local last;local lastAt=0
+    local delay=math.max(.12,data.delay or .44);local finish=delay+.48
+    local entry=effect(finish,function(u)
+        local a=u*finish;local wrist=start:Lerp(hit,seg(a,.025,delay))
+        if a>=delay then wrist=hit:Lerp(swept,seg(a,delay,delay+.18)) end
+        if a>delay+.18 then wrist=swept:Lerp(start,seg(a,delay+.18,delay+.42)) end
+        local shoulder=Vector3.new(0,0,.12);local elbow=shoulder:Lerp(wrist,.5)+Vector3.new(-.1,.28,0)
+        local w=poseArm(arm,cf,shoulder,elbow,wrist,1-seg(a,.025,.1)*(1-seg(a,delay+.34,finish)),Vector3.new(-.55,-.08,-1))
+        if a>=delay and a<delay+.22 and last and now()-lastAt>.022 then trail(last,w,Color3.fromRGB(255,232,247),.1,.27);lastAt=now() end;last=w
+    end,function() m:Destroy() end,data.owner);claws[data.owner]=entry
+end
+local function beam(from,to,radius,color,opacity)
+    local p=part(folder,"PureLoveStream",Vector3.one,color,Enum.PartType.Cylinder,Enum.Material.Neon)
+    effect(.9,function(u) local width=radius*(.5+.5*math.sin(u*math.pi))*(.92+.08*math.sin(u*70));bone(p,from,to,width*2,1-opacity*(1-seg(u,.5,1))) end,function() p:Destroy() end)
+end
+function VFX.beam(data,faceOrigin,hand)
+    local focus=data.position+data.direction*math.min(3.8*S,math.max(.8,data.distance*.6));local finish=data.position+data.direction*data.distance
+    beam(hand,focus,.095*S,Color3.fromRGB(213,255,250),.9)
+    beam(faceOrigin,focus,.38*S,P.Aura,.5);beam(faceOrigin,focus,.12*S,Color3.new(1,1,1),.85)
+    beam(focus,finish,.85*S,P.Aura,.24);beam(focus,finish,.36*S,Color3.fromRGB(255,218,239),.65);beam(focus,finish,.11*S,Color3.new(1,1,1),.9)
+    VFX.motes(focus,P.Aura,22,false);VFX.sound("beam",data.position)
+end
+function VFX.cancel(owner)
+    for _,f in effects do if f.owner==owner then f.dead=true end end
+end
+function VFX.render()
+    local n=now()
+    for i=#effects,1,-1 do local f=effects[i];local u=(n-f.born)/f.life;if f.dead or u>=1 then f.cleanup();table.remove(effects,i) else f.update(u) end end
+end
+function VFX.reset() for _,f in effects do f.cleanup() end;effects={};claws={} end
+return VFX
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_OkkotsuConfig"><Properties><string name="Name">OkkotsuConfig</string><ProtectedString name="Source"><![CDATA[-- Reverse technique is a heal with a real offensive tradeoff. Every skill is independent.
+return {
+    Kit={"ReverseCursed","RikaStrike","PureLove"},
+    ReverseCursed={Cost=30,Cooldown=22,Windup=1.15,Duration=1.8,Heal=.5,WeakenDuration=10,DamageFactor=.7},
+    RikaStrike={Cost=20,Cooldown=9,Windup=.58,Commit=.14,Recovery=.67,Range=5,AimAngle=36,Damage=28,Knockback=16,Lift=3},
+    PureLove={Cost=55,Cooldown=38,Windup=3.1,LockAt=2.4,Duration=4.6,Range=120,Width=7,Damage=110},
+    Colors={Aura=Color3.fromRGB(220,108,196),Heal=Color3.fromRGB(112,255,203),Bone=Color3.fromRGB(202,197,207),Ink=Color3.fromRGB(22,15,31),Gold=Color3.fromRGB(242,207,117)},
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBXFAAF6B71733A789194C8BB46EA4F2A71">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[-- Tendo Pain tuning. Read by PainServer (all combat decisions), PainClient and PainVFX (timing of the visuals).
@@ -5866,7 +6353,206 @@ return AllMight
 				<UniqueId name="UniqueId">15b285ebeb9288716f820b08d0a37b31</UniqueId>
 			</Properties>
 		</Item>
-		<Item class="ModuleScript" referent="RBX2A8E70CAC1CD6A5F8717CED990061E38">
+		<Item class="ModuleScript" referent="RBX_OkkotsuServer"><Properties><string name="Name">OkkotsuServer</string><ProtectedString name="Source"><![CDATA[-- All targeting, costs, hit windows and cancellation are authoritative here.
+local RS=game:GetService("ReplicatedStorage")
+local Run=game:GetService("RunService")
+local K=require(RS:WaitForChild("OkkotsuConfig"))
+local O={};local ctx;local active={};local known={}
+for _,name in K.Kit do known[name]=true end
+local function interrupted(p,a)
+    local m,h=ctx.character(p)
+    local n=ctx.clock()
+    return ctx.states[p]~=a.s or a.s.generation~=a.generation or m~=a.m or not h or ctx.kitOf(p)~="Okkotsu"
+        or (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n
+        or ctx.held(m,n)
+end
+local function sight(m,from,toward,target)
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances={m};params.RespectCanCollide=true
+    local hit=workspace:Raycast(from,toward-from,params)
+    return not hit or (target and hit.Instance:IsDescendantOf(target))
+end
+local function emit(p,kind,data)
+    data.owner=p.UserId;ctx.fx:FireAllClients("Okkotsu"..kind,data)
+end
+local function valid(p,a) return active[p]==a and not interrupted(p,a) end
+local function hit(p,t,amount)
+    local before=t.h.Health;ctx.damage(p,t,amount,"Okkotsu")
+    return t.h.Health<before
+end
+local function eye(r) return r.Position+Vector3.yAxis*1.3 end
+local function flatAim(aim)
+    local v=Vector3.new(aim.X,0,aim.Z)
+    return v.Magnitude>.01 and v.Unit or Vector3.new(0,0,-1)
+end
+local function findTarget(m,r,aim)
+    local best,score=nil,math.huge;local forward=flatAim(aim)
+    for _,t in ctx.targets(m) do
+        local raw=t.r.Position-r.Position;local delta=Vector3.new(raw.X,0,raw.Z);local d=delta.Magnitude
+        local dot=d>.01 and delta.Unit:Dot(forward) or 1
+        if d<=K.RikaStrike.Range and dot>=math.cos(math.rad(K.RikaStrike.AimAngle)) and dot>0 and d<score and sight(m,eye(r),t.r.Position,t.m) then best=t;score=d end
+    end
+    return best
+end
+function O.init(c) ctx=c end
+function O.handles(skill) return known[skill]==true end
+function O.request(p,s,m,h,r,skill,aim)
+    local n=ctx.clock();local cfg=K[skill]
+    if not cfg or s.busyUntil>n or s.slide or (s.cooldowns[skill] or 0)>n or s.energy<cfg.Cost or (m:GetAttribute("RootedUntil") or 0)>n then return end
+    local duration=cfg.Duration or cfg.Windup+cfg.Recovery
+    local a={s=s,m=m,r=r,generation=s.generation,skill=skill,untilTime=n+duration,aim=aim,position=eye(r)}
+    if skill=="ReverseCursed" and h.Health>=h.MaxHealth then return end
+    s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown;s.busyUntil=n+duration
+    active[p]=a
+    m:SetAttribute("OkkotsuCastUntil",n+duration);m:SetAttribute("OkkotsuSpeed",skill=="PureLove" and .25 or .55);ctx.updateSpeed(m,h)
+    emit(p,"Cast",{skill=skill,start=n,duration=duration,position=a.position,direction=aim})
+    if skill=="ReverseCursed" then
+        task.delay(cfg.Windup,function()
+            if not valid(p,a) then return end
+            local before=h.Health
+            h.Health=math.min(h.MaxHealth,h.Health+h.MaxHealth*cfg.Heal)
+            m:SetAttribute("OkkotsuWeakenedUntil",ctx.clock()+cfg.WeakenDuration)
+            emit(p,"Heal",{position=eye(r),healed=h.Health-before,untilTime=ctx.clock()+cfg.WeakenDuration})
+            ctx.sendState(p,s)
+        end)
+    elseif skill=="RikaStrike" then
+        local target=findTarget(m,r,aim);a.target=target
+        task.delay(cfg.Commit,function()
+            if not valid(p,a) then return end
+            -- Open a nearby rift first; the committed target can still move out before the swing lands.
+            local center=target and target.m.Parent and target.r.Position+Vector3.yAxis*1.1 or r.Position+flatAim(aim)*cfg.Range
+            local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.FilterDescendantsInstances={m};params.RespectCanCollide=true
+            local wall=workspace:Raycast(eye(r),center-eye(r),params)
+            if wall and (not target or not wall.Instance:IsDescendantOf(target.m)) then center=wall.Position-flatAim(aim)*.5;a.target=nil end
+            local forward=flatAim(aim)
+            local right=forward:Cross(Vector3.yAxis).Unit
+            local portal=eye(r)+forward*2.1+right*1.35+Vector3.yAxis*1.4
+            a.center=center;a.portal=portal
+            emit(p,"Mark",{position=center,portal=portal,direction=forward,delay=cfg.Windup-cfg.Commit})
+        end)
+        task.delay(cfg.Windup,function()
+            if not valid(p,a) or not a.center then return end
+            emit(p,"Claw",{position=a.center,portal=a.portal,direction=flatAim(aim)})
+            local t=a.target;local forward=flatAim(aim)
+            if t and t.m.Parent and t.h.Health>0 then
+                local raw=t.r.Position-r.Position;local delta=Vector3.new(raw.X,0,raw.Z);local d=delta.Magnitude;local dot=d>.01 and delta.Unit:Dot(forward) or 1
+                if d<=cfg.Range and dot>=math.cos(math.rad(cfg.AimAngle)) and dot>0 and sight(m,eye(r),t.r.Position,t.m) then
+                    if hit(p,t,cfg.Damage) then local left=Vector3.yAxis:Cross(forward).Unit;ctx.launch(t,left*cfg.Knockback+Vector3.yAxis*cfg.Lift) end
+                end
+            end
+        end)
+    else
+        task.delay(cfg.LockAt,function()
+            if valid(p,a) then a.position=eye(r);emit(p,"Lock",{position=a.position,direction=aim,delay=cfg.Windup-cfg.LockAt}) end
+        end)
+        task.delay(cfg.Windup,function()
+            if not valid(p,a) then return end
+            local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.RespectCanCollide=true
+            local exclude={m};for _,t in ctx.targets(m) do table.insert(exclude,t.m) end;params.FilterDescendantsInstances=exclude
+            local wall=workspace:Raycast(a.position,aim*cfg.Range,params)
+            local distance=wall and wall.Distance or cfg.Range
+            emit(p,"Beam",{position=a.position,direction=aim,distance=distance})
+            for _,t in ctx.targets(m) do
+                local delta=t.r.Position-a.position;local along=delta:Dot(aim)
+                if along>0 and along<distance and (delta-aim*along).Magnitude<cfg.Width/2+1 and sight(m,a.position,t.r.Position,t.m) then
+                    if hit(p,t,cfg.Damage) then ctx.launch(t,aim*45+Vector3.yAxis*14) end
+                end
+            end
+        end)
+    end
+    ctx.sendState(p,s)
+end
+local function finish(p,fullReset)
+    local a=active[p];active[p]=nil
+    local m=p.Character
+    if m then if fullReset then m:SetAttribute("OkkotsuWeakenedUntil",0) end;m:SetAttribute("OkkotsuCastUntil",0);local h=m:FindFirstChildOfClass("Humanoid");if h then ctx.updateSpeed(m,h) end end
+    if a then emit(p,"End",{skill=a.skill}) end
+end
+function O.reset(p) finish(p,true) end
+function O.damageFactor(attacker)
+    return attacker and (attacker:GetAttribute("OkkotsuWeakenedUntil") or 0)>ctx.clock() and K.ReverseCursed.DamageFactor or 1
+end
+Run.Heartbeat:Connect(function()
+    if not ctx then return end
+    for p,a in active do
+        if interrupted(p,a) or ctx.clock()>=a.untilTime then
+            if ctx.states[p]==a.s then a.s.busyUntil=math.min(a.s.busyUntil,ctx.clock()) end
+            finish(p,false)
+        end
+    end
+end)
+return O
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_KizaruServer"><Properties><string name="Name">KizaruServer</string><ProtectedString name="Source"><![CDATA[-- Costs, committed aim, collision and every hit are server-authoritative.
+local C=require(game:GetService("ReplicatedStorage"):WaitForChild("GojoConfig"))
+local Run=game:GetService("RunService")
+local M={};local ctx;local active={}
+local skills={LightLaser=true,LightKick=true,LightJewels=true,LightMirror=true}
+function M.init(c) ctx=c end
+function M.handles(skill) return skills[skill]==true end
+local function emit(p,kind,data) data.owner=p.UserId;ctx.fx:FireAllClients("Kizaru"..kind,data) end
+local function valid(p,a)
+    local m,h=ctx.character(p);local n=ctx.clock()
+    return active[p]==a and ctx.states[p]==a.s and a.generation==a.s.generation and m==a.m and h and ctx.kitOf(p)=="Kizaru"
+        and (m:GetAttribute("DomainLockedUntil") or 0)<=n and (m:GetAttribute("PainHeldUntil") or 0)<=n and not ctx.held(m,n)
+end
+local function params(m,excludeTargets)
+    local rp=RaycastParams.new();rp.FilterType=Enum.RaycastFilterType.Exclude;rp.RespectCanCollide=true
+    local list={m};if excludeTargets then for _,t in ctx.targets(m) do table.insert(list,t.m) end end;rp.FilterDescendantsInstances=list;return rp
+end
+local function beam(p,a,offset,spread)
+    if not valid(p,a) then return end
+    local cfg=C[a.skill];local origin=a.r.Position+Vector3.yAxis*1.3+offset;local dir=(a.aim+spread).Unit
+    local wall=workspace:Raycast(origin,dir*cfg.Range,params(a.m,true));local distance=wall and wall.Distance or cfg.Range
+    emit(p,"Beam",{position=origin,direction=dir,distance=distance,skill=a.skill})
+    for _,t in ctx.targets(a.m) do
+        local delta=t.r.Position-origin;local along=delta:Dot(dir)
+        if along>0 and along<distance and (delta-dir*along).Magnitude<cfg.Width then
+            local hit=workspace:Raycast(origin,t.r.Position-origin,params(a.m,false))
+            if not hit or hit.Instance:IsDescendantOf(t.m) then
+                ctx.damage(p,t,cfg.Damage,a.skill)
+                if a.skill=="LightKick" then ctx.launch(t,dir*55+Vector3.yAxis*16) end
+            end
+        end
+    end
+end
+function M.request(p,s,m,h,r,skill,aim)
+    local cfg=C[skill];local n=ctx.clock()
+    if not cfg or s.busyUntil>n or s.slide or s.hold or s.energy<cfg.Cost or (s.cooldowns[skill] or 0)>n or (m:GetAttribute("RootedUntil") or 0)>n then return end
+    local flat=Vector3.new(aim.X,0,aim.Z);if skill=="LightMirror" and flat.Magnitude<.01 then return end
+    s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown;s.busyUntil=n+cfg.Duration
+    local a={s=s,m=m,r=r,skill=skill,aim=aim,generation=s.generation,untilTime=n+cfg.Duration};active[p]=a
+    m:SetAttribute("KizaruCastUntil",a.untilTime);ctx.updateSpeed(m,h)
+    emit(p,"Cast",{skill=skill,start=n,duration=cfg.Duration,position=r.Position,direction=aim})
+    if skill=="LightJewels" then
+        for i=0,11 do task.delay(cfg.Windup+i*.085,function() beam(p,a,Vector3.new(i%2==0 and -.38 or .38,.25,0),Vector3.new(math.sin(i*2.4)*.055,math.cos(i*2.4)*.035,0)) end) end
+    elseif skill=="LightMirror" then
+        task.delay(cfg.Windup,function()
+            if not valid(p,a) then return end
+            local dir=flat.Unit;local origin=r.Position
+            local hit=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),dir*cfg.Range,params(m,false))
+            local distance=hit and math.max(0,hit.Distance-.6) or cfg.Range
+            r.CFrame+=dir*distance;r.AssemblyLinearVelocity=Vector3.zero
+            emit(p,"Beam",{skill=skill,position=origin,direction=dir,distance=distance})
+        end)
+    else task.delay(cfg.Windup,function() beam(p,a,Vector3.zero,Vector3.zero) end) end
+    ctx.sendState(p,s)
+end
+function M.reset(p)
+    active[p]=nil;local m=p.Character
+    if m then m:SetAttribute("KizaruCastUntil",0);local h=m:FindFirstChildOfClass("Humanoid");if h and ctx then ctx.updateSpeed(m,h) end end
+    if ctx then emit(p,"End",{}) end
+end
+Run.Heartbeat:Connect(function()
+    if not ctx then return end
+    for p,a in active do if not valid(p,a) or ctx.clock()>=a.untilTime then
+        if ctx.states[p]==a.s then a.s.busyUntil=math.min(a.s.busyUntil,ctx.clock()) end
+        M.reset(p)
+    end end
+end)
+return M
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX2A8E70CAC1CD6A5F8717CED990061E38">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
 				<ProtectedString name="Source"><![CDATA[-- Tendo Pain: server-side judgement for Shinra Tensei (Q), Bansho Ten'in (E) and Chibaku Tensei (R).
@@ -6563,6 +7249,26 @@ local function outfit(character,kind,fresh)
             attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
             attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
         end
+    elseif kind=="Kizaru" then
+        for _,side in {-1,1} do
+            local lens=attach(head,"KizaruAmberLens",Vector3.new(.55,.32,.055),CFrame.new(side*.32,.08,-head.Size.Z/2-.06),Color3.fromRGB(185,125,44),Enum.Material.Glass)
+            lens.Transparency=.25
+            attach(head,"KizaruGlassesRim",Vector3.new(.59,.035,.065),CFrame.new(side*.32,.25,-head.Size.Z/2-.07),Color3.fromRGB(210,182,97),Enum.Material.Metal)
+        end
+        attach(head,"KizaruBridge",Vector3.new(.15,.035,.065),CFrame.new(0,.13,-head.Size.Z/2-.07),Color3.fromRGB(210,182,97),Enum.Material.Metal)
+    elseif kind=="Okkotsu" then
+        -- Only the katana and engagement ring: preserve the player's own avatar.
+        local hand=character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm") or root
+        local right=character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm") or root
+        for i=0,15 do
+            local a=i*math.pi/8;local b=(i+1)*math.pi/8
+            local p1=Vector3.new(.08+math.cos(a)*.072,-hand.Size.Y*.3, -.18+math.sin(a)*.072)
+            local p2=Vector3.new(.08+math.cos(b)*.072,-hand.Size.Y*.3, -.18+math.sin(b)*.072)
+            attach(hand,"OkkotsuRing",Vector3.new(.025,.025,(p2-p1).Magnitude+.008),CFrame.lookAt((p1+p2)/2,p2),Color3.fromRGB(242,207,117),Enum.Material.Metal)
+        end
+        attach(right,"OkkotsuGrip",Vector3.new(.14,.75,.14),CFrame.new(0,-.1,-.1),Color3.fromRGB(27,28,39))
+        attach(right,"OkkotsuGuard",Vector3.new(.55,.06,.32),CFrame.new(0,.3,-.1),Color3.fromRGB(173,156,116),Enum.Material.Metal)
+        attach(right,"OkkotsuBlade",Vector3.new(.14,3.2,.055),CFrame.new(0,1.93,-.1),Color3.fromRGB(222,235,242),Enum.Material.Metal)
     elseif kind=="Pain" then
         -- Rinnegan: concentric purple rings on both eyes (alternating light/dark discs, a dark pupil in the middle).
         -- Clients brighten PainEyeGlow when a technique is cast. Akatsuki sleeves with black nails on both forearms.
@@ -6682,6 +7388,8 @@ local RunService=game:GetService("RunService")
 local RS=game:GetService("ReplicatedStorage")
 local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
+local Kizaru=require(script.Parent:WaitForChild("KizaruServer"))
+local Okkotsu=require(script.Parent:WaitForChild("OkkotsuServer"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
@@ -6760,7 +7468,7 @@ local function damage(owner,t,amount,kind)
     local attacker=owner.Character
     if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
     -- One For All: buffed basic attacks hit harder, a buffed All Might takes less.
-    dealt*=AllMight.damageFactor(attacker,t.m,kind)
+    dealt*=AllMight.damageFactor(attacker,t.m,kind)*Okkotsu.damageFactor(attacker)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -6778,6 +7486,8 @@ local function updateSpeed(m,h)
         speed*=1-(1-C.Detonation.SlowAtEnd)*progress
     end
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
+    if (m:GetAttribute("KizaruCastUntil") or 0)>n then speed*=.3 end
+    if (m:GetAttribute("OkkotsuCastUntil") or 0)>n then speed*=m:GetAttribute("OkkotsuSpeed") or 1 end
     speed*=AllMight.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
@@ -6788,7 +7498,7 @@ local function updateSpeed(m,h)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
+    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -7365,6 +8075,14 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
     if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
     if skill=="Thunderclap" then return end
+    if Kizaru.handles(skill) then
+        if kitOf(p)=="Kizaru" then Kizaru.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
+    if Okkotsu.handles(skill) then
+        if kitOf(p)=="Okkotsu" then Okkotsu.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
     if Pain.handles(skill) then
         if kitOf(p)=="Pain" then Pain.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
@@ -7481,7 +8199,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -7616,6 +8334,8 @@ RunService.Heartbeat:Connect(function(dt)
         end
     end
 end)
+Kizaru.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,sendState=sendState,launch=launch,kitOf=kitOf,held=AllMight.held})
+Okkotsu.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,sendState=sendState,launch=launch,kitOf=kitOf,held=AllMight.held})
 Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,setTimed=setTimed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,projectiles=projectiles,kitOf=kitOf})
 AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
@@ -7624,15 +8344,15 @@ local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
         stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
-        clearPurpleHover(s);clearDoraFlight(s)
+        clearPurpleHover(s);clearDoraFlight(s);Okkotsu.reset(p);Kizaru.reset(p)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
 Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then stopSlide(p,states[p]);clearBombRecoil(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
+Players.PlayerRemoving:Connect(function(p) Okkotsu.reset(p);Kizaru.reset(p);if states[p] then stopSlide(p,states[p]);clearBombRecoil(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
 ]]></ProtectedString>
 				<bool name="Disabled">false</bool>
 				<Content name="LinkedSource"><null></null></Content>

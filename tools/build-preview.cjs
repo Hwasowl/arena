@@ -24,6 +24,10 @@ html = html.replace(painTag, () => '<script>\n' + esc(p('pain.js')) + '\n</scrip
 const allMightTag = '<script src="allmight.js"></script>';
 if (!html.includes(allMightTag)) throw new Error('allmight.js marker missing');
 html = html.replace(allMightTag, () => '<script>\n' + esc(p('allmight.js')) + '\n</script>');
+html=html.replace('<script src="kizaru.js"></script>',()=>'<script>\n'+esc(p('kizaru.js'))+'\n</script>');
+const okkotsuTag='<script src="okkotsu.js"></script>';
+if(!html.includes(okkotsuTag))throw new Error('okkotsu.js marker missing');
+html=html.replace(okkotsuTag,()=>'<script>\n'+esc(p('okkotsu.js'))+'\n</script>');
 if (!html.includes(link) || !html.includes(tag)) throw new Error('index.html markers missing');
 html = html.replace(link, () => '<style>' + p('style.css') + '</style>').replace(tag, () => script).replace('<head>', () => '<head>\n' + license);
 for (const out of outs) fs.writeFileSync(out, html.replace(/\r?\n/g, '\r\n'));

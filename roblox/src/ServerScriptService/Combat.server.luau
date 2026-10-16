@@ -3,6 +3,8 @@ local RunService=game:GetService("RunService")
 local RS=game:GetService("ReplicatedStorage")
 local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
+local Kizaru=require(script.Parent:WaitForChild("KizaruServer"))
+local Okkotsu=require(script.Parent:WaitForChild("OkkotsuServer"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
@@ -81,7 +83,7 @@ local function damage(owner,t,amount,kind)
     local attacker=owner.Character
     if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
     -- One For All: buffed basic attacks hit harder, a buffed All Might takes less.
-    dealt*=AllMight.damageFactor(attacker,t.m,kind)
+    dealt*=AllMight.damageFactor(attacker,t.m,kind)*Okkotsu.damageFactor(attacker)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -99,6 +101,8 @@ local function updateSpeed(m,h)
         speed*=1-(1-C.Detonation.SlowAtEnd)*progress
     end
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
+    if (m:GetAttribute("KizaruCastUntil") or 0)>n then speed*=.3 end
+    if (m:GetAttribute("OkkotsuCastUntil") or 0)>n then speed*=m:GetAttribute("OkkotsuSpeed") or 1 end
     speed*=AllMight.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
@@ -109,7 +113,7 @@ local function updateSpeed(m,h)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
+    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -686,6 +690,14 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
     if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
     if skill=="Thunderclap" then return end
+    if Kizaru.handles(skill) then
+        if kitOf(p)=="Kizaru" then Kizaru.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
+    if Okkotsu.handles(skill) then
+        if kitOf(p)=="Okkotsu" then Okkotsu.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
     if Pain.handles(skill) then
         if kitOf(p)=="Pain" then Pain.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
@@ -802,7 +814,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -937,6 +949,8 @@ RunService.Heartbeat:Connect(function(dt)
         end
     end
 end)
+Kizaru.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,sendState=sendState,launch=launch,kitOf=kitOf,held=AllMight.held})
+Okkotsu.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,sendState=sendState,launch=launch,kitOf=kitOf,held=AllMight.held})
 Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,setTimed=setTimed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,projectiles=projectiles,kitOf=kitOf})
 AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
@@ -945,12 +959,12 @@ local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
         stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
-        clearPurpleHover(s);clearDoraFlight(s)
+        clearPurpleHover(s);clearDoraFlight(s);Okkotsu.reset(p);Kizaru.reset(p)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end
 Players.PlayerAdded:Connect(joined);for _,p in Players:GetPlayers() do joined(p) end
-Players.PlayerRemoving:Connect(function(p) if states[p] then stopSlide(p,states[p]);clearBombRecoil(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)
+Players.PlayerRemoving:Connect(function(p) Okkotsu.reset(p);Kizaru.reset(p);if states[p] then stopSlide(p,states[p]);clearBombRecoil(p,states[p]);clearPurpleHover(states[p]);clearDoraFlight(states[p]);cancelBlue(p,states[p]) end;states[p]=nil end)

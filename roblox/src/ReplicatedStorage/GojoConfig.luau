@@ -9,6 +9,8 @@ return {
     Slide = { Cost = 6, Cooldown = 1.4, Duration = 0.7, StartSpeed = 38, EndSpeed = 12, MinSpeed = 3, CameraDip = 1.1 },
     -- Skills each character may request; the server rejects anything outside the player's kit.
     Kits = {
+        Kizaru = {"LightLaser","LightKick","LightJewels","LightMirror"},
+        Okkotsu = { "ReverseCursed", "RikaStrike", "PureLove", "Dash" },
         Gojo = { "Blue", "Red", "Domain", "Dash" },
         Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
@@ -19,6 +21,10 @@ return {
         -- All Might: tuning and judgement live in AllMightConfig / AllMightServer.
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
     },
+    LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
+    LightKick = {Cost=24,Cooldown=8,Windup=.85,Duration=1.4,Damage=65,Range=12,Width=2.4},
+    LightJewels = {Cost=55,Cooldown=28,Windup=1.25,Duration=2.8,Damage=12,Range=80,Width=1.25},
+    LightMirror = {Cost=12,Cooldown=6,Windup=.45,Duration=.85,Range=24},
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
     -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
