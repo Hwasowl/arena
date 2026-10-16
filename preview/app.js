@@ -120,10 +120,10 @@ const CHARS={
 };
 Object.assign(SKILLS,{
  lightLaser:{name:'손끝 레이저',type:'0.65초 준비 · 피해 42',icon:'burst-icon',glyph:'✧',accent:'#ffe18a'},
- lightKick:{name:'빛의 발차기',type:'0.85초 들어올림 → 광속 킥 · 피해 65',icon:'bolt-icon',glyph:'ϟ',accent:'#ffd34e'},
- lightJewels:{name:'야사카니의 곡옥',type:'1.25초 준비 → 빛의 탄막 12발',icon:'domain-icon',glyph:'✦',accent:'#fff0ba'},
+ lightKick:{name:'빛의 발차기',type:'0.4초 빛 모음 → 광속 돌진 킥 · 피해 65 · 날려보냄',icon:'bolt-icon',glyph:'ϟ',accent:'#ffd34e'},
+ lightJewels:{name:'야사카니의 곡옥',type:'웅크림 → 높이 도약 → 공중 12발 탄막 → 낙하',icon:'domain-icon',glyph:'✦',accent:'#fff0ba'},
  lightMirror:{name:'야타의 거울',type:'0.45초 빛 변환 → 전방 24 이동',icon:'dash-icon',glyph:'»',accent:'#ffe18a'}});
- CHARS.kizaru={name:'키자루',kanji:'黄猿 · ボルサリーノ',seal:'光',eyebrow:'CHARACTER 09 / GLINT-GLINT',desc:'느긋하게 모은 빛. 피할 틈 없이 터지는 한순간.<br>빛의 속도로 차여본 적 있나?',hud:'KIZARU',energy:'光 / LIGHT',hint:'<kbd>Q</kbd> 손끝 레이저 · <kbd>E</kbd> 빛의 발차기 · <kbd>R</kbd> 야사카니의 곡옥 · <kbd>SHIFT</kbd> 야타의 거울',demoToast:'손끝에 빛 → 느긋한 오른발 준비 · 광속 킥 → 곡옥 탄막 → 빛 이동',slots:{q:'lightLaser',e:'lightKick',r:'lightJewels',shift:'lightMirror'},demo:[[.5,'lightLaser',[0,1.3,-10]],[2,'lightKick',[0,1.3,-10]],[4,'lightJewels',[0,1.3,-10]],[7.5,'lightMirror']],demoEnd:9,demoPos:[0,2.1,-2]};
+ CHARS.kizaru={name:'키자루',kanji:'黄猿 · ボルサリーノ',seal:'光',eyebrow:'CHARACTER 09 / GLINT-GLINT',desc:'느긋하게 모은 빛. 피할 틈 없이 터지는 한순간.<br>빛의 속도로 차여본 적 있나?',hud:'KIZARU',energy:'光 / LIGHT',hint:'<kbd>Q</kbd> 손끝 레이저 · <kbd>E</kbd> 빛의 발차기 · <kbd>R</kbd> 야사카니의 곡옥 · <kbd>SHIFT</kbd> 야타의 거울',demoToast:'손끝에 빛 → 광속 돌진 킥(날려보냄) → 높이 도약 곡옥 탄막 → 빛 이동',slots:{q:'lightLaser',e:'lightKick',r:'lightJewels',shift:'lightMirror'},demo:[[.5,'lightLaser',[0,1.3,-10]],[2,'lightKick',[0,1.3,-10]],[4,'lightJewels',[0,1.3,-10]],[7.5,'lightMirror']],demoEnd:9,demoPos:[0,2.1,-2]};
  CHARS.okkotsu={name:'옷코츠 유타',kanji:'乙骨 憂太',seal:'憂',eyebrow:'CHARACTER 08 / QUEEN OF CURSES',desc:'차원문을 넘어 나타난 리카와 함께 싸웁니다.<br>휘둘러 밀쳐내고, 순애포를 함께 쏩니다.',hud:'OKKOTSU',energy:'呪力 / CURSED ENERGY',hint:'<kbd>Q</kbd> 반전술식 · <kbd>E</kbd> 정면 5칸 리카 휘둘러치기 · <kbd>R</kbd> 칼 수납 → 수인 → 리카와 순애포',demoToast:'차원문에서 나온 리카가 왼쪽으로 휘둘러친다 → 칼 수납 · 수인 · 함께 순애포 → 반전술식',slots:{q:'reverseCursed',e:'rikaStrike',r:'pureLove',shift:'dash'},demo:[[.5,'rikaStrike',[0,1.5,-10]],[2.5,'pureLove',[0,1.5,-10]],[8,'reverseCursed']],demoEnd:10.5,demoPos:[0,2.1,-5.7]};
 const SLOTS=['q','e','r','shift'];
 const hemi=new T.HemisphereLight(0xeaf6ff,0x8d9fb0,2.6); scene.add(hemi);
