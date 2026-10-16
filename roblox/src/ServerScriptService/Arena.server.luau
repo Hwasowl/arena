@@ -198,6 +198,36 @@ local function outfit(character,kind,fresh)
             attach(head,"RezeChoker",Vector3.new(.24,.92,.92),CFrame.new(0,neck,0)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(16,16,20),Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
             attach(head,"RezePin",Vector3.new(.06,.3,.3),CFrame.new(0,neck-.12,-.5)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(200,204,210),Enum.Material.Metal,Enum.PartType.Cylinder)
         end
+    elseif kind=="Pain" then
+        -- Rinnegan: concentric purple rings on both eyes (alternating light/dark discs, a dark pupil in the middle).
+        -- Clients brighten PainEyeGlow when a technique is cast. Akatsuki sleeves with black nails on both forearms.
+        local front=-head.Size.Z/2-.012
+        local light,deep=Color3.fromRGB(196,160,255),Color3.fromRGB(96,62,170)
+        for _,x in {-.21,.21} do
+            for ring=0,4 do
+                local radius=.15-ring*.028
+                attach(head,"PainRinnegan",Vector3.new(.012,radius*2,radius*2),CFrame.new(x,.13,front-ring*.004)*CFrame.Angles(0,math.pi/2,0),
+                    ring%2==0 and light or deep,ring==0 and Enum.Material.Neon or Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
+            end
+            local pupil=attach(head,"PainRinnegan",Vector3.new(.012,.04,.04),CFrame.new(x,.13,front-.024)*CFrame.Angles(0,math.pi/2,0),Color3.fromRGB(28,16,44),nil,Enum.PartType.Cylinder)
+            local glow=Instance.new("PointLight");glow.Name="PainEyeGlow";glow.Color=light;glow.Brightness=.4;glow.Range=3;glow.Parent=pupil
+        end
+        local black,red,white=Color3.fromRGB(14,14,18),Color3.fromRGB(196,28,40),Color3.fromRGB(245,244,240)
+        for _,side in {"Left","Right"} do
+            local arm=character:FindFirstChild(side.."LowerArm") or character:FindFirstChild(side.." Arm")
+            if arm then
+                local sleeve=attach(arm,"PainSleeve",arm.Size*Vector3.new(1.25,.8,1.25),CFrame.new(0,arm.Size.Y*.08,0),black)
+                -- One red cloud with a white rim on the outside of each sleeve.
+                local outward=side=="Left" and -1 or 1
+                for i,offset in {Vector3.new(0,0,0),Vector3.new(0,.16,-.12),Vector3.new(0,-.12,.13)} do
+                    local at=CFrame.new(outward*(sleeve.Size.X/2+.01),offset.Y,offset.Z)
+                    attach(arm,"PainCloudRim",Vector3.new(.02,.3,.3)*(i==1 and 1.2 or 1),at,white,nil,Enum.PartType.Cylinder)
+                    attach(arm,"PainCloud",Vector3.new(.025,.24,.24)*(i==1 and 1.2 or 1),at*CFrame.new(outward*.006,0,0),red,nil,Enum.PartType.Cylinder)
+                end
+            end
+            local hand=character:FindFirstChild(side.."Hand")
+            if hand then attach(hand,"PainNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(10,10,14)) end
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end

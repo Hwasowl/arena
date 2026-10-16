@@ -10,6 +10,10 @@ const scripts = {
   Combat: 'roblox/src/ServerScriptService/Combat.server.luau',
   StoreVFX: 'roblox/src/ServerScriptService/StoreVFX.server.luau',
   Gojo: 'roblox/src/StarterPlayer/StarterPlayerScripts/Gojo.client.luau',
+  PainAbilityConfig: 'roblox/src/ReplicatedStorage/PainAbilityConfig.luau',
+  PainVFX: 'roblox/src/ReplicatedStorage/PainVFX.luau',
+  PainServer: 'roblox/src/ServerScriptService/PainServer.luau',
+  PainClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/PainClient.luau',
 };
 // Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
 // Locate each script's own Properties first so property order cannot mix sources between scripts.
