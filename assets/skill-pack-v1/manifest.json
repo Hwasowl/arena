@@ -240,8 +240,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.09,
-      "rmsDbFS": -22.39
+      "peakDbFS": -3.24,
+      "rmsDbFS": -23.16
     },
     {
       "id": "gojo_blue_charge",
@@ -259,7 +259,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.1
+      "rmsDbFS": -16.13
     },
     {
       "id": "gojo_blue_pull",
@@ -276,7 +276,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.63,
+      "peakDbFS": -2.6,
       "rmsDbFS": -14.89
     },
     {
@@ -294,8 +294,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -16.84
+      "peakDbFS": -5.07,
+      "rmsDbFS": -14.9
     },
     {
       "id": "gojo_purple_charge",
@@ -313,7 +313,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.16
+      "rmsDbFS": -15.83
     },
     {
       "id": "gojo_purple_release",
@@ -330,8 +330,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -17.32
+      "peakDbFS": -8.77,
+      "rmsDbFS": -14.9
     },
     {
       "id": "gojo_domain_open",
@@ -348,8 +348,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.2,
-      "rmsDbFS": -17.5
+      "peakDbFS": -8.94,
+      "rmsDbFS": -14.9
     },
     {
       "id": "gojo_domain_inside",
@@ -367,7 +367,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -9.37,
-      "rmsDbFS": -22.95
+      "rmsDbFS": -22.06
     },
     {
       "id": "gojo_domain_end",
@@ -384,8 +384,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.09,
-      "rmsDbFS": -16.07
+      "peakDbFS": -2.12,
+      "rmsDbFS": -14.91
     },
     {
       "id": "gojo_domain_break",
@@ -402,8 +402,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.34,
-      "rmsDbFS": -21.15
+      "peakDbFS": -2.12,
+      "rmsDbFS": -20.31
     },
     {
       "id": "zenitsu_breath",
@@ -420,7 +420,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.44,
+      "peakDbFS": -2.01,
       "rmsDbFS": -14.89
     },
     {
@@ -439,7 +439,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.02
+      "rmsDbFS": -15.73
     },
     {
       "id": "zenitsu_sheath",
@@ -458,7 +458,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -22.44
+      "rmsDbFS": -22.82
     },
     {
       "id": "zenitsu_flamegod",
@@ -475,8 +475,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -15.93
+      "peakDbFS": -2.88,
+      "rmsDbFS": -14.89
     },
     {
       "id": "zenitsu_delayed_hit",
@@ -494,7 +494,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.96
+      "rmsDbFS": -16.63
     },
     {
       "id": "reze_pin",
@@ -512,7 +512,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -22.6
+      "rmsDbFS": -24.31
     },
     {
       "id": "reze_fuse_loop",
@@ -531,7 +531,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -6.02,
-      "rmsDbFS": -19.49
+      "rmsDbFS": -20.37
     },
     {
       "id": "reze_transform",
@@ -549,7 +549,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -20.03
+      "rmsDbFS": -18.5
     },
     {
       "id": "reze_launch",
@@ -566,8 +566,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.56,
-      "rmsDbFS": -14.91
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.38
     },
     {
       "id": "reze_dive",
@@ -585,7 +585,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.49
+      "rmsDbFS": -15.44
     },
     {
       "id": "reze_slam",
@@ -603,7 +603,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.38
+      "rmsDbFS": -17.63
     },
     {
       "id": "reze_hand_blast",
@@ -621,7 +621,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.86
+      "rmsDbFS": -18.67
     },
     {
       "id": "reze_detonation_charge",
@@ -638,8 +638,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -16.21
+      "peakDbFS": -1.59,
+      "rmsDbFS": -14.89
     },
     {
       "id": "reze_detonation_blast",
@@ -657,7 +657,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -18.9
+      "rmsDbFS": -15.05
     },
     {
       "id": "shanks_haki_charge",
@@ -674,8 +674,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -15.03
+      "peakDbFS": -1.78,
+      "rmsDbFS": -14.89
     },
     {
       "id": "shanks_haki_pulse",
@@ -692,8 +692,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -16.21
+      "peakDbFS": -2.68,
+      "rmsDbFS": -14.91
     },
     {
       "id": "shanks_draw",
@@ -711,7 +711,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.44
+      "rmsDbFS": -18.69
     },
     {
       "id": "shanks_slash",
@@ -729,7 +729,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.58
+      "rmsDbFS": -15.38
     },
     {
       "id": "shanks_parry",
@@ -747,7 +747,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -21.3
+      "rmsDbFS": -22.65
     },
     {
       "id": "shanks_counter",
@@ -764,8 +764,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -15.22
+      "peakDbFS": -1.45,
+      "rmsDbFS": -14.89
     },
     {
       "id": "shanks_departure_charge",
@@ -783,7 +783,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.29
+      "rmsDbFS": -15.72
     },
     {
       "id": "shanks_departure_release",
@@ -800,8 +800,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -15.14
+      "peakDbFS": -4.1,
+      "rmsDbFS": -14.89
     },
     {
       "id": "shared_dash",
@@ -819,7 +819,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -3.74,
-      "rmsDbFS": -17.46
+      "rmsDbFS": -17.23
     },
     {
       "id": "shared_jump",
@@ -836,8 +836,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.8,
-      "rmsDbFS": -16.87
+      "peakDbFS": -1.81,
+      "rmsDbFS": -16.84
     },
     {
       "id": "shared_land",
@@ -873,7 +873,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.21
+      "rmsDbFS": -15.15
     },
     {
       "id": "shared_slide_scrape",
@@ -891,7 +891,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -19.85
+      "rmsDbFS": -19.4
     },
     {
       "id": "shared_slide_end",
@@ -926,7 +926,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.67,
+      "peakDbFS": -1.69,
       "rmsDbFS": -14.9
     },
     {
@@ -944,7 +944,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.42,
+      "peakDbFS": -2.13,
       "rmsDbFS": -14.89
     },
     {
@@ -962,7 +962,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.74,
+      "peakDbFS": -2.43,
       "rmsDbFS": -14.89
     },
     {
@@ -981,7 +981,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -18.21
+      "rmsDbFS": -17.65
     },
     {
       "id": "shared_punch_hit_2",
@@ -999,7 +999,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.63
+      "rmsDbFS": -16.9
     },
     {
       "id": "shared_punch_hit_3",
@@ -1017,7 +1017,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.12
+      "rmsDbFS": -16.94
     },
     {
       "id": "shared_sword_swing_1",
@@ -1035,7 +1035,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.95
+      "rmsDbFS": -17.14
     },
     {
       "id": "shared_sword_swing_2",
@@ -1053,7 +1053,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.06
+      "rmsDbFS": -17.21
     },
     {
       "id": "shared_sword_swing_3",
@@ -1071,7 +1071,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -17.19
+      "rmsDbFS": -17.31
     },
     {
       "id": "shared_sword_hit",
@@ -1106,8 +1106,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.02,
-      "rmsDbFS": -20.86
+      "peakDbFS": -2.67,
+      "rmsDbFS": -21.08
     },
     {
       "id": "shared_boom",
@@ -1125,7 +1125,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -18.01
+      "rmsDbFS": -18.33
     },
     {
       "id": "shared_rustle",
@@ -1178,8 +1178,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.63,
-      "rmsDbFS": -18.82
+      "peakDbFS": -2.26,
+      "rmsDbFS": -22.27
     },
     {
       "id": "dora_air",
@@ -1196,7 +1196,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.15,
+      "peakDbFS": -4.19,
       "rmsDbFS": -14.92
     },
     {
@@ -1232,8 +1232,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.41,
-      "rmsDbFS": -15.96
+      "peakDbFS": -2.31,
+      "rmsDbFS": -14.89
     },
     {
       "id": "dora_door",

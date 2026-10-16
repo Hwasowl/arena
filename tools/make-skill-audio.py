@@ -19,15 +19,24 @@ def env(t, attack=.004, decay=.25, release=.04):
     return np.minimum(1, t / attack) * np.exp(-t / decay) * np.minimum(1, (len(t) / SR - t) / release)
 
 
+def wobble(n, depth):
+    """Slow random phase drift so a synthetic pitch never sits on one perfectly clean frequency."""
+    walk = np.cumsum(RNG.standard_normal(n))
+    walk -= np.linspace(walk[0], walk[-1], n)
+    return walk / max(np.max(np.abs(walk)), 1e-6) * depth
+
+
 def sweep(duration, start, end, decay=.25, gain=1, attack=.003):
     t = axis(duration)
-    phase = 2 * np.pi * (start * t + (end - start) * t * t / (2 * duration))
-    return np.sin(phase) * env(t, attack, decay) * gain
+    decay = min(decay, .16 + start / 2500)  # low thumps stop ringing; a long sine tail is what sounds like floating
+    phase = 2 * np.pi * (start * t + (end - start) * t * t / (2 * duration)) + wobble(len(t), 2.4)
+    return np.tanh(2.2 * np.sin(phase)) * .62 * env(t, attack, decay) * gain
 
 
 def tone(duration, frequency, decay=.3, gain=1, attack=.003):
     t = axis(duration)
-    return np.sin(2 * np.pi * frequency * t) * env(t, attack, decay) * gain
+    decay = min(decay, .12 + frequency / 3000)
+    return np.tanh(2 * np.sin(2 * np.pi * frequency * t + wobble(len(t), 1.6))) * .6 * env(t, attack, decay) * gain
 
 
 def noise(duration, low=100, high=12000, decay=.25, gain=1, attack=.002):
@@ -44,8 +53,11 @@ def noise(duration, low=100, high=12000, decay=.25, gain=1, attack=.002):
 
 def metal(duration=.6, base=1700, gain=.3):
     x = np.zeros(len(axis(duration)))
-    for ratio, strength in [(1, 1), (1.478, .53), (2.117, .25), (3.613, .12)]:
-        x += tone(duration, base * ratio, .14 / np.sqrt(ratio), strength * gain)
+    for ratio, strength in [(1, 1), (1.478, .53), (2.117, .25), (3.613, .12), (5.31, .08)]:
+        detune = 1 + RNG.uniform(-.018, .018)
+        x += tone(duration, base * ratio * detune, .07 / np.sqrt(ratio), strength * gain * .5)
+    grit = noise(min(duration, .12), 1500, 13000, .02, gain * .5)
+    x[:len(grit)] += grit
     return x
 
 
@@ -77,13 +89,6 @@ def foley(name, peak=.5, rate=1):
 # of space. The original synthesis stays underneath for energy, lightning and scale.
 # Entries are (seconds after cue, recording, peak, playback rate).
 FOLEY_LAYERS = {
-    'gojo_snap': [(0, 'metalClick', .48, 1.7)],
-    'gojo_blue_charge': [(0, 'cloth1', .28, .8), (.82, 'impactBell_heavy_001', .18, 1.5)],
-    'gojo_blue_pull': [(0, 'knifeSlice', .48, .75)],
-    'gojo_red_release': [(0, 'impactPunch_heavy_003', .64, .85), (.04, 'impactGlass_light_003', .38, .9)],
-    'gojo_purple_charge': [(0, 'clothBelt', .28, .75), (2.85, 'impactBell_heavy_001', .32, 1.3)],
-    'gojo_purple_release': [(0, 'impactPlate_heavy_002', .7, .8), (.04, 'impactGlass_heavy_002', .42, .75)],
-    'gojo_domain_open': [(0, 'impactBell_heavy_001', .58, .75), (.08, 'cloth1', .18, .55)],
     'zenitsu_breath': [(0, 'cloth1', .24, .7), (.82, 'cloth2', .2, .75)],
     'zenitsu_sheath': [(0, 'drawKnife1', .3, 1.5), (.16, 'metalLatch', .62, 1.35)],
     'zenitsu_flamegod': [(0, 'knifeSlice2', .52, 1.3), (.15, 'impactPunch_heavy_003', .53, .8)],
@@ -96,7 +101,7 @@ FOLEY_LAYERS = {
     'reze_detonation_charge': [(0, 'clothBelt', .3, .7), (3.15, 'impactGlass_light_003', .23, .5)],
     'reze_detonation_blast': [(0, 'impactPlate_heavy_002', .75, .7), (.03, 'impactGlass_heavy_002', .52, .65)],
     'shanks_haki_charge': [(0, 'clothBelt', .3, .8)],
-    'shanks_haki_pulse': [(0, 'impactBell_heavy_001', .52, 1.2), (.015, 'impactPunch_medium_002', .36, .8)],
+    'shanks_haki_pulse': [(0, 'impactPlate_heavy_002', .55, .85), (.015, 'impactPunch_medium_002', .4, .8)],
     'shanks_draw': [(0, 'drawKnife1', .5, .95), (.08, 'metalLatch', .3, 1.3)],
     'shanks_slash': [(0, 'knifeSlice2', .55, .9)],
     'shanks_counter': [(0, 'knifeSlice', .5, 1.1), (.12, 'impactMetal_medium_003', .48, 1.2)],
@@ -107,12 +112,18 @@ FOLEY_LAYERS = {
 
 
 def echo(x, delay=.09, amount=.18, repeats=3):
-    out = x.copy()
-    for i in range(1, repeats + 1):
-        shift = round(delay * SR * i)
-        if shift < len(out):
-            out[shift:] += x[:-shift] * amount ** i
-    return out
+    """Small room: the sound convolved with a dark, decaying noise tail (no discrete, pitched repeats)."""
+    tail = delay * repeats + .08
+    n = round(tail * SR)
+    t = np.arange(n) / SR
+    ir = RNG.standard_normal(n) * np.exp(-t / (tail * .33))
+    f = np.fft.rfftfreq(n, 1 / SR)
+    ir = np.fft.irfft(np.fft.rfft(ir) * np.exp(-(f / 4200) ** 2), n=n)
+    ir[:round(.012 * SR)] *= np.linspace(0, 1, round(.012 * SR))
+    ir /= np.sqrt(np.sum(ir * ir))
+    size = len(x) + n
+    wet = np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(ir, size), size)[:len(x)]
+    return x + wet * min(1.6, amount * 3.2)
 
 
 def impact(duration=.8, weight=1):
@@ -132,8 +143,9 @@ def charge(duration, base=100, bright=3000, gain=.3):
     ramp = np.sin(np.pi / 2 * t / duration) ** 1.5
     oscillator = np.sin(2 * np.pi * (base * t + base * .7 * t * t / duration))
     overtone = np.sin(2 * np.pi * (base * 2.01 * t + base * 1.2 * t * t / duration))
-    x = (oscillator * .32 + overtone * .11 + noise(duration, 300, bright, 20, .25)) * ramp * gain
-    x *= .8 + .2 * np.sin(2 * np.pi * (4 * t + 9 * t * t / duration))
+    rumble = noise(duration, 35, base * 3.5, 20, .5)
+    x = (oscillator * .07 + overtone * .02 + rumble + noise(duration, 300, bright, 20, .3)) * ramp * gain
+    x *= .78 + .22 * noise(duration, 2, 14, 50, 1)
     x[-round(.025 * SR):] *= np.linspace(1, 0, round(.025 * SR))
     return x
 
@@ -183,33 +195,73 @@ def add(id, character, label, duration, cue, signal, skills, loop=False, gain=.8
                       rmsDbFS=round(20 * np.log10(max(np.sqrt(np.mean(x*x)), 1e-10)), 2)))
 
 
-def make():
+def fit(x, duration, fade=.05):
+    """Crop or pad to the clip length with a soft tail, so slowed recordings never end on a click."""
+    n = round(duration * SR)
+    x = x[:n] if len(x) >= n else np.pad(x, (0, n - len(x)))
+    k = min(round(fade * SR), n // 2)
+    x[-k:] *= np.linspace(1, 0, k) ** 2
+    return x
+
+
+def lowpass(x, cutoff):
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    return np.fft.irfft(np.fft.rfft(x) * np.exp(-(f / cutoff) ** 2), n=len(x))
+
+
+def swell(name, peak, rate, power=1.6):
+    """A recording played backwards: its decay becomes a natural build-up into the cue."""
+    x = foley(name, peak, rate)[::-1].copy()
+    return x * (np.arange(len(x)) / len(x)) ** (power - 1)
+
+
+def room(x, size=.5, wet=1.0):
+    return echo(x, size / 4, wet / 3.2, 4)
+
+
+def make_gojo():
+    """Gojo: cursed-energy cues built from recorded impacts, cloth and blades rather than sine tones."""
     add('gojo_snap', 'gojo', '손가락 스냅', .22, '아오 손가락이 맞닿는 프레임',
-        mix(.22, [(0, noise(.12, 1200, 13000, .009, .6)), (.003, tone(.16, 870, .016, .28)), (.009, noise(.17, 180, 1300, .028, .16))]), ['Blue'])
+        mix(.22, [(0, foley('metalClick', .5, 1.9)), (0, noise(.08, 2000, 13000, .01, .35)),
+                  (.01, foley('cloth2', .12, 2.2)[:round(.15 * SR)])]), ['Blue'])
     add('gojo_blue_charge', 'gojo', '아오 응축', 1.2, '아오 구체 생성부터 홀드 중 앞부분',
-        echo(charge(1.2, 165, 3800, .9), .067, .17), ['Blue'])
+        fit(mix(1.2, [(0, swell('impactGlass_heavy_002', .5, .7)), (0, swell('clothBelt', .45, .7)),
+                      (0, lowpass(noise(1.2, 60, 5000, 9, .5), 1800) * np.linspace(.1, 1, round(1.2*SR)) ** 1.6),
+                      (.9, foley('impactSoft_medium_001', .22, .8))]), 1.2, .06), ['Blue'])
     add('gojo_blue_pull', 'gojo', '아오 흡인', .85, '구체가 앞으로 나가고 흡인이 시작될 때',
-        mix(.85, [(0, whoosh(.85, 2600, .55)), (.1, sweep(.75, 100, 390, .5, .18)), (.03, tone(.8, 82, .45, .2))]), ['Blue'])
+        fit(mix(.85, [(0, foley('knifeSlice', .55, .72)), (0, swell('impactPunch_medium_002', .35, .7)),
+                      (.04, foley('impactPunch_heavy_003', .4, .55)), (0, lowpass(whoosh(.85, 3000, .4), 2400))]), .85, .15), ['Blue'])
     add('gojo_red_release', 'gojo', '아카 반발', .75, '아카 발사 프레임',
-        mix(.75, [(0, impact(.75, 1.45)), (0, electrical(.4)), (.03, sweep(.65, 960, 105, .12, .23))]), ['Red'])
+        fit(room(mix(.75, [(0, foley('impactPunch_heavy_003', .78, .8)), (0, foley('impactPunch_heavy_001', .5, .55)),
+                           (.015, foley('impactGlass_light_003', .46, .9)), (.02, foley('impactMetal_medium_003', .3, .7)),
+                           (0, noise(.2, 1000, 12000, .04, .35))]), .3, .9), .75, .12), ['Red'])
     add('gojo_purple_charge', 'gojo', '무라사키 융합', 3.6, '무라사키 준비 시작; 2.85초에 융합 악센트',
-        mix(3.6, [(0, charge(3.6, 70, 5000, .95)), (2.85, metal(.75, 580, .11)), (2.85, sweep(.75, 350, 1100, .65, .16))]), ['Purple'])
+        fit(mix(3.6, [(0, swell('impactPlate_heavy_002', .55, .38, 2.2)), (.2, swell('clothBelt', .45, .45)),
+                      (0, lowpass(noise(3.6, 40, 6000, 30, .7), 2600) * np.linspace(.05, 1, round(3.6*SR)) ** 2.2),
+                      (1.2, swell('impactGlass_heavy_002', .35, .55)),
+                      (2.8, foley('impactGlass_heavy_002', .55, .75)), (2.85, foley('impactPlate_heavy_002', .5, .7))]), 3.6, .25), ['Purple'])
     add('gojo_purple_release', 'gojo', '무라사키 발사', 1.5, '3.6초 준비 종료 후 발사',
-        echo(mix(1.5, [(0, impact(1.5, 1.3)), (0, electrical(1.1)), (.08, tone(1.4, 55, .55, .25))]), .14, .23), ['Purple'])
+        fit(room(mix(1.5, [(0, foley('impactPlate_heavy_002', .85, .55)), (0, foley('impactPunch_heavy_001', .6, .5)),
+                           (.03, foley('impactGlass_heavy_002', .5, .62)), (.02, foley('impactMetal_medium_003', .3, .55)),
+                           (.05, lowpass(whoosh(1.4, 5000, .5), 2200)), (0, noise(.35, 600, 11000, .09, .4))]), .5, 1.2), 1.5, .3), ['Purple'])
     add('gojo_domain_open', 'gojo', '무량공처 전개', 2.6, '2초 준비 후 영역이 펼쳐질 때',
-        echo(mix(2.6, [(0, sweep(2.6, 240, 48, 1.2, .28)), (0, tone(2.6, 73.4, 1.5, .2)), (.08, metal(2.3, 440, .1)), (.1, whoosh(2.3, 2200, .27))]), .21, .35), ['Domain'])
+        fit(room(mix(2.6, [(0, foley('impactPlate_heavy_002', .8, .45)), (.03, foley('impactGlass_heavy_002', .5, .55)),
+                           (0, swell('clothBelt', .3, .5)), (.1, lowpass(whoosh(2.4, 4000, .45), 2000)),
+                           (.4, foley('cloth1', .22, .5))]), 1.0, 1.5), 2.6, .5), ['Domain'])
+    loop = mix(2, [(0, lowpass(noise(2, 80, 4000, 50, .22, .01), 1500)), (.2, foley('cloth2', .08, .55)),
+                   (1.1, foley('clothBelt', .07, .5))])
     add('gojo_domain_inside', 'gojo', '무량공처 내부 지속음', 2, '영역 안에 있는 동안만 반복; 밖으로 나가거나 영역이 끝나면 정지',
-        mix(2, [(0, noise(2, 220, 2600, 3, .12, .12) * np.sin(np.pi*axis(2)/2)**2),
-                (0, tone(2, 55, 3, .11, .08)), (.42, foley('impactBell_heavy_001', .12, 1.8)),
-                (1.24, foley('cloth2', .08, .65))]), ['Domain'], True, .34)
+        loop, ['Domain'], True, .34)
     add('gojo_domain_end', 'gojo', '무량공처 닫힘', 1.05, '7.5초가 끝나 공간이 접힐 때',
-        mix(1.05, [(0, foley('impactBell_heavy_001', .57, .85)),
-                   (.04, sweep(1, 410, 45, .35, .28)),
-                   (.12, foley('clothBelt', .21, .65))]), ['Domain'])
+        fit(room(mix(1.05, [(0, foley('impactPlate_heavy_002', .62, .55)), (.03, swell('clothBelt', .3, .8)),
+                            (.12, foley('clothBelt', .22, .6))]), .5, .9), 1.05, .25), ['Domain'])
     add('gojo_domain_break', 'gojo', '영역 충돌 · 기존 영역 파괴', .85, '늦게 전개한 영역이 겹쳐 기존 영역을 깰 때',
-        mix(.85, [(0, foley('impactGlass_heavy_002', .68, .7)),
-                  (.015, foley('impactMetal_medium_003', .48, .8)),
-                  (0, sweep(.85, 730, 56, .18, .27))]), ['Domain'])
+        fit(mix(.85, [(0, foley('impactGlass_heavy_002', .75, .68)), (.012, foley('impactMetal_medium_003', .5, .78)),
+                      (.02, foley('impactPunch_heavy_003', .5, .7)), (0, noise(.25, 1500, 13000, .05, .4))]), .85, .15), ['Domain'])
+
+
+def make():
+    make_gojo()
 
     t = axis(2)
     breath = noise(2, 250, 2300, 20, .5, .1) * np.sin(np.pi*t/2)**1.5
@@ -320,7 +372,7 @@ def make():
     add('dora_gadget', 'doraemon', '도구 꺼내기', .5, '주머니에서 도구가 나올 때',
         mix(.5, [(0, foley('clothBelt', .35, 1.55)), (.1, foley('metalClick', .4, 1.5))]), ['Pocket'])
     add('dora_light', 'doraemon', '스몰라이트', .4, '빛이 발사될 때',
-        mix(.4, [(0, foley('impactBell_heavy_001', .33, 4)), (0, sweep(.4, 1100, 480, .12, .15))]), ['Pocket'])
+        mix(.4, [(0, foley('impactGlass_light_003', .4, 1.7)), (0, sweep(.4, 1100, 480, .12, .15))]), ['Pocket'])
     add('dora_air', 'doraemon', '공기포', .47, '공기포가 발사·벽에 닿을 때',
         mix(.47, [(0, foley('impactSoft_medium_001', .56, .85)),
                   (0, whoosh(.47, 2400, .4))]), ['Pocket'])

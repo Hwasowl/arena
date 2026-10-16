@@ -21,6 +21,10 @@ let char='gojo',charges=0,chargesUntil=0,thunderHoldAt=-1,thunderHoldDemo=false,
 const THUNDER_MAX_CHARGE=1.6,THUNDER_MIN_DISTANCE=10,THUNDER_MAX_DISTANCE=40,THUNDER_CHAIN_COOLDOWN=.5;
 let melee=null,sliding=null,attackQueued=false,basicCombo=0,basicUntil=0,slideCooldown=0,commonDemo=-1,commonStage=0,jumpVelocity=0;
 const COMMON={windups:[.16,.18,.24],swing:.1,recoveries:[.22,.24,.32],damage:[12,14,20],comboReset:.95,slideDuration:.7};
+const scabbard=()=>char==='zenitsu'||char==='shanks';
+// Shanks has only his right arm: one hand, quicker and lighter cuts.
+const SHANKS_BASIC={windups:[.34,.2,.2,.2],swing:.16,recoveries:[.2,.17,.17,.22],damage:[10,11,12,17],comboReset:.6,sheath:.34};
+const basicCfg=()=>char==='shanks'?SHANKS_BASIC:ZEN_BASIC;
 const ZEN_BASIC={windups:[.52,.32,.32,.32],swing:.24,recoveries:[.30,.28,.28,.34],damage:[12,14,16,20],comboReset:.70,sheath:.42};
 let zenDrawUntil=0,zenGuardSign=1,zenSheathSoundPlayed=true;
 const keys = new Set(), effects=[], targets=[], particles=[], popups=[], timers=[], trails=[];
@@ -112,7 +116,7 @@ makeTarget(0,-10,1);makeTarget(-7,-15,2);makeTarget(8,-18,3);
 
 // Local view arms are independent from the world-body pose, as in an FPS viewmodel.
 function makeHand(side){const g=new T.Group();camera.add(g);const localSkin=skin.clone();localSkin.depthTest=false;const sleeve=cloth.clone();sleeve.depthTest=false;const fore=mesh(new T.CylinderGeometry(.105,.13,.55,8),sleeve,g);fore.position.set(0,-.31,.065);fore.rotation.x=.2;const cuff=mesh(new T.CylinderGeometry(.112,.112,.07,12),sleeve,g);cuff.position.y=-.075;const palm=box([.17,.17,.085],[0,.025,0],localSkin,g);const fuse=new T.Group();g.add(fuse);const cord=mesh(new T.CylinderGeometry(.012,.012,.3,5),new T.MeshBasicMaterial({color:0x4a3626,depthTest:false}),fuse);cord.position.set(side*.1,-.16,.1);cord.rotation.set(.5,0,side*.6);const ember=glow(colors.bomb,.12,fuse);ember.material.depthTest=false;ember.position.set(side*.19,-.28,.17);fuse.visible=false;
-g.traverse(o=>{o.renderOrder=102;o.frustumCulled=false;o.castShadow=false;});return {g,skin:localSkin,sleeve,side,fuse,ember};}
+g.traverse(o=>{o.renderOrder=102;o.frustumCulled=false;o.castShadow=false;});return {g,skin:localSkin,sleeve,cuff,side,fuse,ember};}
 const left=makeHand(-1),right=makeHand(1);
 // Reze's choker, shown only during the pull: the body-fixed rig follows position and yaw (not pitch), so lowering
 // the chin brings the black band and its pin ring into the bottom of the view. The ring sits on her right side.
@@ -215,14 +219,14 @@ function placeHand(hand,gripLocal,shoulder,restArm,k,roll){
   const arm=restArm.clone().lerp(hand.g.position.clone().sub(shoulder).normalize(),k).normalize();
   hand.g.quaternion.setFromUnitVectors(UP,arm);
   if(k>0&&roll)hand.g.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(arm,roll*.5*k));}
-function applyShanks(){if(swordPose&&melee){sword.g.visible=false;sword.hilt.visible=true;sword.hilt.position.copy(swordPose.pos);sword.hilt.quaternion.setFromUnitVectors(BACK,swordPose.dir);if(swordPose.roll)sword.hilt.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),swordPose.roll));sword.blade.visible=sword.edge.visible=true;sword.blade.scale.z=sword.edge.scale.z=1;sword.blade.position.z=.67;sword.edge.position.z=.66;sword.edge.material.color.setHex(colors.haki);left.g.visible=true;placeHand(right,GRIP_R2,SHOULDER_R,RIGHT_ARM,1,swordPose.roll||0);placeHand(left,GRIP_L2,SHOULDER_L,LEFT_ARM,1,-(swordPose.roll||0));return;}const dir=new T.Vector3(-.5,.34,-.8).normalize();sword.g.visible=false;sword.hilt.visible=true;sword.hilt.position.copy(right.g.position).add(new T.Vector3(0,.08,-.08));sword.hilt.quaternion.setFromUnitVectors(BACK,dir.clone().negate());sword.blade.visible=sword.edge.visible=true;sword.blade.scale.z=sword.edge.scale.z=1;sword.blade.position.z=.67;sword.edge.position.z=.66;sword.edge.material.color.setHex(colors.haki);if(!cast){right.g.position.set(.32,-.39,-.92);right.g.quaternion.setFromUnitVectors(UP,RIGHT_ARM);}left.g.visible=false;}
+function applyShanks(){if(castSword){const s=castSword;sword.g.visible=false;sword.hilt.visible=true;sword.hilt.position.copy(s.pos);sword.hilt.quaternion.setFromUnitVectors(BACK,s.dir);if(s.roll)sword.hilt.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),s.roll));sword.blade.visible=sword.edge.visible=true;sword.blade.scale.z=sword.edge.scale.z=1;sword.blade.position.z=.67;sword.edge.position.z=.66;sword.edge.material.color.setHex(colors.haki);if(s.armsDown){left.g.visible=false;right.g.visible=true;pose(right,[.38,-.36,-.76],[.1,-.25,.3]);return;}left.g.visible=false;placeHand(right,GRIP,SHOULDER_R,RIGHT_ARM,1,s.roll||0);return;}if(swordPose&&melee){sword.g.visible=false;sword.hilt.visible=true;sword.hilt.position.copy(swordPose.pos);sword.hilt.quaternion.setFromUnitVectors(BACK,swordPose.dir);if(swordPose.roll)sword.hilt.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),swordPose.roll));sword.blade.visible=sword.edge.visible=true;sword.blade.scale.z=sword.edge.scale.z=1;sword.blade.position.z=.67;sword.edge.position.z=.66;sword.edge.material.color.setHex(colors.haki);left.g.visible=true;placeHand(right,GRIP_R2,SHOULDER_R,RIGHT_ARM,1,swordPose.roll||0);placeHand(left,GRIP_L2,SHOULDER_L,LEFT_ARM,1,-(swordPose.roll||0));return;}const dir=new T.Vector3(-.5,.34,-.8).normalize();sword.g.visible=false;sword.hilt.visible=true;sword.hilt.position.copy(right.g.position).add(new T.Vector3(0,.08,-.08));sword.hilt.quaternion.setFromUnitVectors(BACK,dir.clone().negate());sword.blade.visible=sword.edge.visible=true;sword.blade.scale.z=sword.edge.scale.z=1;sword.blade.position.z=.67;sword.edge.position.z=.66;sword.edge.material.color.setHex(colors.haki);if(!cast){right.g.position.set(.32,-.39,-.92);right.g.quaternion.setFromUnitVectors(UP,RIGHT_ARM);}left.g.visible=false;}
 function drawSword(pos,bladeDir,progress=1,roll=0){zen.roll=roll;zen.drawn=progress>.02;zen.drawProgress=progress;zen.hiltPos.set(...pos);zen.bladeDir.set(...bladeDir).normalize();}
-function applyZen(){sword.g.position.copy(zen.pos);sword.g.quaternion.setFromUnitVectors(FWD,zen.dir);
+function applyZen(){sword.g.visible=true;sword.hilt.visible=true;left.g.visible=char!=='shanks';sword.edge.material.color.setHex(char==='shanks'?colors.haki:0xffd23f);sword.g.position.copy(zen.pos);sword.g.quaternion.setFromUnitVectors(FWD,zen.dir);
 if(zen.drawn){sword.hilt.position.copy(zen.hiltPos);sword.hilt.quaternion.setFromUnitVectors(BACK,zen.bladeDir);if(zen.roll)sword.hilt.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),zen.roll));}else{sword.hilt.position.copy(zen.pos).addScaledVector(zen.dir,zen.push);sword.hilt.quaternion.copy(sword.g.quaternion);}
 sword.blade.visible=sword.edge.visible=zen.drawn;sword.blade.scale.z=sword.edge.scale.z=Math.max(.001,zen.drawProgress);sword.blade.position.z=.02+.65*zen.drawProgress;sword.edge.position.z=.02+.64*zen.drawProgress;sword.edge.material.opacity=.45+zen.glow*.55*(.6+Math.random()*.4);
-const k=clamp(twoHandK,0,1),roll=zen.roll||0;
+const one=char==='shanks',k=one?0:clamp(twoHandK,0,1),roll=zen.roll||0;
 sword.g.position.copy(zen.pos).lerp(new T.Vector3(-.95,-.95,-.1),k);
-placeHand(right,k>0?GRIP_R2:GRIP,SHOULDER_R,RIGHT_ARM,k>0?1:0,roll);
+placeHand(right,k>0?GRIP_R2:GRIP,SHOULDER_R,RIGHT_ARM,(k>0||one)?1:0,roll);if(one){left.g.visible=false;return;}
 if(k>0.001){const sayaHand=SAYA.clone().applyQuaternion(sword.g.quaternion).add(sword.g.position);placeHand(left,GRIP_L2,SHOULDER_L,LEFT_ARM,1,-roll);left.g.position.lerp(sayaHand,1-k);}
 else{left.g.position.copy(SAYA).applyQuaternion(sword.g.quaternion).add(sword.g.position);left.g.quaternion.setFromUnitVectors(UP,LEFT_ARM);}}
 
@@ -243,6 +247,48 @@ function kamusariWave(from,dir,length,width){
   for(let i=0;i<14;i++){const vfx=4,at=startDistance+visualLength*(.06+Math.random()*.88),offset=side.clone().multiplyScalar((Math.random()-.5)*width*.86*vfx).add(up.clone().multiplyScalar((Math.random()-.5)*2.1*heightVfx));const start=from.clone().addScaledVector(dir,at).add(offset),end=start.clone().addScaledVector(dir,(5+Math.random()*13)*vfx).add(side.clone().multiplyScalar((Math.random()-.5)*.7*vfx)).add(up.clone().multiplyScalar((Math.random()-.5)*.45*heightVfx));bolt(start,end,i%3===0?0xffffff:i%3===1?0x111116:0xff203d,(.09+Math.random()*.06)*vfx,.38,1,2.6);}
   return wave;
 }
+// ---- Shanks: red / white / black haki lightning, first-person sword poses and the kamusari beam ----
+// castSword is the one-handed viewmodel pose of the current Shanks cast ({pos,dir,roll} in camera space); updateCast fills it every frame.
+let castSword=null;
+const HAKI_RED=0xff1f3d,HAKI_BLACK=0x07060a;
+const hakiDark=opacity=>new T.MeshBasicMaterial({color:HAKI_BLACK,transparent:true,opacity,depthWrite:false,side:T.DoubleSide});
+const hakiBladeDir=(yawDeg,pitchDeg)=>{const y=yawDeg*Math.PI/180,p=pitchDeg*Math.PI/180;return new T.Vector3(Math.sin(y)*Math.cos(p),Math.sin(p),-Math.cos(y)*Math.cos(p)).normalize();};
+const camPoint=v=>v.clone().applyQuaternion(camera.quaternion).add(camera.position);
+const swordTipWorld=(s,reach=1.25)=>camPoint(s.pos.clone().addScaledVector(s.dir,reach));
+// Lightning with a black outline, a red body and a white core, so it reads as the three haki colours.
+function hakiBolt(from,to,width=.06,life=.4,branches=2){
+  const g=new T.Group();scene.add(g);
+  const dir=to.clone().sub(from),len=dir.length();if(len<1e-3)return g;
+  const s1=new T.Vector3().crossVectors(dir,UP);if(s1.lengthSq()<1e-4)s1.set(1,0,0);s1.normalize();
+  const s2=new T.Vector3().crossVectors(dir,s1).normalize();
+  const pts=[from.clone()],n=Math.max(4,Math.round(len/1.2));
+  for(let i=1;i<n;i++){const p=from.clone().addScaledVector(dir,i/n),j=Math.min(1.1,len*.08);p.addScaledVector(s1,(Math.random()-.5)*j*2).addScaledVector(s2,(Math.random()-.5)*j*2);pts.push(p);}
+  pts.push(to.clone());
+  const seg=(a,b,w,kind)=>{const d=b.clone().sub(a),l=d.length();if(l<1e-4)return;const mat=kind==='k'?hakiDark(.7):glowMat(kind==='r'?HAKI_RED:0xffffff);mat.userData.o=mat.opacity;const m=new T.Mesh(new T.CylinderGeometry(w,w,l,5,1,true),mat);m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(UP,d.normalize());g.add(m);};
+  for(let i=0;i<pts.length-1;i++){seg(pts[i],pts[i+1],width*1.7,'k');seg(pts[i],pts[i+1],width,'r');seg(pts[i],pts[i+1],width*.45,'w');}
+  for(let b=0;b<branches;b++){const k=1+Math.floor(Math.random()*(pts.length-2)),a=pts[k];const end=a.clone().addScaledVector(dir,.1).addScaledVector(s1,(Math.random()-.5)*len*.3).addScaledVector(s2,(Math.random()-.5)*len*.3);seg(a,end,width*1.0,'k');seg(a,end,width*.55,'r');seg(a,end,width*.25,'w');}
+  const gl=glow(HAKI_RED,Math.min(4,1+len*.1),g);gl.position.copy(to);gl.material.userData.o=gl.material.opacity;
+  effect(g,life,(o,u)=>{const f=Math.random()<.25?.35:1;o.traverse(m=>{if(m.material)m.material.opacity=(m.material.userData.o??1)*(1-u)*f;});});return g;}
+// Bolts falling from the sky around a point.
+function hakiStorm(center,radius,count){for(let i=0;i<count;i++){const ang=Math.random()*Math.PI*2,r=2.5+Math.random()*Math.max(.1,radius-2.5),x=center.x+Math.cos(ang)*r,z=center.z+Math.sin(ang)*r;const top=new T.Vector3(x+(Math.random()-.5)*3,12+Math.random()*8,z+(Math.random()-.5)*3);later(Math.random()*.25,()=>{hakiBolt(top,new T.Vector3(x,.1,z),.09+Math.random()*.06,.45,3);burst(new T.Vector3(x,.3,z),i%2?HAKI_RED:0xffffff,6,3);});}}
+// A sword streak drawn in camera space: black outline, red body, white core. Grows quickly, then fades.
+function slashTrail(kind){
+  const pts=[];for(let i=0;i<=12;i++){const u=i/12,bow=Math.sin(u*Math.PI);pts.push(kind==='SWAT'?new T.Vector3(mix(.8,-.8,u),mix(.02,-.2,u)+.1*bow,-1.15-.1*bow):new T.Vector3(mix(.78,-.72,u),mix(.52,-.56,u)+.16*bow,-1.1-.2*bow));}
+  const curve=new T.CatmullRomCurve3(pts),g=new T.Group();scene.add(g);
+  const tube=(r,mat)=>{const m=new T.Mesh(new T.TubeGeometry(curve,24,r,6,false),mat);mat.userData.o=mat.opacity;g.add(m);return m;};
+  const parts=[tube(.12,hakiDark(.8)),tube(.07,glowMat(HAKI_RED)),tube(.024,glowMat(0xffffff))];
+  effect(g,.5,(o,u)=>{o.position.copy(camera.position);o.quaternion.copy(camera.quaternion);const grow=ease(u/.22),fade=1-ease((u-.25)/.75);for(const m of parts){m.geometry.setDrawRange(0,Math.floor(grow*24)*36);m.material.opacity=m.material.userData.o*fade;}});}
+// Kamusari: a 5-wide cylinder of black / red / white, 50 long, wrapped in lightning that keeps striking it.
+function kamusariBeam(from,dir,length,radius){
+  const start=2.2,L=length-start,beam=new T.Group();scene.add(beam);beam.position.copy(from).addScaledVector(dir,start);beam.quaternion.setFromUnitVectors(BACK,dir);beam.scale.z=.001;
+  const layers=[];const layer=(r,mat)=>{const geo=new T.CylinderGeometry(r,r,L,36,1,true);geo.rotateX(Math.PI/2);geo.translate(0,0,L/2);mat.side=T.DoubleSide;mat.userData.o=mat.opacity;const m=new T.Mesh(geo,mat);beam.add(m);layers.push(m);};
+  layer(radius*1.04,hakiDark(.6));layer(radius*.84,glowMat(HAKI_RED));layer(radius*.5,new T.MeshBasicMaterial({color:0xff5a6a,transparent:true,opacity:.8,blending:T.AdditiveBlending,depthWrite:false}));layer(radius*.22,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,blending:T.AdditiveBlending,depthWrite:false}));
+  effect(beam,.9,(o,u)=>{const grow=ease(u/.16),fade=1-ease((u-.35)/.65);o.scale.z=Math.max(.001,grow);const pulse=.85+.15*Math.sin(u*70);for(const m of layers)m.material.opacity=m.material.userData.o*fade*pulse;});
+  const side=new T.Vector3().crossVectors(dir,UP);if(side.lengthSq()<.01)side.set(1,0,0);side.normalize();const up=new T.Vector3().crossVectors(dir,side).normalize();
+  const around=(s,ang,r)=>from.clone().addScaledVector(dir,s).addScaledVector(side,Math.cos(ang)*r).addScaledVector(up,Math.sin(ang)*r);
+  for(let i=0;i<34;i++){const s=start+Math.random()*L*.92,ang=Math.random()*Math.PI*2,r0=radius*(1+Math.random()*.4),reach=5+Math.random()*13,turn=(Math.random()-.5)*1.1;later(Math.random()*.16,()=>hakiBolt(around(s,ang,r0),around(Math.min(length,s+reach),ang+turn,radius*(1.1+Math.random()*.9)),.07+Math.random()*.06,.5,2));}
+  for(let i=0;i<6;i++){const s=start+(i/5)*L*.8;later(.04+s/length*.18,()=>{const rg=ring(radius,i%2?0xffffff:HAKI_RED,around(s,0,0),.1);rg.quaternion.setFromUnitVectors(BACK,dir);effect(rg,.5,(o,u)=>{o.scale.setScalar(1+1.1*u);o.material.opacity=.8*(1-u);});});}
+  return beam;}
 function flatForward(){return new T.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));}
 // Seventh form: a lightning dragon forms along the dash path, then curls up and back over it so that its head
 // faces the user, who turns around after arriving. The head leads while the tube body grows behind it.
@@ -279,7 +325,7 @@ function playSkillSound(id,{loop=false,tag,rate=1,volume=.65}={}){const buffer=s
 const skillArt={blue:'gojo_blue',red:'gojo_red',purple:'gojo_purple',domain:'gojo_domain',breath:'zenitsu_breath',thunder:'zenitsu_thunderclap',god:'zenitsu_flamegod',rampage:'reze_rampage',dive:'reze_dive',kick:'reze_hand_blast',devil:'reze_transform',detonate:'reze_detonation',haki:'shanks_haki',engarde:'shanks_stance',shanksSlash:'shanks_slash',shanksParry:'shanks_parry',departure:'shanks_departure',dash:'shared_dash'};
 function setSkillArt(button,key){const icon=button.querySelector('.skill-icon'),id=skillArt[key],url=skillMedia.icons[id];if(!url)return;if(icon.dataset.artId===id&&icon.firstElementChild?.tagName==='IMG')return;icon.className='skill-icon asset-icon';icon.dataset.artId=id;const img=document.createElement('img');img.src=url;img.alt='';img.draggable=false;icon.replaceChildren(img);}
 function updateSkillArt(){for(const slot of SLOTS){let key=slotType(slot);if(char==='gojo'&&['q','e'].includes(slot)&&(cast?.type==='purple'||hold&&hold.kind!==key))key='purple';if(char==='reze'&&slot==='q'&&(rezeAirUntil>time||cast?.dive))key='dive';if(char==='shanks'&&slot==='e'&&['shanksSlash','shanksParry'].includes(cast?.type))key=cast.type;setSkillArt($(slot+'Btn'),key);}const choices=$('shanksChoices');if(choices){choices.hidden=char!=='shanks'||shanksReadyUntil<=time;choices.querySelector('output').textContent=Math.max(0,shanksReadyUntil-time).toFixed(1)+'초';}}
-function startShanksParry(){if(char!=='shanks'||shanksReadyUntil<=time)return false;shanksReadyUntil=0;cast={type:'shanksParry',start:time,windup:0,duration:1,flags:{},direction:aimDir(),hit:false};title('패기 반격','칼을 오른쪽으로 숙인다','1초 동안 공격을 무시 · 맞았을 때만 앞찌르기','#ff5267');return true;}
+function startShanksParry(){if(char!=='shanks'||shanksReadyUntil<=time)return false;shanksReadyUntil=0;cast={type:'shanksParry',start:time,windup:0,duration:1,flags:{},direction:aimDir(),hit:false};title('패기 반격','칼을 일자로 세우고 웅크려 물러난다','1초 동안 공격을 무시 · 받아내면 오른쪽에서 왼쪽으로 쳐내고 찌르기','#ff5267');return true;}
 const SOUND_ALIASES={dash:'shared_dash',rustle:'shared_rustle',gadget:'dora_gadget',light:'dora_light',air:'dora_air',bite:'dora_bite',rotor:'dora_rotor',door:'dora_door',snap:'gojo_snap',breath:'zenitsu_breath',crack:'shared_crack',boom:'shared_boom',slash:'shared_sword_swing_1'};
 function sound(type,options={}){if(muted||!audio)return;const id=SOUND_ALIASES[type]||type;if(!skillMedia.soundData[id]){console.warn('Missing sound cue:',id);return;}return playSkillSound(id,options);}
 function flash(color,power=.25){$('flash').style.background=color;let o={p:power};effects.push({object:null,born:time,life:.25,update:(_,t)=>$('flash').style.opacity=(1-t)*o.p});}
@@ -298,13 +344,13 @@ function startBasic(fromDemo=false){
   if(char==='shanks'&&shanksReadyUntil>time){shanksReadyUntil=0;cast={type:'shanksSlash',start:time,windup:.25,duration:.8,flags:{},direction:aimDir()};title('赤髪の剣技','내지르기 · 사선 베기','살짝 떠오르며 전방으로 돌진','#ff5267');return true;}
   if(melee){if(melee.duration-(time-melee.start)<=.15)attackQueued=true;return false;}
   if(cast||hold||sliding||time<rootUntil)return false;
-  const cfg=char==='zenitsu'?ZEN_BASIC:COMMON;
+  const cfg=scabbard()?basicCfg():COMMON;
   const chained=time<basicUntil;
   basicCombo=chained?basicCombo%cfg.windups.length+1:1;
   const i=basicCombo-1,w=cfg.windups[i],duration=w+cfg.swing+cfg.recoveries[i];
-  melee={combo:basicCombo,draw:char==='zenitsu'&&!chained,start:time,windup:w,swing:cfg.swing,duration,dir:aimDir(),hit:false};basicUntil=time+duration+cfg.comboReset;
-  if(char==='zenitsu'){zenDrawUntil=basicUntil;zenGuardSign=basicCombo%2===1?-1:1;zenSheathSoundPlayed=false;if(melee.draw)sound('zenitsu_sheath',{rate:1.55,volume:.35});}
-  toast((char==='zenitsu'?'기본 베기':'기본공격')+' · '+basicCombo+' / '+cfg.windups.length);return true;
+  melee={combo:basicCombo,draw:scabbard()&&!chained,start:time,windup:w,swing:cfg.swing,duration,dir:aimDir(),hit:false};basicUntil=time+duration+cfg.comboReset;
+  if(scabbard()){zenDrawUntil=basicUntil;zenGuardSign=basicCombo%2===1?-1:1;zenSheathSoundPlayed=false;if(melee.draw)sound('zenitsu_sheath',{rate:1.55,volume:.35});}
+  toast((scabbard()?'기본 베기':'기본공격')+' · '+basicCombo+' / '+cfg.windups.length);return true;
 }
 function startSlide(direction=null,fromDemo=false){
   if(!fromDemo){demoStart=-1;commonDemo=-1;}
@@ -328,7 +374,7 @@ const SWORD_SWING={
 };
 let swordPose=null;
 // Combo order: Zenitsu cuts up, down, across, down; Shanks cuts up, down, across. Every cut ends where the next one starts.
-const SWORD_ORDER={zenitsu:['UP','DN','MID','DN'],shanks:['UP','DN','MID']};
+const SWORD_ORDER={zenitsu:['UP','DN','MID','DN'],shanks:['UP','DN','MID','DN']};
 const swordKind=combo=>{const o=SWORD_ORDER[char]||SWORD_ORDER.shanks;return o[(combo-1)%o.length];};
 const bladeAt=(th,ax=CUT_AXIS)=>CUT_FWD.clone().multiplyScalar(Math.cos(th)).addScaledVector(ax,Math.sin(th)).normalize();
 function swingAt(kind,u,pre=0){const k=SWORD_SWING[kind],th=k.a+(k.b-k.a)*u-Math.sign(k.b-k.a)*pre;return {pos:k.h.getPoint(u),dir:bladeAt(th,k.ax),len:1,roll:k.r0+(k.r1-k.r0)*u};}
@@ -343,7 +389,7 @@ function swordSwingPose(kind,wind,strike,recovery,next){
   const k=SWORD_SWING[kind],p=swingAt(kind,strike,.3*wind*(1-strike));p.pos.addScaledVector(k.h.getPoint(0).sub(k.h.getPoint(1)).normalize(),.1*wind*(1-strike));return p;}
 function updateCommon(dt){swordPose=null;twoHandK=0;
   if(commonDemo>=0){
-    const age=time-commonDemo,isZen=char==='zenitsu',at=isZen?[.3,1.5,2.55,3.6,5.8]:[.3,.95,1.65,2.65],attacks=isZen?4:3;
+    const age=time-commonDemo,isZen=scabbard(),at=isZen?[.3,1.5,2.55,3.6,5.8]:[.3,.95,1.65,2.65],attacks=isZen?4:3;
     if(commonStage<at.length&&age>=at[commonStage]&&!melee&&!sliding){
       if(commonStage<attacks)startBasic(true);else startSlide(new T.Vector3(1,0,0),true);commonStage++;
     }
@@ -358,7 +404,7 @@ function updateCommon(dt){swordPose=null;twoHandK=0;
       basePos.copy(next);camera.position.copy(basePos);camera.position.y-=.65*dip;
       camera.rotation.x-=.05*dip;camera.rotation.z+=.045*dip;camera.fov=66+12*dip;
       pose(left,[-.5,-.65,-.72],[.4,.25,-.45]);pose(right,[.5,-.65,-.72],[.4,-.25,.45]);
-      if(char==='zenitsu')zen.pos.y+=.15*dip;
+      if(scabbard())zen.pos.y+=.15*dip;
       if(time>c.dust){c.dust=time+.08;smoke(basePos.clone().setY(.1).addScaledVector(c.dir,-.6),.45,.25);}
     }
   }
@@ -370,20 +416,20 @@ function updateCommon(dt){swordPose=null;twoHandK=0;
     camera.rotation.y+=sign*(-.04*wind+.09*strike)*(1-recovery);camera.rotation.z-=sign*.045*strike*(1-recovery);camera.fov=66-2*wind+6*strike*(1-recovery);
     if(char==='zenitsu'||char==='shanks'){
       const kind=swordKind(c.combo),next=swordKind(c.combo+1),start=swingAt(kind,0);let sp;
-      if(char==='zenitsu'&&c.draw&&a<c.windup){
+      if(scabbard()&&c.draw&&a<c.windup){
         // Drawing from the scabbard: the hilt slides out along the saya axis while the blade is exposed, then the wrist brings it round to the first cut's start.
         const p=ease(a/(c.windup*.75)),turn=ease((a/c.windup-.55)/.45),out=zen.pos.clone().addScaledVector(zen.dir,.5*p);
         sp={pos:out.lerp(start.pos,turn),dir:zen.dir.clone().negate().normalize().lerp(start.dir,turn).normalize(),len:p,roll:start.roll*turn};
       }else sp=swordSwingPose(kind,wind,strike,recovery>0?recovery:0,next);
-      if(char==='zenitsu')drawSword(sp.pos.toArray(),sp.dir.toArray(),sp.len,sp.roll||0);
-      swordPose=sp;twoHandK=char==='zenitsu'&&c.draw?ease((a/c.windup-.6)/.4):1;
+      if(scabbard())drawSword(sp.pos.toArray(),sp.dir.toArray(),sp.len,sp.roll||0);
+      swordPose=sp;twoHandK=scabbard()&&c.draw?ease((a/c.windup-.6)/.4):1;
     }
-    if(a>=c.windup&&!c.sound){c.sound=true;sound((char==='zenitsu'||char==='shanks'?'shared_sword_swing_':'shared_punch_swing_')+((c.combo-1)%3+1),{volume:.58,rate:char==='zenitsu'?.75:1});}
+    if(a>=c.windup&&!c.sound){c.sound=true;sound((char==='zenitsu'||char==='shanks'?'shared_sword_swing_':'shared_punch_swing_')+((c.combo-1)%3+1),{volume:.58,rate:char==='zenitsu'?.75:char==='shanks'?1.2:1});}
     if(a>=c.windup+c.swing*.5&&!c.hit){
       c.hit=true;const origin=basePos.clone(),ray=new T.Raycaster();let nearest=null,distance=Infinity;
       for(const t of targets){
         if(t.hp<=0)continue;const delta=t.g.position.clone().setY(1.5).sub(origin),along=delta.dot(c.dir);
-        if(along<=0||along>(char==='zenitsu'?6:2.8)||delta.clone().addScaledVector(c.dir,-along).length()>(char==='zenitsu'?2.4:1.2)||delta.length()>=distance)continue;
+        if(along<=0||along>(scabbard()?6:2.8)||delta.clone().addScaledVector(c.dir,-along).length()>(scabbard()?2.4:1.2)||delta.length()>=distance)continue;
         ray.set(origin,delta.clone().normalize());ray.far=delta.length();if(ray.intersectObjects(solidMeshes,false).length)continue;
         nearest=t;distance=delta.length();
       }
@@ -394,14 +440,14 @@ function updateCommon(dt){swordPose=null;twoHandK=0;
         if(nearest)hit(nearest,big?10:6,'#ffb27a');
       }
       if(nearest){
-        hit(nearest,(char==='zenitsu'?ZEN_BASIC:COMMON).damage[c.combo-1],'#eaf4ff');burst(nearest.g.position.clone().setY(1.5),0xeaf4ff,12,3);sound(char==='zenitsu'||char==='shanks'?'shared_sword_hit':'shared_punch_hit_'+c.combo,{volume:.6});hitstopUntil=previous+65;
-        if(c.combo===(char==='zenitsu'?4:3))launch(nearest,c.dir.clone().setY(0).normalize().multiplyScalar(8).setY(3));
+        hit(nearest,(scabbard()?basicCfg():COMMON).damage[c.combo-1],'#eaf4ff');burst(nearest.g.position.clone().setY(1.5),0xeaf4ff,12,3);sound(char==='zenitsu'||char==='shanks'?'shared_sword_hit':'shared_punch_hit_'+c.combo,{volume:.6});hitstopUntil=previous+65;
+        if(c.combo===(scabbard()?4:3))launch(nearest,c.dir.clone().setY(0).normalize().multiplyScalar(8).setY(3));
       }
     }
     if(a>=c.duration){melee=null;if(attackQueued){attackQueued=false;startBasic(commonDemo>=0);}}
   }
-  if(char==='zenitsu'&&!melee&&!cast&&thunderHoldAt<0&&zenDrawUntil>0&&time<zenDrawUntil+ZEN_BASIC.sheath){const sheathe=time<zenDrawUntil?0:ease((time-zenDrawUntil)/ZEN_BASIC.sheath),idleCut=swingAt(swordKind(basicCombo+1),0),guard=idleCut.pos.clone(),guardDir=idleCut.dir.clone();const at=guard.lerp(zen.pos,sheathe),dir=guardDir.lerp(zen.dir.clone().negate(),sheathe).normalize();drawSword(at.toArray(),dir.toArray(),1-sheathe,idleCut.roll*(1-sheathe));twoHandK=1-ease(sheathe*2);if(sheathe>0&&!zenSheathSoundPlayed){zenSheathSoundPlayed=true;sound('zenitsu_sheath',{volume:.55});}}
-  $('basicAttack').textContent=melee?'기본공격 '+melee.combo+' / '+(char==='zenitsu'?4:3):'기본공격 · 좌클릭';
+  if(scabbard()&&!melee&&!cast&&thunderHoldAt<0&&zenDrawUntil>0&&time<zenDrawUntil+basicCfg().sheath){const sheathe=time<zenDrawUntil?0:ease((time-zenDrawUntil)/basicCfg().sheath),idleCut=swingAt(swordKind(basicCombo+1),0),guard=idleCut.pos.clone(),guardDir=idleCut.dir.clone();const at=guard.lerp(zen.pos,sheathe),dir=guardDir.lerp(zen.dir.clone().negate(),sheathe).normalize();drawSword(at.toArray(),dir.toArray(),1-sheathe,idleCut.roll*(1-sheathe));twoHandK=1-ease(sheathe*2);if(sheathe>0&&!zenSheathSoundPlayed){zenSheathSoundPlayed=true;sound('zenitsu_sheath',{volume:.55});}}
+  $('basicAttack').textContent=melee?'기본공격 '+melee.combo+' / '+(scabbard()?4:3):'기본공격 · 좌클릭';
   $('slide').textContent=sliding?'슬라이딩 중':slideCooldown>time?'슬라이딩 '+(slideCooldown-time).toFixed(1)+'초':'슬라이딩 · CTRL';
 }
 function startThunderHold(fromDemo=false){if(char!=='zenitsu'||thunderHoldAt>=0||cast||melee||sliding)return false;const boosted=charges>0&&chargesUntil>time;if(cooldowns.thunder>time||(!boosted&&energy<costs.thunder)){toast('벽력일섬을 아직 쓸 수 없어요');return false;}zenDrawUntil=0;thunderHoldAt=time;thunderHoldDemo=fromDemo;title('雷の呼吸 · 壱ノ型','벽력일섬 · 발도 대기','E를 놓으면 돌진 · 10 → 40칸 · 피해 70','#ffd23f');sound('zenitsu_breath',{tag:'thunderCharge',volume:.22,rate:1.4});return true;}
@@ -424,9 +470,9 @@ const instant=type==='thunder'&&charges>0&&chargesUntil>time;
 if(instant){if(cooldowns.thunder>time){toast('벽력일섬 연계 대기 · '+(cooldowns.thunder-time).toFixed(1)+'초');return false;}charges--;if(charges<=0){charges=0;chargesUntil=0;cooldowns.thunder=time+durations.thunder;}else cooldowns.thunder=time+THUNDER_CHAIN_COOLDOWN;}else{if(cooldowns[type]>time&&!rezeDive){toast(word+' 회복 중 · '+(cooldowns[type]-time).toFixed(1)+'초');return false;}if(energy<costs[type]){toast(char==='gojo'?'주력이 회복될 때까지 잠시 기다려주세요':'호흡을 가다듬는 중이에요');return false;}energy-=costs[type];cooldowns[type]=time+durations[type];}
 if(hpCosts[type])hp=Math.max(1,hp-200*hpCosts[type]);
 if(type==='blue'||type==='red'){hold={kind:type,start:time};const blue=type==='blue';title(blue?'CURSED TECHNIQUE · LAPSE':'CURSED TECHNIQUE · REVERSAL',(blue?'아오':'아카')+' · 대기','3초 안에 '+(blue?'E 아카':'Q 아오')+' → 무라사키 · '+(blue?'Q':'E')+' 다시 → 즉시 발사',blue?'#67ceff':'#ff7590');sound('gojo_blue_charge',{tag:'hold',rate:blue?1:.7,volume:blue?.5:.3});return true;}
-if(char==='zenitsu')zenDrawUntil=0;return beginCast(type,instant,thunderCharge??THUNDER_MAX_CHARGE);}
+if(scabbard())zenDrawUntil=0;return beginCast(type,instant,thunderCharge??THUNDER_MAX_CHARGE);}
 function endHold(){stopSkillSound('hold');hold=null;holdGlow.visible=false;for(const h of [left,right])h.skin.emissive.set(0x000000);}
-function beginCast(skill,instant,thunderCharge=THUNDER_MAX_CHARGE){const dive=skill==='rampage'&&rezeAirUntil>time;const windup=skill==='thunder'?.05:skill==='god'?.8:skill==='devil'?1:skill==='rampage'?(dive?.05:.4):skill==='kick'?.2:skill==='detonate'?4:skill==='departure'?2.5:skill==='haki'?.5:skill==='pocket'?1.75:skill==='copter'?2.05:skill==='door'?2.3:0;cast={type:skill,dive,start:time,windup,thunderCharge,thunderEnhanced:skill==='thunder'&&instant,fuse:skill==='kick'?.8:0,duration:{blue:1.3,red:1,purple:1.7*PURPLE_SLOW,domain:2.4,dash:.28,breath:2,thunder:.5,god:windup+1.4,devil:windup+2,rampage:windup+.75,kick:windup+.8+.5,detonate:windup+1.6,haki:2,departure:2.5,pocket:2.2,copter:2.4,door:2.65,shanksSlash:.8,shanksParry:1}[skill]||windup,flags:{},direction:new T.Vector3(0,0,-1).applyEuler(new T.Euler(pitch,yaw,0,'YXZ')),point:aimPoint(19)};
+function beginCast(skill,instant,thunderCharge=THUNDER_MAX_CHARGE){const dive=skill==='rampage'&&rezeAirUntil>time;const windup=skill==='thunder'?.05:skill==='god'?.8:skill==='devil'?1:skill==='rampage'?(dive?.05:.4):skill==='kick'?.2:skill==='detonate'?4:skill==='departure'?2.5:skill==='haki'?.5:skill==='pocket'?1.75:skill==='copter'?2.05:skill==='door'?2.3:0;cast={type:skill,dive,start:time,windup,thunderCharge,thunderEnhanced:skill==='thunder'&&instant,fuse:skill==='kick'?.8:0,duration:{blue:1.3,red:1,purple:1.7*PURPLE_SLOW,domain:2.4,dash:.28,breath:2,thunder:.5,god:windup+1.4,devil:windup+2,rampage:windup+.75,kick:windup+.8+.5,detonate:windup+1.6,haki:2,departure:3.1,pocket:2.2,copter:2.4,door:2.65,shanksSlash:.8,shanksParry:1}[skill]||windup,flags:{},direction:new T.Vector3(0,0,-1).applyEuler(new T.Euler(pitch,yaw,0,'YXZ')),point:aimPoint(19)};
 if(skill==='thunder'){title('雷の呼吸 · 壱ノ型','벽력일섬',(instant?'전집중 · 남은 '+charges+'회 · ':'')+'발도 '+Math.round(THUNDER_MIN_DISTANCE+(THUNDER_MAX_DISTANCE-THUNDER_MIN_DISTANCE)*thunderCharge/THUNDER_MAX_CHARGE)+'칸 · 피해 70','#ffd23f');}
 if(skill==='breath'){title('全集中の呼吸','전집중 호흡','2초 집중 · 낙뢰 · E를 매번 충전하여 벽력일섬 3회 연속 사용','#ffe27a');sound('zenitsu_breath',{tag:'castCharge'});}
 if(skill==='god'){title('雷の呼吸 · 漆ノ型','화뢰신 · 火雷神','벽력일섬의 10배 속도 · 뇌룡 발도 · 사용 후 반동','#ffb347');sound('zenitsu_breath',{tag:'castCharge',rate:2.5,volume:.3});}
@@ -448,7 +494,7 @@ function projectile(color,radius,damage,speed,start,direction){const p=orb(color
 function endDomain(reason='expired'){if(!domain)return;const old=domain;domain=null;stopSkillSound('domainInside');dispose(old.group);for(const t of old.trapped)t.locked=false;sound(reason==='shattered'?'gojo_domain_break':'gojo_domain_end',{volume:.72});toast(reason==='shattered'?'기존 영역 파괴 · 나중에 전개한 영역 승리':'영역 해제');}
 function createDomain(center,owner='player'){center.y=0;if(domain)endDomain('shattered');sound('gojo_domain_open');const group=new T.Group();scene.add(group);group.position.copy(center);const shader=new T.ShaderMaterial({uniforms:{t:{value:0},opacity:{value:0}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 vP;uniform float t;uniform float opacity;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec3 n=normalize(vP);vec2 uv=vec2(atan(n.z,n.x),asin(n.y));vec2 cell=floor(uv*160.);float stars=pow(hash(cell),110.);float lanes=pow(max(0.,sin(uv.x*32.+sin(uv.y*3.+t*.25))),18.);float curtain=lanes*(.1+.9*pow(max(0.,sin(uv.y*3.+t*.5)),4.));vec3 col=vec3(.008,.018,.038)+stars*vec3(.65,.8,1.)+curtain*vec3(.045,.12,.23);gl_FragColor=vec4(col,opacity);}`,transparent:true,side:T.BackSide,depthWrite:false});const dome=mesh(new T.SphereGeometry(26,64,32),shader,group);dome.position.y=1.5;const rings=[];for(let i=0;i<5;i++){const r=ring(7+i*4,0x88c6ff,new T.Vector3(0,.12+i*.025,0),.028,group);rings.push(r);}for(let i=0;i<32;i++){const a=i*Math.PI/16;const beam=box([.025,22,.025],[Math.sin(a)*25,8,Math.cos(a)*25],glowMat(0x77baff),group);beam.material.opacity=.32;}
 const trapped=targets.filter(t=>t.hp>0&&t.g.position.distanceTo(center)<26);domain={group,dome,shader,rings,start:time,duration:7.5,center:center.clone(),lastTick:time,trapped,owner};for(const t of trapped)t.locked=true;shockwave(center.clone().add(new T.Vector3(0,.2,0)),0x94cfff,30);flash('#82a4e1',.3);toast('무량공처 · 영역 안의 표적 스킬 봉인');}
-function updateCast(dt){if(!cast)return;const c=cast,a=time-c.start,p=a/c.duration;$('castProgress').style.width=clamp(p,0,1)*100+'%';
+function updateCast(dt){castSword=null;if(!cast)return;const c=cast,a=time-c.start,p=a/c.duration;$('castProgress').style.width=clamp(p,0,1)*100+'%';
 if(['pocket','copter','door'].includes(c.type)){
   if(c.type==='pocket'&&a>=.98&&!c.item){c.item=c.forcedItem||['small','cannon','dorayaki'][Math.floor(Math.random()*3)];sound('gadget');toast({small:'스몰라이트!',cannon:'공기포!',dorayaki:'단팥빵!'}[c.item]);}
   poseDora(c,a);
@@ -467,12 +513,75 @@ if(['pocket','copter','door'].includes(c.type)){
     if(a>=c.windup&&!c.flags.open){c.flags.open=true;const dir=c.direction.clone().setY(0).normalize(),distance=nearestObstacleDistance(basePos,dir,24);basePos.addScaledVector(dir,distance);camera.position.copy(basePos);flash('#f6e8f0',.22);sound('door');toast('어디로든 문 · 전방 '+Math.round(distance)+'블록 이동');}
   }
 }
-if(c.type==='haki'){const k=ease(a/.5);camera.fov=66-5*k;if(!comfort)$('scene').style.filter=a<.5?`blur(${Math.sin(Math.min(1,a/.5)*Math.PI)*8}px)`:'';right.g.position.set(.3,-.5-.18*k,-.82);right.g.rotation.set(-.4*k,-.1,.6*k);if(a<.5&&Math.random()<dt*30){const from=camera.position.clone().add(new T.Vector3((Math.random()-.5)*1.5,(Math.random()-.5)*1.1,-1.2)),to=from.clone().add(new T.Vector3((Math.random()-.5)*.7,(Math.random()-.5)*.7,-1));bolt(from,to,colors.haki,.018,.16,1);}for(let i=0;i<2;i++){const at=.5+i;if(a>=at&&!c.flags['pulse'+i]){c.flags['pulse'+i]=true;flash('#ff263f',.18);sound('shanks_haki_pulse');shockwave(basePos.clone().setY(.1),colors.haki,10);burst(basePos.clone().add(new T.Vector3(0,1,0)),colors.haki,28,6);for(const t of targets)if(t.hp>0&&t.g.position.distanceTo(basePos)<=10)hit(t,10,'#ff5267');}}}
-if(c.type==='departure'){const k=ease(a/2.5);right.g.position.set(.26-.12*k,-.42+.12*k,-.55+.3*k);right.g.rotation.set(-.8*k,-.2,.7*k);camera.fov=66-5*k;
-if(a<2.5&&a>0&&time-c.start>(c.flags.nextSpark||.06)){c.flags.nextSpark=time-c.start+.06;const forward=new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion),side=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion),up=new T.Vector3(0,1,0).applyQuaternion(camera.quaternion);for(let eye=-1;eye<=1;eye+=2){const seed=camera.position.clone().addScaledVector(forward,.75).addScaledVector(side,eye*.09).addScaledVector(up,.065);const end=seed.clone().addScaledVector(forward,.06+Math.random()*.06).addScaledVector(side,(Math.random()-.5)*.14).addScaledVector(up,(Math.random()-.5)*.1);bolt(seed,end,0xff1738,.012,.13,1,.08);}}
-if(a>=2.5&&!c.flags.fire){c.flags.fire=true;const from=basePos.clone().add(new T.Vector3(0,1.5,0)),dir=c.direction.clone().normalize(),to=from.clone().addScaledVector(dir,50),line=new T.Line3(from,to);kamusariWave(from,dir,50,5);flash('#fff6f6',.12);setTimeout(()=>flash('#ff1838',.04),55);stopSkillSound('castCharge');sound('shanks_departure_release');for(const t of targets){if(t.hp<=0)continue;const q=t.g.position.clone().add(new T.Vector3(0,1.5,0));if(line.closestPointToPoint(q,true,new T.Vector3()).distanceTo(q)<=2.5&&q.distanceTo(from)<=50)hit(t,50,'#ff5267');}}}
-if(c.type==='shanksSlash'){const k=ease(a/.25);right.g.position.set(.35,-.35+.08*k,-.6-.35*k);right.g.rotation.set(-.45,-.2,.65-1.2*ease((a-.25)/.18));camera.position.y+=Math.sin(Math.min(1,a/.25)*Math.PI)*.12;if(a>=.25&&!c.flags.hit){c.flags.hit=true;const start=basePos.clone(),dir=c.direction.clone();basePos.addScaledVector(dir,8);for(const t of targets){if(t.hp<=0)continue;const q=t.g.position.clone().add(new T.Vector3(0,1.5,0));if(new T.Line3(start,basePos).closestPointToPoint(q,true,new T.Vector3()).distanceTo(q)<3.5)hit(t,35,'#ff8792');}bolt(camera.position.clone().add(new T.Vector3(-.7,.35,-1)),camera.position.clone().add(new T.Vector3(.7,-.25,-2.3)),colors.haki,.08,.3,4);flash('#ff5267',.22);sound('shanks_slash');}}
-if(c.type==='shanksParry'){if(c.hit&&!c.flags.contact){c.flags.contact=true;sound('shanks_parry');}const guard=ease(a/.18);right.g.position.set(.42+.12*guard,-.42+.12*guard,-.62);right.g.rotation.set(-.6*guard,-.2,.8*guard);camera.fov=66-3*guard;if(a>=1&&!c.flags.done){c.flags.done=true;if(c.hit){const at=basePos.clone().addScaledVector(c.direction,5);const t=targets.find(t=>t.hp>0&&t.g.position.distanceTo(at)<6);if(t)hit(t,45,'#ff5267');flash('#ff5267',.3);sound('shanks_counter');}else toast('반격 종료 · 공격을 받아내지 못했습니다');}}
+if(c.type==='haki'){
+  // 0-.5s: blur, the sword is raised. .5-2s: the sword sinks slowly to point at the ground while the haki erupts in two pulses.
+  const k=ease(a/.5),lower=ease((a-.5)/1.5),shake=a>=.5&&a<2?(1-lower)*.012:0;
+  camera.fov=66-5*k+3*Math.sin(clamp((a-.5)/.3,0,1)*Math.PI);
+  if(!comfort)$('scene').style.filter=a<.5?`blur(${Math.sin(Math.min(1,a/.5)*Math.PI)*8}px)`:'';
+  castSword={pos:new T.Vector3(.36+(Math.random()-.5)*shake,mix(-.28,-.34,k)+(Math.random()-.5)*shake,-.76),dir:hakiBladeDir(4,-80),roll:0,armsDown:true};camera.rotation.x-=.05*k*(1-lower*.6);
+  const kick=a>=.5?Math.max(0,1-(a-(a<1.5?.5:1.5))/.45):0;if(kick>0){camera.rotation.x+=(Math.random()-.5)*.03*kick;camera.rotation.z+=(Math.random()-.5)*.04*kick;}
+  if(a>.1&&a<2&&Math.random()<dt*(a<.5?30:55)){const side=Math.random()<.5?-1:1,tip=camPoint(new T.Vector3(side*(.3+Math.random()*.15),-.55,-.7));hakiBolt(tip,tip.clone().add(new T.Vector3(side*Math.random()*.7,.25+Math.random()*.8,-(Math.random()*.7))),.006+Math.random()*.006,.22,1);}
+  if(a<.5&&Math.random()<dt*30){const from=camera.position.clone().add(new T.Vector3((Math.random()-.5)*1.5,(Math.random()-.5)*1.1,-1.2)),to=from.clone().add(new T.Vector3((Math.random()-.5)*.7,(Math.random()-.5)*.7,-1));hakiBolt(from,to,.02,.16,1);}
+  if(a>=.5&&a<2&&time-(c.flags.floor||0)>.11){c.flags.floor=time;const ang=Math.random()*Math.PI*2,r=3+Math.random()*7,feet=basePos.clone().setY(.15);hakiBolt(feet.clone().add(new T.Vector3(Math.cos(ang),0,Math.sin(ang)).multiplyScalar(1.5)),feet.clone().add(new T.Vector3(Math.cos(ang)*r,.1,Math.sin(ang)*r)),.05,.3,1);}
+  for(let i=0;i<2;i++){const at=.5+i;if(a>=at&&!c.flags['pulse'+i]){c.flags['pulse'+i]=true;flash('#ff263f',.18);sound('shanks_haki_pulse');shockwave(basePos.clone().setY(.1),colors.haki,10);shockwave(basePos.clone().setY(.14),0xffffff,6.5);burst(basePos.clone().add(new T.Vector3(0,1,0)),colors.haki,28,6);hakiStorm(basePos,10,i?14:10);for(const t of targets)if(t.hp>0&&t.g.position.distanceTo(basePos)<=10)hit(t,10,'#ff5267');}}
+}
+if(c.type==='departure'){
+  // 0-2.5s: the sword is held up to the upper right and trembles while tri-colour lightning gathers on it. 2.5s: an overhead cut releases the beam.
+  const k=ease(a/2.5),rel=ease((a-2.5)/.22),fin=ease((a-2.78)/.32);
+  camera.fov=66-5*k+(a>=2.5?12*(1-fin):0);
+  let pos,dir;
+  if(a<2.5){pos=new T.Vector3(mix(.4,.36,k)+(Math.random()-.5)*.012*k,mix(-.38,0,k)+(Math.random()-.5)*.012*k,mix(-.6,-.55,k));dir=hakiBladeDir(mix(24,38,k),mix(8,58,k));}
+  else{pos=new T.Vector3(mix(.36,.2,rel),mix(0,-.3,rel),mix(-.55,-.9,rel));dir=hakiBladeDir(mix(38,-2,rel),mix(58,-50,rel));}
+  castSword={pos,dir,roll:0};
+  if(fin>0){const idle={pos:new T.Vector3(.34,-.42,-.8),dir:hakiBladeDir(18,22),len:1,roll:0};const m=mixPose({...castSword,len:1},idle,fin);castSword={pos:m.pos,dir:m.dir,roll:0};}
+  if(a<2.5&&Math.random()<dt*(10+110*k)){const s=.25+Math.random()*1,from=camPoint(pos.clone().addScaledVector(dir,s));hakiBolt(from,from.clone().add(new T.Vector3((Math.random()-.5)*(.6+k*2),(Math.random()-.3)*(.6+k*2),(Math.random()-.5)*(.6+k*2))),.012+.014*k,.2+.1*k,1);}
+  if(k>.55&&a<2.5&&time-(c.flags.storm||0)>.4){c.flags.storm=time;hakiStorm(basePos,6+6*k,1+Math.round(k*3));}
+  if(a<2.5&&a>0&&time-c.start>(c.flags.nextSpark||.06)){c.flags.nextSpark=time-c.start+.06;const forward=new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion),side=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion),up=new T.Vector3(0,1,0).applyQuaternion(camera.quaternion);for(let eye=-1;eye<=1;eye+=2){const seed=camera.position.clone().addScaledVector(forward,.75).addScaledVector(side,eye*.09).addScaledVector(up,.065);const end=seed.clone().addScaledVector(forward,.06+Math.random()*.06).addScaledVector(side,(Math.random()-.5)*.14).addScaledVector(up,(Math.random()-.5)*.1);hakiBolt(seed,end,.012,.13,1);}}
+  if(a>=2.5&&a<3){const kick=1-(a-2.5)/.5;camera.rotation.x+=(Math.random()-.5)*.05*kick;camera.rotation.z+=(Math.random()-.5)*.06*kick;camera.position.y+=(Math.random()-.5)*.05*kick;}
+  if(a>=2.5&&!c.flags.fire){c.flags.fire=true;const eye=basePos.clone().add(new T.Vector3(0,-.35,0)),from=basePos.clone().add(new T.Vector3(0,1.5,0)),dir=c.direction.clone().normalize(),to=from.clone().addScaledVector(dir,50),line=new T.Line3(from,to);
+    kamusariBeam(eye,dir,50,2.5);hakiStorm(basePos,9,18);shockwave(basePos.clone().setY(.1),colors.haki,14);shockwave(basePos.clone().setY(.14),0xffffff,9);burst(eye.clone().addScaledVector(dir,3),0xffffff,40,10);burst(eye.clone().addScaledVector(dir,3),colors.haki,40,12);
+    flash('#fff6f6',.12);setTimeout(()=>flash('#ff1838',.04),55);stopSkillSound('castCharge');sound('shanks_departure_release');
+    for(const t of targets){if(t.hp<=0)continue;const q=t.g.position.clone().add(new T.Vector3(0,1.5,0));if(line.closestPointToPoint(q,true,new T.Vector3()).distanceTo(q)<=2.5&&q.distanceTo(from)<=50)hit(t,50,'#ff5267');}}
+}
+if(c.type==='shanksSlash'){
+  // 0-.25s: the weight drops back and the sword is drawn to the upper right. .25-.43s: lunge forward and cut from the upper right to the lower left.
+  const prep=ease(a/.25),sw=clamp((a-.25)/.18,0,1),rec=ease((a-.5)/.3);
+  let pose=a<.25?swingAt('DN',0,.55*prep):swingAt('DN',ease(sw));
+  if(a<.25){pose.pos.x+=.02*prep;pose.pos.y+=.05*prep;}
+  if(rec>0)pose=mixPose(pose,{pos:new T.Vector3(.34,-.42,-.8),dir:hakiBladeDir(18,22),len:1,roll:0},rec);
+  castSword={pos:pose.pos,dir:pose.dir,roll:pose.roll||0};
+  const lunge=ease(clamp((a-.25)/.2,0,1)),done=c.flags.lunge||0;if(lunge>done){basePos.addScaledVector(c.direction.clone().setY(0).normalize(),8*(lunge-done));c.flags.lunge=lunge;}
+  camera.fov=a<.25?66-4*prep:a<.43?mix(62,88,ease(sw)):mix(88,66,rec);
+  camera.position.y+=-.2*prep*(1-sw)+Math.sin(sw*Math.PI)*.05;camera.rotation.x+=-.07*Math.sin(clamp((a-.2)/.35,0,1)*Math.PI);camera.rotation.z+=-.09*Math.sin(sw*Math.PI)+.03*prep*(1-sw);
+  if(a>=.25&&!c.flags.cut){c.flags.cut=true;c.flags.start=basePos.clone();slashTrail('DN');sound('shanks_slash');flash('#ff5267',.16);}
+  if(a>=.25&&a<.5&&Math.random()<dt*70){const x=(Math.random()-.5)*2.4,y=(Math.random()-.5)*1.4,from=camPoint(new T.Vector3(x,y,-6)),to=camPoint(new T.Vector3(x*1.1,y*1.1,-1.2));hakiBolt(from,to,.016,.16,0);}
+  if(a>=.4&&!c.flags.hit){c.flags.hit=true;const end=basePos.clone(),start=c.flags.start?end.clone().addScaledVector(c.direction.clone().setY(0).normalize(),-8):end.clone();for(const t of targets){if(t.hp<=0)continue;const q=t.g.position.clone().add(new T.Vector3(0,1.5,0));if(new T.Line3(start,end).closestPointToPoint(q,true,new T.Vector3()).distanceTo(q)<3.5){hit(t,35,'#ff8792');burst(q,HAKI_RED,22,6);burst(q,0xffffff,14,7);hakiBolt(q.clone().add(new T.Vector3(-1.2,1.1,0)),q.clone().add(new T.Vector3(1.2,-1.1,0)),.08,.3,2);}}hitstopUntil=previous+70;}
+}
+if(c.type==='shanksParry'){
+  // Guard: the sword is held upright and the body drops and slides back. If an attack lands inside the window: sweep it aside from right to left, then thrust forward.
+  const settle=ease(a/.22),flat=c.direction.clone().setY(0).normalize();
+  const backK=ease(a/.28);basePos.addScaledVector(flat,-1.3*(backK-(c.flags.back||0)));c.flags.back=backK;
+  // Preview stand-in for an enemy strike: the nearest dummy lashes out part-way through the window, so the counter can be seen.
+  if(!c.hit&&!c.flags.incoming&&a>=.4){const foe=targets.filter(t=>t.hp>0).sort((x,y)=>x.g.position.distanceTo(basePos)-y.g.position.distanceTo(basePos))[0];if(foe){c.flags.incoming=a;hakiBolt(foe.g.position.clone().setY(1.5),camera.position.clone().addScaledVector(c.direction,1.2),.07,.16,1);}}
+  if(c.flags.incoming&&!c.hit&&a>=c.flags.incoming+.14)c.hit=true;
+  if(c.hit&&c.flags.contactAt===undefined){c.flags.contactAt=a;c.duration=Math.max(c.duration,a+.62);sound('shanks_parry');flash('#ffffff',.3);hitstopUntil=previous+90;const tip=swordTipWorld({pos:new T.Vector3(.1,-.2,-.78),dir:hakiBladeDir(-30,40)},.9);burst(tip,0xffffff,26,7);burst(tip,HAKI_RED,18,6);for(let i=0;i<4;i++)hakiBolt(tip,tip.clone().add(new T.Vector3((Math.random()-.5)*2.4,(Math.random()-.2)*2,(Math.random()-.5)*2.4)),.03,.25,1);}
+  const guard={pos:new T.Vector3(.3,-.28,-.72),dir:hakiBladeDir(12,72)};
+  const tr=a<.9?(Math.random()-.5)*.004:0;
+  let pos=guard.pos.clone().add(new T.Vector3(tr,tr,0)),dir=guard.dir.clone(),crouch=settle;
+  if(c.flags.contactAt!==undefined){
+    const u=a-c.flags.contactAt,swat=ease(u/.12),thrust=ease((u-.12)/.16),rec=ease((u-.32)/.3);
+    crouch=1-ease(u/.14);
+    pos=new T.Vector3(mix(.3,-.38,swat),mix(-.28,-.2,swat),mix(-.72,-.8,swat));dir=hakiBladeDir(mix(12,-72,swat),mix(72,12,swat));
+    if(thrust>0){pos=new T.Vector3(mix(-.38,.04,thrust),mix(-.2,-.18,thrust),mix(-.8,-1.02,thrust));dir=hakiBladeDir(mix(-72,-2,thrust),mix(12,3,thrust));}
+    if(rec>0){pos.lerp(new T.Vector3(.34,-.42,-.8),rec);dir=dir.lerp(hakiBladeDir(18,22),rec).normalize();}
+    camera.fov=u<.12?66+(-3):mix(80,66,ease((u-.28)/.3));camera.rotation.x+=-.05*Math.sin(clamp((u-.1)/.25,0,1)*Math.PI);
+    const lunge=thrust,done=c.flags.lunge||0;if(lunge>done){basePos.addScaledVector(flat,2.8*(lunge-done));c.flags.lunge=lunge;}
+    if(u>=.12&&!c.flags.counter){c.flags.counter=true;sound('shanks_counter');flash('#ff5267',.3);slashTrail('SWAT');const at=basePos.clone().addScaledVector(c.direction,5);const t=targets.find(t=>t.hp>0&&t.g.position.distanceTo(at)<6);if(t){hit(t,45,'#ff5267');const q=t.g.position.clone().setY(1.5);burst(q,HAKI_RED,26,7);burst(q,0xffffff,18,8);hakiBolt(camera.position.clone().addScaledVector(c.direction,1.5),q,.06,.3,2);}}
+  }else{camera.fov=66-3*settle;if(a>=.82)crouch*=1-ease((a-.82)/.18);}
+  camera.position.y-=.34*crouch;
+  castSword={pos,dir,roll:0};
+  if(a>=c.duration&&!c.flags.done){c.flags.done=true;if(!c.hit)toast('반격 종료 · 공격을 받아내지 못했습니다');}
+}
 if(c.type==='blue'){right.g.position.set(.22,-.14,-.7);right.g.rotation.set(-.2,-.3,.05);right.skin.emissive.setHex(0x092c44);if(a>.43&&!c.flags.snap){c.flags.snap=true;sound('gojo_snap');sound('gojo_blue_pull');blueUntil=time+8;blueOrb=orb(colors.blue,.7);blueOrb.position.copy(c.point);blueOrb.position.y=Math.max(2.8,blueOrb.position.y);burst(blueOrb.position,colors.blue,70,8);shockwave(new T.Vector3(c.point.x,.15,c.point.z),colors.blue,7);flash('#4db4ff',.12);}}
 if(c.type==='red'){right.g.position.set(.1,-.2,-.67-ease(a/.55)*.25);right.skin.emissive.setHex(0x3f0714);if(a>.42&&!c.flags.fire){c.flags.fire=true;sound('gojo_red_release');projectile(colors.red,.65,65,32,basePos.clone().addScaledVector(c.direction,2),c.direction);flash('#ff506b',.17);}}
 if(c.type==='purple'){const K=PURPLE_SLOW,s=ease(a/(.8*K)),angle=s*Math.PI*2;const circle=.45*(1-ease((a-.6*K)/(.4*K)));for(const [i,hand]of [left,right].entries()){const side=i===0?-1:1;hand.g.position.set(side*circle*Math.cos(angle),-.1+circle*Math.sin(angle*side),-.87);hand.g.rotation.set(-.2,side*.25,side*angle*.25);const point=new T.Vector3(side*circle*Math.cos(angle)*5,.45+circle*Math.sin(angle*side)*4,-5).applyQuaternion(camera.quaternion).add(camera.position);if(c.orbs[i])c.orbs[i].position.copy(point);}
@@ -577,7 +686,7 @@ if(a>=c.duration&&!(c.dive&&!c.flags.slam&&a<8)){boot.visible=false;if(c.ring)di
 function reset(){thunderHoldDemo=false;stopSkillSounds();document.body.classList.remove('pocket-peek');doraFlightVelocity=0;doraItemProp.visible=false;doraFlightStart=-1;doraFlightActive=false;doraFlightBase=0;rezeAirUntil=0;rezeAirVel=0;rezeAirDir.set(0,0,0);rezeLookUntil=0;melee=null;sliding=null;jumpVelocity=0;attackQueued=false;basicUntil=0;basicCombo=0;zenDrawUntil=0;zenSheathSoundPlayed=true;slideCooldown=0;commonDemo=-1;commonStage=0;if(cast?.ring)dispose(cast.ring);boot.visible=false;kickCombo=null;cast?.orbs?.forEach(dispose);if(cast?.merged)dispose(cast.merged);cast=null;if(blueOrb)dispose(blueOrb);blueOrb=null;blueUntil=0;charges=0;chargesUntil=0;thunderHoldAt=-1;hp=200;slowUntil=0;hold=null;holdGlow.visible=false;devilUntil=0;for(const tr of trails)tr.grains.forEach(dispose);trails.length=0;timers.length=0;pin.visible=false;choker.visible=false;$('blackout').style.opacity=0;if(domain)dispose(domain.group);domain=null;for(const fx of effects)if(fx.object)dispose(fx.object);effects.length=0;for(const p of particles)dispose(p.object);particles.length=0;for(const p of popups)p.el.remove();popups.length=0;Object.keys(cooldowns).forEach(k=>cooldowns[k]=0);energy=100;damageTotal=0;$('totalDamage').textContent='0';for(const t of targets){t.hp=t.max;t.g.scale.setScalar(1);delete t.g.userData.doraSmallUntil;delete t.g.userData.cannonUntil;t.g.visible=true;t.g.position.copy(t.home);t.bar.scale.x=1;t.bar.position.x=0;t.locked=false;t.respawn=0;t.vel=null;t.landed=0;t.g.rotation.x=0;}rootUntil=0;basePos.set(0,2.1,13);yaw=0;pitch=-.015;$('castTitle').classList.remove('active');$('scene').style.filter='';$('flash').style.opacity=0;updateTargetCount();}
 
 function setCharacter(next){if(!CHARS[next])return;if(cast||melee||sliding){toast('현재 동작이 끝난 뒤 바꿀 수 있어요');return;}demoStart=-1;$('demo').classList.remove('active');char=next;reset();const C=CHARS[char];
-document.body.dataset.char=char;document.title='INFINITY / '+C.name+' · Skill Lab';$('charEyebrow').textContent=C.eyebrow;$('charName').innerHTML=C.name+'<span>'+C.kanji+'</span>';$('charDesc').innerHTML=C.desc;$('seal').textContent=C.seal;$('hudName').textContent=C.hud;$('energyLabel').textContent=C.energy;$('comboHint').innerHTML=C.hint;$('movesDemo').textContent=char==='zenitsu'?'발도 4연타 · 납도 시연':'기본공격 · 슬라이딩 시연';
+document.body.dataset.char=char;document.title='INFINITY / '+C.name+' · Skill Lab';$('charEyebrow').textContent=C.eyebrow;$('charName').innerHTML=C.name+'<span>'+C.kanji+'</span>';$('charDesc').innerHTML=C.desc;$('seal').textContent=C.seal;$('hudName').textContent=C.hud;$('energyLabel').textContent=C.energy;$('comboHint').innerHTML=C.hint;$('movesDemo').textContent=scabbard()?'발도 4연타 · 납도 시연':'기본공격 · 슬라이딩 시연';
 for(const slot of SLOTS){const s=SKILLS[C.slots[slot]],b=$(slot+'Btn'),icon=b.querySelector('.skill-icon');b.style.setProperty('--accent',s.accent);icon.className='skill-icon '+s.icon;icon.textContent=s.glyph;b.querySelector('strong').textContent=s.name;b.querySelector('.skill-type').textContent=s.type;b.classList.remove('combo','locked');b.dataset.skill='';}
 for(const b of document.querySelectorAll('.char-switch button'))b.classList.toggle('active',b.dataset.pick===char);
 sword.g.visible=sword.hilt.visible=char==='zenitsu'||char==='shanks';left.g.visible=char!=='shanks';shanksReadyUntil=0;$('comboKey').textContent='E';$('comboText').textContent=' 연계 킥!';$('comboPrompt').classList.remove('on');devilShown=null;updateSkillArt();}
@@ -612,14 +721,14 @@ if(char==='doraemon'&&!doraFlightActive&&!jumpVelocity&&basePos.y>2.1){doraFligh
 if(rezeAirVel){basePos.y+=rezeAirVel*dt;basePos.addScaledVector(rezeAirDir,12*dt);rezeAirVel-=25*dt;if(rezeAirVel<0&&basePos.y<=2.1&&!cast?.dive){basePos.y=2.1;rezeAirVel=0;rezeAirDir.set(0,0,0);}}if(Math.hypot(basePos.x,basePos.z)>ARENA_R){const l=ARENA_R/Math.hypot(basePos.x,basePos.z);basePos.x*=l;basePos.z*=l;}
 camera.position.copy(basePos);camera.rotation.set(pitch,yaw,0,'YXZ');if(time<rezeLookUntil)camera.rotation.x=mix(-.58,pitch,ease(1-(rezeLookUntil-time)/.2));
 // Recoil after the seventh form: knees buckle, the view sags and limps until the slow wears off.
-if(time<slowUntil){const k=Math.min(1,(slowUntil-time)/.6);camera.position.y-=.28*k;camera.rotation.z=Math.sin(time*(movement.lengthSq()?7:2))*.025*k;}camera.fov=mix(camera.fov,66,dt*7);const bob=movement.lengthSq()?Math.sin(time*10)*.012:Math.sin(time*1.9)*.008;if(char!=='zenitsu'){pose(left,[-.38,-.48+bob,-.8],[.1,.2,-.3]);pose(right,[.38,-.42-bob,-.8],[.05,-.25,.3]);left.g.visible=char!=='shanks';}else poseZen(bob);
+if(time<slowUntil){const k=Math.min(1,(slowUntil-time)/.6);camera.position.y-=.28*k;camera.rotation.z=Math.sin(time*(movement.lengthSq()?7:2))*.025*k;}camera.fov=mix(camera.fov,66,dt*7);const bob=movement.lengthSq()?Math.sin(time*10)*.012:Math.sin(time*1.9)*.008;if(!scabbard()){pose(left,[-.38,-.48+bob,-.8],[.1,.2,-.3]);pose(right,[.38,-.42-bob,-.8],[.05,-.25,.3]);}else poseZen(bob);
 if(thunderHoldAt>=0&&time-thunderHoldAt>=THUNDER_MAX_CHARGE)releaseThunderHold();
 for(const h of [left,right]){h.skin.depthTest=char==='doraemon';h.sleeve.depthTest=char==='doraemon';}updateCast(dt);updateCommon(dt);applyLook();
 // Hold: Blue raises the right arm, Red the left, with the technique gathering in the palm.
 if(hold){const blue=hold.kind==='blue',h=blue?right:left,side=blue?1:-1,u=time-hold.start,k=ease(u/.25);h.g.position.set(side*.3,-.42+.3*k,-.8+.06*k);h.g.rotation.set(.35*k,0,side*(.3-.22*k));h.skin.emissive.setHex(blue?0x0a3a5a:0x4a0a18);
   holdGlow.visible=true;holdGlow.material.color.setHex(blue?colors.blue:colors.red);holdGlow.position.copy(h.g.position).add(new T.Vector3(0,.16,0));holdGlow.scale.setScalar((.3+.15*k)*(1+Math.sin(time*14)*.08));
   $('castTitle').classList.add('active');$('castProgress').style.width=clamp(u/3,0,1)*100+'%';
-  if(u>=3&&!cast){const kind=hold.kind;endHold();beginCast(kind,false);}}if(char==='zenitsu'&&thunderHoldAt>=0){const u=clamp((time-thunderHoldAt)/THUNDER_MAX_CHARGE,0,1);zen.pos.y-=.09+.08*u;zen.pos.z+=.1*u;zen.push=.07*u;zen.glow=.4+.6*u;camera.position.y-=.4+.2*u;camera.rotation.x-=.1*u;camera.fov=66-6*u;document.getElementById("castProgress").style.width=(u*100)+'%';if(Math.random()<dt*(12+u*22)){const at=basePos.clone().addScaledVector(flatForward(),2).setY(.05);bolt(at,at.clone().add(new T.Vector3((Math.random()-.5)*.6,1+u,0)),colors.thunder,.02,.15,0);}}if(char==='zenitsu')applyZen();else if(char==='shanks')applyShanks();const handRatio=clamp(camera.aspect,.55,1);holdGlow.position.x*=handRatio;for(const o of [left.g,right.g,sword.g,sword.hilt]){if(o===right.g&&cast?.type==='devil'&&!cast.flags.boom)continue;if(char==='doraemon'&&cast&&['pocket','copter','door'].includes(cast.type))continue;o.position.x*=handRatio;o.scale.setScalar(mix(.78,1,handRatio)*(char==='zenitsu'&&(o===left.g||o===right.g)?.62:1));}camera.updateProjectionMatrix();
+  if(u>=3&&!cast){const kind=hold.kind;endHold();beginCast(kind,false);}}if(char==='zenitsu'&&thunderHoldAt>=0){const u=clamp((time-thunderHoldAt)/THUNDER_MAX_CHARGE,0,1);zen.pos.y-=.09+.08*u;zen.pos.z+=.1*u;zen.push=.07*u;zen.glow=.4+.6*u;camera.position.y-=.4+.2*u;camera.rotation.x-=.1*u;camera.fov=66-6*u;document.getElementById("castProgress").style.width=(u*100)+'%';if(Math.random()<dt*(12+u*22)){const at=basePos.clone().addScaledVector(flatForward(),2).setY(.05);bolt(at,at.clone().add(new T.Vector3((Math.random()-.5)*.6,1+u,0)),colors.thunder,.02,.15,0);}}left.cuff.visible=right.cuff.visible=!scabbard();if(char==='shanks'&&castSword)applyShanks();else if(scabbard())applyZen();const handRatio=clamp(camera.aspect,.55,1);holdGlow.position.x*=handRatio;for(const o of [left.g,right.g,sword.g,sword.hilt]){if(o===right.g&&cast?.type==='devil'&&!cast.flags.boom)continue;if(char==='doraemon'&&cast&&['pocket','copter','door'].includes(cast.type))continue;o.position.x*=handRatio;o.scale.setScalar(mix(.78,1,handRatio)*(scabbard()&&(o===left.g||o===right.g)?.62:1));}camera.updateProjectionMatrix();
 if(blueOrb){if(time>blueUntil){burst(blueOrb.position,colors.blue,15,3);dispose(blueOrb);blueOrb=null;}else{blueOrb.rotation.y+=dt*1.7;blueOrb.rotation.z+=dt*.7;blueOrb.scale.setScalar(1+Math.sin(time*9)*.04);if(Math.random()<.3){const p=glow(colors.blue,.15);const v=new T.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize().multiplyScalar(4+Math.random()*3);const destination=blueOrb.position.clone();p.position.copy(destination).add(v);effect(p,.5,(o,u)=>{o.position.lerp(destination,u*.3);o.material.opacity=1-u;});}for(const t of targets){if(t.hp<=0)continue;const d=blueOrb.position.clone().sub(t.g.position);d.y=0;if(d.length()<11&&d.length()>1.5)t.g.position.addScaledVector(d.normalize(),dt*1.5);}if(!cast){right.skin.emissive.setHex(0x052030);}}}
 if(domain){const d=domain,a=time-d.start;const inside=basePos.distanceTo(d.center)<26;if(inside&&!skillLoops.has('domainInside'))sound('gojo_domain_inside',{loop:true,tag:'domainInside',volume:.24});else if(!inside)stopSkillSound('domainInside');d.shader.uniforms.t.value=a;d.shader.uniforms.opacity.value=ease(a/.7)*(1-ease((a-d.duration+1)));d.group.scale.setScalar(.01+.99*ease(a/.8));d.rings.forEach((r,i)=>r.material.opacity=(.25+Math.sin(time*2+i)*.12)*(1-ease(a-d.duration+1)));if(time-d.lastTick>.5){d.lastTick=time;for(const t of d.trapped)if(t.hp>0)hit(t,8,'#9ccfff');}if(a>d.duration)endDomain('expired');}
 for(let i=timers.length-1;i>=0;i--)if(time>=timers[i].at){const fn=timers[i].fn;timers.splice(i,1);fn();}
