@@ -65,6 +65,7 @@ end
 local function startMover(t,owner,spec)
     if not alive(t) then return end
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
+    if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end

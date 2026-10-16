@@ -10,7 +10,7 @@
   <div class="vignette"></div><div id="flash"></div><div id="damageLayer"></div>
   <header>
     <div class="brand"><span class="brand-symbol">∞</span><div>INFINITY<span class="sub">ABILITY ARENA / SKILL LAB 01</span></div></div>
-    <div class="top-right"><span class="build-tag"><i></i> 브라우저 전투 프로토타입</span><div class="char-switch" role="group" aria-label="캐릭터 선택"><button data-pick="gojo" class="active" title="1">고죠</button><button data-pick="zenitsu" title="2">젠이츠</button><button data-pick="reze" title="3">레제</button><button data-pick="shanks" title="4">샹크스</button><button data-pick="doraemon" title="5">도라에몽</button><button data-pick="pain" title="6">페인</button></div><button id="sound" title="사운드 켜기">소리 OFF</button><button id="settings" title="화면 흔들림 줄이기">연출: 기본</button></div>
+    <div class="top-right"><span class="build-tag"><i></i> 브라우저 전투 프로토타입</span><div class="char-switch" role="group" aria-label="캐릭터 선택"><button data-pick="gojo" class="active" title="1">고죠</button><button data-pick="zenitsu" title="2">젠이츠</button><button data-pick="reze" title="3">레제</button><button data-pick="shanks" title="4">샹크스</button><button data-pick="doraemon" title="5">도라에몽</button><button data-pick="pain" title="6">페인</button><button data-pick="allmight" title="7">올마이트</button></div><button id="sound" title="사운드 켜기">소리 OFF</button><button id="settings" title="화면 흔들림 줄이기">연출: 기본</button></div>
   </header>
   <aside class="identity"><span class="eyebrow" id="charEyebrow">CHARACTER 01 / LIMITLESS</span><h1 id="charName">고죠 사토루<span>五条 悟</span></h1><p id="charDesc">공간을 지배하는 힘.<br>아오와 아카를 연결해 무라사키를 완성하세요.</p><div class="mode"><i></i> TRAINING GROUNDS <span>01 — NIGHTFALL</span></div></aside>
   <div class="target-hint">훈련 표적 <span id="targetCount">3</span><span class="separator">/</span>누적 피해 <b id="totalDamage">0</b></div>
@@ -26,13 +26,14 @@
     <button class="skill dash" id="shiftBtn"><div class="key">SHIFT</div><div class="skill-icon dash-icon">»</div><strong>순간 가속</strong><span class="skill-type">이동</span><div class="cooldown"></div><small></small></button>
   </section>
   <div class="bottom-right"><div class="common-controls"><button id="basicAttack">기본공격 · 좌클릭</button><button id="slide">슬라이딩 · CTRL</button></div><button id="movesDemo" class="reset-button">기본공격 · 슬라이딩 시연</button><button id="demo" class="demo-button"><span>▶</span> 전체 스킬 시연</button><button id="reset" class="reset-button">표적 · 쿨타임 초기화 ↻</button></div>
-  <footer><span><kbd>W A S D</kbd> 이동 <kbd>우클릭 드래그</kbd> 시점 <kbd>1–6</kbd> 캐릭터 <span id="comboHint"><kbd>Q → E</kbd> 무라사키 연계</span></span><span>1인칭 연출 미리보기 · Roblox 실행 화면은 아닙니다</span></footer>
+  <footer><span><kbd>W A S D</kbd> 이동 <kbd>우클릭 드래그</kbd> 시점 <kbd>1–7</kbd> 캐릭터 <span id="comboHint"><kbd>Q → E</kbd> 무라사키 연계</span></span><span>1인칭 연출 미리보기 · Roblox 실행 화면은 아닙니다</span></footer>
   <div id="comboPrompt"><b id="comboKey">E</b><span id="comboText"> 연계 킥!</span><i></i></div>
   <div id="blackout"></div>
   <div id="loading"><span class="loader-symbol">∞</span><p>술식 공간을 구성하는 중</p></div>
   <div id="fatal" hidden><h2>3D 미리보기를 열지 못했어요</h2><p>WebGL을 지원하는 브라우저에서 다시 열어주세요.</p></div>
   <script src="skill-assets.js"></script>
   <script src="pain.js"></script>
+  <script src="allmight.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -21,6 +21,9 @@ html = html.replace(assetTag, () => '<script>\n' + esc(p('skill-assets.js')) + '
 const painTag = '<script src="pain.js"></script>';
 if (!html.includes(painTag)) throw new Error('pain.js marker missing');
 html = html.replace(painTag, () => '<script>\n' + esc(p('pain.js')) + '\n</script>');
+const allMightTag = '<script src="allmight.js"></script>';
+if (!html.includes(allMightTag)) throw new Error('allmight.js marker missing');
+html = html.replace(allMightTag, () => '<script>\n' + esc(p('allmight.js')) + '\n</script>');
 if (!html.includes(link) || !html.includes(tag)) throw new Error('index.html markers missing');
 html = html.replace(link, () => '<style>' + p('style.css') + '</style>').replace(tag, () => script).replace('<head>', () => '<head>\n' + license);
 for (const out of outs) fs.writeFileSync(out, html.replace(/\r?\n/g, '\r\n'));
