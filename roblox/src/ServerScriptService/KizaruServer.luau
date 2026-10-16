@@ -5,7 +5,7 @@ local C=require(game:GetService("ReplicatedStorage"):WaitForChild("GojoConfig"))
 local Run=game:GetService("RunService")
 local M={};local ctx;local active={}
 local skills={LightLaser=true,LightKick=true,LightJewels=true,LightMirror=true}
-local DASH_TIME=.12
+local DASH_TIME=.05
 function M.init(c) ctx=c end
 function M.handles(skill) return skills[skill]==true end
 local function emit(p,kind,data) data.owner=p.UserId;ctx.fx:FireAllClients("Kizaru"..kind,data) end

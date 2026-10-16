@@ -120,7 +120,7 @@ const CHARS={
 };
 Object.assign(SKILLS,{
  lightLaser:{name:'손끝 레이저',type:'0.65초 준비 · 피해 42',icon:'burst-icon',glyph:'✧',accent:'#ffe18a'},
- lightKick:{name:'빛의 발차기',type:'0.4초 빛 모음 → 광속 돌진 킥 · 피해 65 · 날려보냄',icon:'bolt-icon',glyph:'ϟ',accent:'#ffd34e'},
+ lightKick:{name:'빛의 발차기',type:'0.3초 빛 모음 → 번개 돌진 킥 · 피해 65 · 날려보냄',icon:'bolt-icon',glyph:'ϟ',accent:'#ffd34e'},
  lightJewels:{name:'야사카니의 곡옥',type:'웅크림 → 높이 도약 → 공중 12발 탄막 → 낙하',icon:'domain-icon',glyph:'✦',accent:'#fff0ba'},
  lightMirror:{name:'야타의 거울',type:'0.45초 빛 변환 → 전방 24 이동',icon:'dash-icon',glyph:'»',accent:'#ffe18a'}});
  CHARS.kizaru={name:'키자루',kanji:'黄猿 · ボルサリーノ',seal:'光',eyebrow:'CHARACTER 09 / GLINT-GLINT',desc:'느긋하게 모은 빛. 피할 틈 없이 터지는 한순간.<br>빛의 속도로 차여본 적 있나?',hud:'KIZARU',energy:'光 / LIGHT',hint:'<kbd>Q</kbd> 손끝 레이저 · <kbd>E</kbd> 빛의 발차기 · <kbd>R</kbd> 야사카니의 곡옥 · <kbd>SHIFT</kbd> 야타의 거울',demoToast:'손끝에 빛 → 광속 돌진 킥(날려보냄) → 높이 도약 곡옥 탄막 → 빛 이동',slots:{q:'lightLaser',e:'lightKick',r:'lightJewels',shift:'lightMirror'},demo:[[.5,'lightLaser',[0,1.3,-10]],[2,'lightKick',[0,1.3,-10]],[4,'lightJewels',[0,1.3,-10]],[7.5,'lightMirror']],demoEnd:9,demoPos:[0,2.1,-2]};

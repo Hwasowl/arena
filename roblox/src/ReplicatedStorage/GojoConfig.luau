@@ -22,7 +22,7 @@ return {
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
     },
     LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
-    LightKick = {Cost=24,Cooldown=8,Windup=.4,Duration=1.3,Damage=65,Range=32,Width=4.5},
+    LightKick = {Cost=24,Cooldown=8,Windup=.3,Duration=1.1,Damage=65,Range=48,Width=4.5},
     LightJewels = {Cost=55,Cooldown=28,Windup=.5,Duration=2.9,Damage=12,Range=90,Width=1.25,Height=26,Rise=.45,Hover=2.25,Fall=.5,Shoot=.95,Gap=.085},
     LightMirror = {Cost=12,Cooldown=6,Windup=.45,Duration=.85,Range=24},
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },

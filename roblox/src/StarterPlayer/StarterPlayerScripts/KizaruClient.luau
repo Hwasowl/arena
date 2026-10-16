@@ -29,7 +29,7 @@ function M.onEvent(kind,d)
     elseif kind=="KizaruDash" then
         local dist=(d.to-d.from).Magnitude;if dist>.1 then
             local trail=part("KizaruDash",Vector3.new(.5,.5,dist),workspace);trail.CFrame=CFrame.lookAt((d.from+d.to)/2+Vector3.yAxis*1.3,d.to+Vector3.yAxis*1.3)
-            Tween:Create(trail,TweenInfo.new(.4),{Transparency=1,Size=Vector3.new(.1,.1,dist)}):Play();Debris:AddItem(trail,.42)
+            Tween:Create(trail,TweenInfo.new(.3),{Transparency=1,Size=Vector3.new(.1,.1,dist)}):Play();Debris:AddItem(trail,.42)
         end
         sound(d.from,true)
     elseif kind=="KizaruKick" then
@@ -59,7 +59,7 @@ function M.render(dt,selected,alive)
     local core=CFrame.new(.28,.18*k,-1.15-.22*k);local fov=66
     boot.Transparency=1
     if cast.skill=="LightKick" then
-        local dash=smooth((a-cfg.Windup)/.12);local sweep=smooth((a-cfg.Windup-.12)/.12);local rush=math.sin(math.pi*math.clamp((a-cfg.Windup)/.37,0,1));back=smooth((a-cfg.Windup-.42)/(cfg.Duration-cfg.Windup-.42))
+        local dash=smooth((a-cfg.Windup)/.05);local sweep=smooth((a-cfg.Windup-.05)/.1);local rush=math.sin(math.pi*math.clamp((a-cfg.Windup)/.2,0,1));back=smooth((a-cfg.Windup-.3)/(cfg.Duration-cfg.Windup-.3))
         boot.Transparency=0;boot.CFrame=cam.CFrame*CFrame.new(.58-1.15*sweep,-1.1+.95*wind-.9*back,-.65-.6*wind)*CFrame.Angles(-.5*wind,.7-1.7*sweep,-.25+.65*wind-1.35*sweep)
         core=cam.CFrame:ToObjectSpace(boot.CFrame*CFrame.new(0,.05,-.32));r=CFrame.new(.65,-.28,-.65)*CFrame.Angles(.2,.2,.55)
         env.commonLook(CFrame.Angles(0,(.04*wind-.09*sweep)*(1-back),(.065*wind-.15*sweep)*(1-back)));fov=66-5*wind*(1-dash)+30*rush
