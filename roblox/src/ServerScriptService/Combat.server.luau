@@ -5,6 +5,7 @@ local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
+local Itachi=require(script.Parent:WaitForChild("ItachiServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
@@ -75,6 +76,8 @@ local function damage(owner,t,amount,kind)
         victimState.parryHit=true
         return
     end
+    -- Itachi's Crow Clone: rolled here, before anything lands. A dodged hit deals nothing at all.
+    if Itachi.tryDodge(owner,t,kind) then return end
     local dealt=amount
     -- Pain takes less damage while holding Chibaku Tensei.
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then dealt*=.7 end
@@ -82,6 +85,8 @@ local function damage(owner,t,amount,kind)
     if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
     -- One For All: buffed basic attacks hit harder, a buffed All Might takes less.
     dealt*=AllMight.damageFactor(attacker,t.m,kind)
+    -- Susanoo's Yata Mirror takes 60% off frontal hits.
+    dealt*=Itachi.damageFactor(attacker,t.m,kind)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -100,16 +105,17 @@ local function updateSpeed(m,h)
     end
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
     speed*=AllMight.speedFactor(m,n)
+    speed*=Itachi.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
     local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
     if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
-    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n)
+    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
+    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -169,6 +175,7 @@ end
 local function launch(t,velocity)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then return end -- Chibaku Tensei: strong stagger resistance
     velocity=AllMight.filterKnockback(t.m,velocity);if not velocity then return end -- Plus Ultra guard / One For All
+    velocity=Itachi.filterKnockback(t.m,velocity);if not velocity then return end -- Susanoo / a crow clone's cancelled hit
     local victim=Players:GetPlayerFromCharacter(t.m)
     if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
     elseif t.r.Anchored then
@@ -344,7 +351,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                 task.delay((pulse-1)*cfg.Tick,function()
                     if p.Character~=m or not m.Parent or h.Health<=0 then return end
                     for _,t in targets(m) do
-                        if (t.r.Position-r.Position).Magnitude<=cfg.Radius then damage(p,t,cfg.Damage) end
+                        if (t.r.Position-r.Position).Magnitude<=cfg.Radius then damage(p,t,cfg.Damage,"Status") end
                     end
                     fx:FireAllClients("HakiPulse",{owner=p.UserId,position=r.Position,radius=cfg.Radius,pulse=pulse})
                 end)
@@ -360,7 +367,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             if ray then finish=origin+direction*math.max(0,ray.Distance-.5) end
             for _,t in targets(m) do
                 local along=math.clamp((t.r.Position-origin):Dot(direction),0,(finish-origin).Magnitude)
-                if (origin+direction*along-t.r.Position).Magnitude<=cfg.Width then damage(p,t,cfg.Damage) end
+                if (origin+direction*along-t.r.Position).Magnitude<=cfg.Width then damage(p,t,cfg.Damage,"Projectile") end
             end
             fx:FireAllClients("DivineDeparture",{owner=p.UserId,from=origin,to=finish,width=cfg.Width})
         end)
@@ -435,7 +442,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         local distance=cfg.MinDistance+(cfg.Distance-cfg.MinDistance)*charged/cfg.MaxCharge
         delayed(p,s,m,windup,function()
             local start,finish,victims=dashStrike(m,r,flat,distance,cfg.Width)
-            for _,t in victims do damage(p,t,cfg.Damage) end
+            for _,t in victims do damage(p,t,cfg.Damage,"Dash") end
             fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish,charged=charged,distance=distance})
         end)
     elseif kind=="Breath" then
@@ -454,7 +461,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             fx:FireAllClients("FlameGod",{owner=p.UserId,from=start,to=finish})
             -- Too fast to see: the cuts land only after the user is already past.
             task.delay(cfg.HitDelay,function()
-                for _,t in victims do damage(p,t,cfg.Damage) end
+                for _,t in victims do damage(p,t,cfg.Damage,"Ultimate") end
             end)
             -- The cut lands after the turn; recoil follows just after the user sees the result.
             task.delay(cfg.RecoilDelay,function()
@@ -478,7 +485,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             for _,t in targets(m) do
                 local distance=(t.r.Position-center).Magnitude
                 if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
+                    damage(p,t,cfg.Damage,"Explosion")
                     local power=1-.5*distance/cfg.Radius
                     launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
                 end
@@ -497,7 +504,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             for _,t in targets(m) do
                 local distance=(t.r.Position-center).Magnitude
                 if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
+                    damage(p,t,cfg.Damage,"Ultimate")
                     local power=1-.55*distance/cfg.Radius
                     launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
                 end
@@ -521,7 +528,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                     for _,t in targets(m) do
                         local delta=t.r.Position-center
                         if Vector3.new(delta.X,delta.Y*.65,delta.Z).Magnitude<=cfg.Radius then
-                            damage(p,t,cfg.Damage);launch(t,outward(center,t,direction)*cfg.Knockback+Vector3.yAxis*cfg.Lift)
+                            damage(p,t,cfg.Damage,"Explosion");launch(t,outward(center,t,direction)*cfg.Knockback+Vector3.yAxis*cfg.Lift)
                         end
                     end
                 end)
@@ -575,7 +582,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                 fx:FireAllClients("DoraShrink",{owner=p.UserId,from=origin,position=finish,duration=cfg.ShrinkDuration})
             else
                 if best then
-                    damage(p,best,cfg.CannonDamage)
+                    damage(p,best,cfg.CannonDamage,"Projectile")
                     local flat=Vector3.new(aim.X,0,aim.Z);flat=flat.Magnitude>.01 and flat.Unit or r.CFrame.LookVector
                     local excluded={m};for _,other in targets(nil) do table.insert(excluded,other.m) end
                     local wallParams=rayParams(m);wallParams.FilterDescendantsInstances=excluded
@@ -619,7 +626,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             fx:FireAllClients("HandBlast",{owner=p.UserId,from=from,to=center,radius=cfg.Radius})
             for _,t in targets(m) do
                 if (t.r.Position-center).Magnitude<=cfg.Radius then
-                    damage(p,t,cfg.Damage);launch(t,flat*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
+                    damage(p,t,cfg.Damage,"Explosion");launch(t,flat*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
                 end
             end
         end)
@@ -661,7 +668,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
         if skill=="ThunderclapRelease" then releaseThunder(p,s,aim);return end
         local n=clock()
         local m,h,r=character(p);if not m or s.thunderHold or s.busyUntil>n or s.hold or s.slide then return end
-        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
+        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
         local enhanced=s.charges>0 and s.chargesUntil>n
         if (s.cooldowns.Thunderclap or 0)>n or (not enhanced and s.energy<C.Thunderclap.Cost) then return end
         local hold={start=n,model=m,generation=s.generation,direction=aim.Unit}
@@ -683,8 +690,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
-    -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
-    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
+    -- Held by Pain (pulled, thrown, sealed), All Might (smashed, carried, launched) or Itachi (Tsukuyomi, sealed):
+    -- no attacks, dashes or skills. Susanoo locks its own caster too.
+    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
+    if (m:GetAttribute("ItachiLockUntil") or 0)>n then return end
     if skill=="Thunderclap" then return end
     if Pain.handles(skill) then
         if kitOf(p)=="Pain" then Pain.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
@@ -692,6 +701,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     end
     if AllMight.handles(skill) then
         if kitOf(p)=="AllMight" then AllMight.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
+    if Itachi.handles(skill) then
+        if kitOf(p)=="Itachi" then Itachi.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
     end
     if skill=="BasicAttack" or skill=="Slide" then
@@ -715,7 +728,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
                 local finish=r.Position
                 for _,t in targets(m) do
                     local path=finish-start;local along=path.Magnitude>0 and math.clamp((t.r.Position-start):Dot(path.Unit),0,path.Magnitude) or 0
-                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage) end
+                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage,"Weapon") end
                 end
             end)
         end)
@@ -734,7 +747,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
                     local delta=t.r.Position-origin;local along=delta:Dot(look)
                     if along>0 and along<=cfg.CounterReach and (delta-look*along).Magnitude<=3 and along<dist then best=t;dist=along end
                 end
-                if best then damage(p,best,cfg.CounterDamage) end
+                if best then damage(p,best,cfg.CounterDamage,"Weapon") end
                 fx:FireAllClients("ShanksCounter",{owner=p.UserId,position=origin+look*math.min(dist,cfg.CounterReach)})
             else fx:FireAllClients("ShanksParryEnd",{owner=p.UserId}) end
         end)
@@ -802,7 +815,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Itachi.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -822,7 +835,7 @@ RunService.Heartbeat:Connect(function(dt)
             model:PivotTo(CFrame.new(position)*k.from.Rotation);t.r.AssemblyLinearVelocity=Vector3.zero;k.last=travelled
             if wall or progress>=1 then
                 doraKnockbacks[model]=nil
-                if wall then damage(k.owner,t,C.Pocket.CannonWallDamage-C.Pocket.CannonDamage);fx:FireAllClients("DoraWallHit",{position=position,owner=k.owner.UserId}) end
+                if wall then damage(k.owner,t,C.Pocket.CannonWallDamage-C.Pocket.CannonDamage,"Environment");fx:FireAllClients("DoraWallHit",{position=position,owner=k.owner.UserId}) end
             end
         end
     end
@@ -897,7 +910,7 @@ RunService.Heartbeat:Connect(function(dt)
             local projection=math.clamp((t.r.Position-shot.position):Dot(shot.direction),0,segmentLength)
             local closest=shot.position+shot.direction*projection
             if not shot.hit[t.m] and (t.r.Position-closest).Magnitude<=cfg.Radius+2 then
-                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage)
+                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage,shot.kind=="Purple" and "Ultimate" or "Projectile")
                 if shot.kind=="Red" and not t.r.Anchored then t.r.AssemblyLinearVelocity+=shot.direction*34 end
             end
         end
@@ -930,7 +943,7 @@ RunService.Heartbeat:Connect(function(dt)
                 if t.m.Parent and t.h.Health>0 then
                     local delta=t.r.Position-d.center
                     if delta.Magnitude>C.Domain.Radius-2 then t.r.CFrame=CFrame.new(d.center+delta.Unit*(C.Domain.Radius-2))*t.r.CFrame.Rotation end
-                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage) end
+                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage,"DoT") end
                 end
             end
             if n>=d.nextTick then d.nextTick=n+C.Domain.Tick end
@@ -941,6 +954,8 @@ Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,d
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,projectiles=projectiles,kitOf=kitOf})
 AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
+Itachi.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
@@ -948,7 +963,7 @@ local function joined(p)
         clearPurpleHover(s);clearDoraFlight(s)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Itachi.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

@@ -18,6 +18,10 @@ const scripts = {
   AllMightVFX: 'roblox/src/ReplicatedStorage/AllMightVFX.luau',
   AllMightServer: 'roblox/src/ServerScriptService/AllMightServer.luau',
   AllMightClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/AllMightClient.luau',
+  ItachiConfig: 'roblox/src/ReplicatedStorage/ItachiConfig.luau',
+  ItachiVFX: 'roblox/src/ReplicatedStorage/ItachiVFX.luau',
+  ItachiServer: 'roblox/src/ServerScriptService/ItachiServer.luau',
+  ItachiClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/ItachiClient.luau',
 };
 // Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
 // Locate each script's own Properties first so property order cannot mix sources between scripts.

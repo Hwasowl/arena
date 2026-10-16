@@ -830,6 +830,7 @@ local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local PainClient=require(script.Parent:WaitForChild("PainClient"))
 local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
+local ItachiClient=require(script.Parent:WaitForChild("ItachiClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
 local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.Parent=camera
@@ -959,13 +960,16 @@ local KITS={
         slots={{"ShinraTensei","Q","신라천정"},{"BanshoTenin","E","만상천인"},{"ChibakuTensei","R","지폭천성"},{"Dash","SHIFT","대시"}}},
     AllMight={title="オールマイト  ·  올마이트",energy="ONE FOR ALL",hint="Q 풀 파워 10초 · E 유나이티드 스테이츠 오브 스매시 · R PLUS ULTRA (E 적중 직후 R 연계)   /   SHIFT 대시   /   7 캐릭터",handScale=1,
         slots={{"OneForAll","Q","원 포 올: 풀 파워"},{"UnitedStatesOfSmash","E","UNITED STATES OF SMASH"},{"PlusUltra","R","PLUS ULTRA!"},{"Dash","SHIFT","대시"}}},
+    Itachi={title="うちはイタチ  ·  우치하 이타치",energy="MANGEKYO SHARINGAN",hint="Q 츠쿠요미 · E 아마테라스 (바라본 바닥) · R 스사노오 · 패시브 까마귀 분신   /   SHIFT 대시   /   8 캐릭터",handScale=1,
+        slots={{"Tsukuyomi","Q","츠쿠요미"},{"Amaterasu","E","아마테라스"},{"Susanoo","R","스사노오 · 토츠카의 검"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
 local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
+local ITACHI_KINDS={Tsukuyomi=true,Amaterasu=true,Susanoo=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
@@ -1465,10 +1469,10 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(630,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(720,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight"} do
+local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Itachi="이타치"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Itachi"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
     b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
@@ -1481,12 +1485,13 @@ local function announce(name,sub)
 end
 PainClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce,blur=blur})
 AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+ItachiClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or C.Colors.Blue
-    PainClient.reset();AllMightClient.reset()
+    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or C.Colors.Blue
+    PainClient.reset();AllMightClient.reset();ItachiClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -1510,11 +1515,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local attackButton=Instance.new("TextButton");attackButton.Name="BasicAttackButton"
@@ -1532,7 +1537,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Eight]="Itachi"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -1562,6 +1567,7 @@ end)
 event.OnClientEvent:Connect(function(kind,data)
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
     if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
+    if string.sub(kind,1,6)=="Itachi" then ItachiClient.onEvent(kind,data);return end
     if kind=="BasicAttack" then
         bodyMotion(data,false)
         if data.owner==player.UserId then
@@ -2288,6 +2294,13 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if AllMightClient.busy() then desiredFov=mightOut.fov end
         desiredFov+=mightOut.fovAdd
     end
+    -- Itachi: own techniques for the Itachi kit; the Tsukuyomi world and the seal view for anyone caught in them.
+    local isItachi=current()=="Itachi"
+    local itachiOut=ItachiClient.render(dt,{isItachi=isItachi,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0,sliding=sliding~=nil})
+    if itachiOut then
+        if (isItachi and ItachiClient.busy()) or itachiOut.victim then desiredFov=itachiOut.fov end
+        desiredFov+=itachiOut.fovAdd
+    end
     if n<fovKickUntil then desiredFov=94 end
     if h then h.CameraOffset=h.CameraOffset:Lerp(Vector3.new(0,-1.3*lean,0),math.min(1,dt*10)) end
     camera.FieldOfView+=(desiredFov-camera.FieldOfView)*math.min(1,dt*8)
@@ -2360,8 +2373,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         entry.p.Color=entry.source.Color;entry.p.Transparency=(isDora and alive) and entry.source.Transparency or 1
     end
     if doraTool and dora.tools[doraTool] then dora.show(dora.tools[doraTool],true);dora.tools[doraTool]:PivotTo(camera.CFrame*doraToolFrame) end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isItachi)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isItachi)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -2412,7 +2425,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         end
         if reze and not transformed and (entry.skill=="Rampage" or entry.skill=="Kick") then text=entry.name.." (변신 필요)";cooldown=math.max(cooldown,.001) end
         entry.b.Text=entry.key.."\n"..text..(cooldown>0 and string.format("  %.1f",cooldown) or "")
-        entry.stroke.Thickness=((painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) or (mightOut and mightOut.rReady and entry.key=="R" and cooldown<=0)) and 3 or 1
+        entry.stroke.Thickness=((painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) or (mightOut and mightOut.rReady and entry.key=="R" and cooldown<=0) or (itachiOut and itachiOut.ready==entry.key and cooldown<=0)) and 3 or 1
         entry.b.TextTransparency=doraPeek>.08 and .75 or 0
         entry.b.BackgroundTransparency=doraPeek>.08 and .9 or cooldown>0 and .5 or .12
     end
@@ -2425,6 +2438,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             comboLabel.Text=painOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         elseif mightOut and mightOut.combo then
             comboLabel.Text=mightOut.combo;comboLabel.TextTransparency=mightOut.rReady and .1+.25*math.abs(math.sin(n*9)) or .15
+        elseif itachiOut and itachiOut.combo then
+            comboLabel.Text=itachiOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         elseif isDora and dora.rotorUntil>n then
             comboLabel.Text=string.format("대나무 헬리콥터   %.1f초 · SPACE ↑ / CTRL ↓",dora.rotorUntil-n);comboLabel.TextTransparency=0
         else comboLabel.Text="" end
@@ -2442,7 +2457,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();PainClient.reset();AllMightClient.reset()
+    clearCastVFX();PainClient.reset();AllMightClient.reset();ItachiClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)
@@ -2460,6 +2475,602 @@ end)
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003df</UniqueId>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX4D517FF99E303DC30FE108C681D1C1E6">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[-- Uchiha Itachi on the client: slim first-person hands with jointed fingers and purple nails inside wide Akatsuki
+-- sleeves (red clouds, red lining), the seal / face / sleeve-grip / point poses, the Mangekyo overlay, camera work for
+-- each technique (including the Susanoo cinematic), the crow-clone dissolve, and the victim's side: the Tsukuyomi
+-- world (only on the victim's own screen) and the view from inside the Totsuka seal.
+-- Gojo.client.luau owns input and the shared HUD; it forwards Itachi* events here and asks for the arm pose every
+-- frame. All judgement stays on the server.
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local UIS=game:GetService("UserInputService")
+local Lighting=game:GetService("Lighting")
+local I=require(RS:WaitForChild("ItachiConfig"))
+local VFX=require(RS:WaitForChild("ItachiVFX"))
+local COLORS=I.Colors
+local player=Players.LocalPlayer
+local smoothstep,window,bump=VFX.smoothstep,VFX.window,VFX.bump
+local function clock() return workspace:GetServerTimeNow() end
+local function lerp(a,b,t) return a+(b-a)*t end
+
+local ItachiClient={}
+local env
+local cast=nil            -- own technique in progress: {kind, start, data}
+local crow=nil            -- own crow clone in progress
+local victim=nil          -- something being done to us: {kind="Tsukuyomi"|"Seal", start, owner}
+local combo={untilTime=0,text="",key=nil}
+local shake={untilTime=0,power=0,duration=.1}
+local revealed={}
+
+---------------------------------------------------------------- arms
+-- Hand frame: origin at the wrist, +Y toward the knuckles, palm facing -Z. The sleeve hangs open around the wrist.
+local arms={}
+local SKIN,CLOAK,LINING,NAIL=COLORS.Skin,COLORS.Cloak,Color3.fromRGB(150,10,16),COLORS.Nail
+local function vmPart(model,name,size,color,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.Shape=shape or Enum.PartType.Block
+    p.Material=material or Enum.Material.SmoothPlastic;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false
+    p.CastShadow=false;p.Transparency=1;p.Parent=model
+    return p
+end
+local FINGERS={{x=.052,a=.072,b=.05,c=.04},{x=.018,a=.078,b=.054,c=.042},{x=-.017,a=.074,b=.05,c=.04},{x=-.05,a=.062,b=.042,c=.035}}
+local function buildArm(side)
+    local m=Instance.new("Model");m.Name=side>0 and "ItachiRightArm" or "ItachiLeftArm";m.Parent=env.viewmodel
+    local a={side=side,thumbSide=side>0 and -1 or 1,model=m,fingers={},order={},k=1}
+    a.palm=vmPart(m,"Palm",Vector3.new(.15,.17,.06),SKIN)
+    for i,f in FINGERS do
+        local fp={def=f,a=vmPart(m,"Finger",Vector3.new(.034,f.a,.034),SKIN),b=vmPart(m,"Finger",Vector3.new(.031,f.b,.031),SKIN),
+            c=vmPart(m,"Finger",Vector3.new(.028,f.c,.028),SKIN),nail=vmPart(m,"Nail",Vector3.new(.026,.016,.012),NAIL)}
+        a.fingers[i]=fp
+    end
+    a.thumb={a=vmPart(m,"Thumb",Vector3.new(.038,.06,.038),SKIN),b=vmPart(m,"Thumb",Vector3.new(.034,.05,.034),SKIN),nail=vmPart(m,"Nail",Vector3.new(.03,.016,.012),NAIL)}
+    a.wrist=vmPart(m,"Wrist",Vector3.new(.3,.11,.11),SKIN,Enum.PartType.Cylinder)
+    a.sleeve=vmPart(m,"Sleeve",Vector3.new(.95,.4,.4),CLOAK,Enum.PartType.Cylinder)
+    a.lining=vmPart(m,"SleeveLining",Vector3.new(.04,.37,.37),LINING,Enum.PartType.Cylinder)
+    a.clouds={}
+    for i=1,3 do
+        table.insert(a.clouds,{rim=vmPart(m,"CloudRim",Vector3.new(.012,.15,.15),COLORS.CloudRim,Enum.PartType.Cylinder),
+            red=vmPart(m,"Cloud",Vector3.new(.014,.12,.12),COLORS.Cloud,Enum.PartType.Cylinder),at=({-.25,-.48,-.66})[i],h=({.02,.07,-.05})[i]})
+    end
+    a.upper=vmPart(m,"UpperSleeve",Vector3.new(1,.42,.42),CLOAK,Enum.PartType.Cylinder)
+    -- Dissolve order for the crow clone: fingertips first, the sleeve last.
+    for i=4,1,-1 do table.insert(a.order,a.fingers[i].nail);table.insert(a.order,a.fingers[i].c) end
+    table.insert(a.order,a.thumb.nail);table.insert(a.order,a.thumb.b)
+    for i=4,1,-1 do table.insert(a.order,a.fingers[i].b) end
+    table.insert(a.order,a.thumb.a);for i=4,1,-1 do table.insert(a.order,a.fingers[i].a) end
+    for _,p in {a.palm,a.wrist,a.lining} do table.insert(a.order,p) end
+    for _,c in a.clouds do table.insert(a.order,c.red);table.insert(a.order,c.rim) end
+    table.insert(a.order,a.sleeve);table.insert(a.order,a.upper)
+    return a
+end
+local function handFrame(position,fingerDir,palmNormal)
+    local y=fingerDir.Unit
+    local z=-(palmNormal-y*palmNormal:Dot(y))
+    if z.Magnitude<.01 then z=Vector3.zAxis end
+    z=z.Unit
+    return CFrame.fromMatrix(position,y:Cross(z),y,z)
+end
+local ALONG=CFrame.Angles(0,0,math.pi/2)
+-- pose: {frame, curl (number or per finger, thumb 5th), shoulder}
+local function poseArm(a,pose,visible)
+    local cam=workspace.CurrentCamera.CFrame
+    local world=cam*pose.frame
+    local shown={}
+    local count=#a.order;local keep=math.floor(a.k*count+.5)
+    for i,p in a.order do shown[p]=i>count-keep end
+    local function put(p,cf) p.CFrame=cf;p.Transparency=(visible and shown[p]) and 0 or 1 end
+    put(a.palm,world*CFrame.new(0,.085,0))
+    for i,f in a.fingers do
+        local d=f.def
+        local c=math.clamp(type(pose.curl)=="table" and pose.curl[i] or pose.curl or 0,0,1)
+        local base=world*CFrame.new(d.x*a.thumbSide,.17,0)
+        local pa=base*CFrame.Angles(-c*1.45,0,0)
+        put(f.a,pa*CFrame.new(0,d.a/2,0))
+        local pb=pa*CFrame.new(0,d.a,0)*CFrame.Angles(-c*1.6,0,0)
+        put(f.b,pb*CFrame.new(0,d.b/2,0))
+        local pc=pb*CFrame.new(0,d.b,0)*CFrame.Angles(-c*1.1,0,0)
+        put(f.c,pc*CFrame.new(0,d.c/2,0))
+        put(f.nail,pc*CFrame.new(0,d.c-.008,.012))
+    end
+    local tc=math.clamp(type(pose.curl)=="table" and pose.curl[5] or pose.curl or 0,0,1)
+    local thumb=world*CFrame.new(a.thumbSide*.075,.05,-.02)*CFrame.Angles(0,0,-a.thumbSide*(.8-.6*tc))*CFrame.Angles(-.3-tc*.7,0,0)
+    put(a.thumb.a,thumb*CFrame.new(0,.03,0))
+    local tip=thumb*CFrame.new(0,.06,0)*CFrame.Angles(-tc*.9,0,0)
+    put(a.thumb.b,tip*CFrame.new(0,.025,0))
+    put(a.thumb.nail,tip*CFrame.new(0,.042,.014))
+    put(a.wrist,world*CFrame.new(0,-.1,0)*ALONG)
+    -- The sleeve opens around the wrist (it never hides the hand) and runs back toward the elbow.
+    local sleeve=world*CFrame.new(0,-.62,0)
+    put(a.sleeve,sleeve*ALONG)
+    put(a.lining,world*CFrame.new(0,-.15,0)*ALONG)
+    for _,c in a.clouds do
+        local at=world*CFrame.new(a.side*.2,c.at,c.h)
+        put(c.rim,at*CFrame.Angles(0,0,0))
+        put(c.red,at*CFrame.new(a.side*.003,0,0))
+    end
+    local elbow=(world*CFrame.new(0,-1.08,0)).Position
+    local shoulder=(cam*CFrame.new(pose.shoulder or Vector3.new(a.side*.85,-1.15,.2))).Position
+    local span=shoulder-elbow
+    if span.Magnitude>.05 then
+        a.upper.Size=Vector3.new(span.Magnitude+.15,.42,.42)
+        put(a.upper,CFrame.lookAt(elbow+span*.5,shoulder)*CFrame.Angles(0,math.pi/2,0))
+    else put(a.upper,CFrame.new(0,-5000,0)) end
+end
+local function pose(position,fingers,palm,curl,shoulder)
+    return {frame=handFrame(position,fingers,palm),curl=curl or .3,shoulder=shoulder}
+end
+local function blend(p,q,t)
+    if t<=0 then return p elseif t>=1 then return q end
+    local curl
+    if type(p.curl)=="table" or type(q.curl)=="table" then
+        curl={}
+        for i=1,5 do
+            local x=type(p.curl)=="table" and p.curl[i] or p.curl
+            local y=type(q.curl)=="table" and q.curl[i] or q.curl
+            curl[i]=x+(y-x)*t
+        end
+    else curl=p.curl+(q.curl-p.curl)*t end
+    local sp=p.shoulder or Vector3.zero;local sq=q.shoulder or Vector3.zero
+    return {frame=p.frame:Lerp(q.frame,t),curl=curl,shoulder=(p.shoulder and q.shoulder) and sp:Lerp(sq,t) or q.shoulder or p.shoulder}
+end
+-- Poses (camera space). Idle: both hands low and relaxed, at the bottom edge of the screen.
+local function REST(side,breathe) return pose(Vector3.new(side*.5,-.9+(breathe or 0),-.9),Vector3.new(-side*.08,.2,-1),Vector3.new(-side,-.3,0),.35) end
+local function LOW(side) return pose(Vector3.new(side*.56,-1.25,-.72),Vector3.new(-side*.05,-.2,-1),Vector3.new(-side,0,0),.25) end
+local function KNIFE(side) return pose(Vector3.new(side*.1,-.34,-1.42),Vector3.new(0,.08,-1),Vector3.new(-side,0,0),{0,0,0,0,.35},Vector3.new(side*.62,-.98,-.2)) end
+local function SEAL(side) return pose(Vector3.new(side*.055,-.44,-.78),Vector3.new(-side*.05,1,-.18),Vector3.new(-side,0,0),{0,0,.85,.85,.3},Vector3.new(side*.8,-1.1,0)) end
+local FACE=pose(Vector3.new(.16,-.14,-.62),Vector3.new(-.22,1,.08),Vector3.new(-1,0,.15),{0,0,.85,.85,.45},Vector3.new(.78,-1.0,.05))
+local GRIP=pose(Vector3.new(.14,-.62,-.86),Vector3.new(1,.25,-.25),Vector3.new(0,-1,0),.8,Vector3.new(-.8,-1.1,.1))
+local POINT=pose(Vector3.new(.24,-.34,-1.18),Vector3.new(-.04,.12,-1),Vector3.new(-1,0,0),{0,1,1,1,.7},Vector3.new(.74,-1,-.12))
+
+---------------------------------------------------------------- screen
+local overlay={}
+local function frame(parent,name,size,position,color,z)
+    local f=Instance.new("Frame");f.Name=name;f.Size=size;f.Position=position or UDim2.new();f.BackgroundColor3=color or Color3.new()
+    f.BackgroundTransparency=1;f.BorderSizePixel=0;f.ZIndex=z or 4;f.Parent=parent
+    return f
+end
+local function round(f) local c=Instance.new("UICorner");c.CornerRadius=UDim.new(.5,0);c.Parent=f;return f end
+local function buildOverlay()
+    local root=frame(env.gui,"ItachiOverlay",UDim2.fromScale(1,1));overlay.root=root
+    overlay.edges={}
+    for i,spec in {{UDim2.fromScale(1,.34),UDim2.fromScale(0,0),90},{UDim2.fromScale(1,.34),UDim2.fromScale(0,.66),-90},{UDim2.fromScale(.28,1),UDim2.fromScale(0,0),0},{UDim2.fromScale(.28,1),UDim2.fromScale(.72,0),180}} do
+        local e=frame(root,"Edge",spec[1],spec[2],Color3.fromRGB(6,0,0))
+        local g=Instance.new("UIGradient");g.Rotation=spec[3];g.Transparency=NumberSequence.new(0,1);g.Parent=e
+        overlay.edges[i]=e
+    end
+    overlay.red=frame(root,"Red",UDim2.fromScale(1,1),nil,Color3.fromRGB(150,0,6),5)
+    overlay.lid=frame(root,"Lid",UDim2.fromScale(.5,1),UDim2.fromScale(0,0),Color3.new(),6)   -- one eye closing
+    -- Mangekyo Sharingan: red disc, black ring, three curved pinwheel blades, black pupil; spun from code.
+    local eye=frame(root,"Sharingan",UDim2.fromOffset(260,260),UDim2.fromScale(.5,.5),COLORS.Red,7);eye.AnchorPoint=Vector2.new(.5,.5);round(eye)
+    local ring=frame(eye,"Ring",UDim2.fromScale(.92,.92),UDim2.fromScale(.5,.5),Color3.new(),7);ring.AnchorPoint=Vector2.new(.5,.5);round(ring)
+    local inner=frame(ring,"Inner",UDim2.fromScale(.9,.9),UDim2.fromScale(.5,.5),COLORS.Red,7);inner.AnchorPoint=Vector2.new(.5,.5);round(inner)
+    overlay.blades={}
+    for i=1,3 do
+        local b=frame(inner,"Blade",UDim2.fromScale(.16,.5),UDim2.fromScale(.5,.5),Color3.new(),8);b.AnchorPoint=Vector2.new(.5,1);round(b)
+        overlay.blades[i]=b
+    end
+    local pupil=frame(inner,"Pupil",UDim2.fromScale(.22,.22),UDim2.fromScale(.5,.5),Color3.new(),9);pupil.AnchorPoint=Vector2.new(.5,.5);round(pupil)
+    overlay.eye=eye;overlay.eyeParts={eye,ring,inner,pupil}
+    -- Cracks across the genjutsu world, and the vortex seen from inside the seal.
+    overlay.cracks={}
+    for i=1,9 do
+        local c=frame(root,"Crack",UDim2.fromOffset(3,220+math.random(0,260)),UDim2.fromScale(.5,.5),Color3.fromRGB(255,235,235),8)
+        c.AnchorPoint=Vector2.new(.5,0);c.Rotation=(i-1)*40+math.random(-12,12)
+        overlay.cracks[i]=c
+    end
+    overlay.vortex={}
+    for i=1,14 do
+        local v=frame(root,"Vortex",UDim2.fromOffset(6,600),UDim2.fromScale(.5,.5),i%2==0 and COLORS.Gold or COLORS.Red,5)
+        v.AnchorPoint=Vector2.new(.5,1);overlay.vortex[i]={f=v,angle=(i-1)/14*360}
+    end
+    local label=Instance.new("TextLabel");label.AnchorPoint=Vector2.new(.5,0);label.Position=UDim2.fromScale(.5,.12);label.Size=UDim2.fromOffset(520,30)
+    label.BackgroundTransparency=1;label.Font=Enum.Font.GothamBold;label.TextSize=16;label.TextColor3=Color3.fromRGB(255,214,214)
+    label.TextStrokeTransparency=.4;label.Text="";label.ZIndex=9;label.Parent=root
+    overlay.label=label
+    overlay.grade=Instance.new("ColorCorrectionEffect");overlay.grade.Name="ItachiGrade";overlay.grade.Parent=Lighting
+end
+local function setOverlay(o)
+    for _,e in overlay.edges do e.BackgroundTransparency=1-math.clamp(o.vignette or 0,0,1) end
+    overlay.red.BackgroundTransparency=1-math.clamp(o.red or 0,0,.85)
+    overlay.lid.BackgroundTransparency=1-math.clamp(o.lid or 0,0,1)
+    local n=clock();local eye=math.clamp(o.eye or 0,0,1)
+    for _,p in overlay.eyeParts do p.BackgroundTransparency=1-eye*(p.Name=="Sharingan" and .55 or .65) end
+    overlay.eye.Rotation=(n*420)%360;overlay.eye.Size=UDim2.fromOffset(260*(1.25-.25*eye),260*(1.25-.25*eye))
+    for i,b in overlay.blades do b.Rotation=(i-1)*120+20;b.BackgroundTransparency=1-eye*.7 end
+    for _,c in overlay.cracks do c.BackgroundTransparency=1-math.clamp(o.crack or 0,0,1) end
+    local vortex=math.clamp(o.vortex or 0,0,1)
+    for _,v in overlay.vortex do v.f.Rotation=(v.angle+n*140)%360;v.f.BackgroundTransparency=1-vortex*.55 end
+    overlay.label.Text=o.label or "";overlay.label.TextTransparency=o.label and 0 or 1;overlay.label.TextStrokeTransparency=o.label and .4 or 1
+    local world=math.clamp(o.world or 0,0,1)
+    overlay.grade.Saturation=-world;overlay.grade.Contrast=.45*world;overlay.grade.Brightness=-.18*world
+    overlay.grade.TintColor=Color3.new(1,1,1):Lerp(Color3.fromRGB(255,110,110),world)
+end
+local function kick(power,duration) if power>=shake.power or clock()>shake.untilTime then shake.power=power;shake.untilTime=clock()+duration;shake.duration=duration end end
+
+---------------------------------------------------------------- the Tsukuyomi world (victim's screen only)
+local world=nil
+local function clearWorld()
+    if not world then return end
+    for _,p in world.parts do p:Destroy() end
+    world=nil
+end
+local function silhouette(parent)
+    local m=Instance.new("Model");m.Name="ItachiShadow";m.Parent=parent
+    local function sp(name,size,cf,shape)
+        local p=VFX.part(name,size,COLORS.Black,cf,shape,Enum.Material.SmoothPlastic);p.Parent=m;return p
+    end
+    local parts={
+        {sp("Legs",Vector3.new(1.6,2.2,1),CFrame.new(0,1.1,0)),CFrame.new(0,1.1,0)},
+        {sp("Cloak",Vector3.new(2.4,3.2,1.4),CFrame.new(0,3.2,0)),CFrame.new(0,3.2,0)},
+        {sp("Head",Vector3.new(1.2,1.2,1.2),CFrame.new(0,5.4,0),Enum.PartType.Ball),CFrame.new(0,5.4,0)},
+        {sp("Hair",Vector3.new(1.3,.5,1.3),CFrame.new(0,5.9,.1)),CFrame.new(0,5.9,.1)},
+    }
+    for _,x in {-.25,.25} do
+        local e=VFX.part("ShadowEye",Vector3.new(.2,.1,.05),COLORS.Red,CFrame.new(),nil,Enum.Material.Neon);e.Parent=m
+        table.insert(parts,{e,CFrame.new(x,5.45,-.6)})
+    end
+    return {model=m,parts=parts}
+end
+local function buildWorld(casterModel)
+    world={parts={},shadows={}}
+    local moon=VFX.part("TsukuyomiMoon",Vector3.one*60,COLORS.Moon,CFrame.new(0,-5000,0),Enum.PartType.Ball,Enum.Material.Neon)
+    local floor=VFX.part("TsukuyomiFloor",Vector3.new(.2,140,140),Color3.fromRGB(10,4,4),CFrame.new(0,-5000,0),Enum.PartType.Cylinder,Enum.Material.SmoothPlastic)
+    floor.Transparency=1;moon.Transparency=1
+    world.moon=moon;world.floor=floor;table.insert(world.parts,moon);table.insert(world.parts,floor)
+    for i=1,6 do
+        local s=silhouette(VFX.folder);s.ang=(i-3.5)*.36;s.rad=7+(i%3)*3;s.next=0
+        table.insert(world.shadows,s);table.insert(world.parts,s.model)
+    end
+    world.caster=casterModel
+end
+local function updateWorld(a,k,me)
+    if not world then return end
+    local cfg=I.Tsukuyomi
+    local caster=VFX.rootOf(world.caster)
+    local myRoot=VFX.rootOf(me)
+    if not myRoot then return end
+    local toCaster=caster and Vector3.new(caster.Position.X-myRoot.Position.X,0,caster.Position.Z-myRoot.Position.Z) or -myRoot.CFrame.LookVector
+    if toCaster.Magnitude<.1 then toCaster=-myRoot.CFrame.LookVector end
+    toCaster=toCaster.Unit
+    local feet=myRoot.Position-Vector3.yAxis*3
+    world.moon.CFrame=CFrame.new(feet+toCaster*260+Vector3.yAxis*110);world.moon.Size=Vector3.one*(60+30*k)
+    world.moon.Transparency=1-k
+    world.floor.CFrame=CFrame.new(feet+Vector3.yAxis*.06)*CFrame.Angles(0,0,math.pi/2);world.floor.Transparency=1-.85*k
+    local base=math.atan2(toCaster.Z,toCaster.X)
+    for _,s in world.shadows do
+        if a>.9 and a<1.5 and clock()>s.next then
+            s.next=clock()+.08+math.random()*.12
+            if math.random()<.5 then
+                VFX.feathers(s.model:GetPivot().Position+Vector3.yAxis*3,4,1.5,.8)
+                s.ang=math.clamp(s.ang+(math.random()-.5)*1.4,-1.2,1.2);s.rad=6+math.random()*8
+            end
+        end
+        local ang=base+s.ang
+        local pos=feet+Vector3.new(math.cos(ang),0,math.sin(ang))*s.rad
+        local cf=CFrame.lookAt(pos,Vector3.new(feet.X,pos.Y,feet.Z))
+        local show=k>.3 and a<1.62
+        for _,entry in s.parts do entry[1].CFrame=cf*entry[2];entry[1].Transparency=show and 0 or 1 end
+    end
+    if a>=1.62 and not world.scattered then
+        world.scattered=true
+        for _,s in world.shadows do VFX.feathers(s.model:GetPivot().Position+Vector3.yAxis*3,12,3,1.4) end
+    end
+end
+
+---------------------------------------------------------------- events
+local function ownerOf(data)
+    local owner=Players:GetPlayerByUserId(data.owner)
+    return owner and owner.Character,owner==player
+end
+function ItachiClient.onEvent(kind,data)
+    local model,mine=ownerOf(data)
+    local me=player.Character
+    if kind=="ItachiCrow" then
+        if model then VFX.crowClone(model,data) end
+        if mine then crow={start=data.start};combo={untilTime=data.start+2.5,text="까마귀 분신 · 지금 Q 츠쿠요미로 반격",key="Q"} end
+    elseif kind=="ItachiTsukuyomi" then
+        if model then VFX.tsukuyomi(model,data) end
+        if mine then cast={kind="Tsukuyomi",start=data.start,target=data.target}
+            combo={untilTime=data.start+I.Tsukuyomi.End+1,text="츠쿠요미 · 구속 중에 E 아마테라스로 연계",key="E",from=data.start+I.Tsukuyomi.Wave} end
+        if data.target==me and me then
+            victim={kind="Tsukuyomi",start=data.start,caster=model}
+            clearWorld();buildWorld(model)
+            VFX.sound("Genjutsu",me:GetPivot().Position,.8,3)
+        end
+    elseif kind=="ItachiTsukuyomiFail" then
+        if mine then cast={kind="TsukuyomiFail",start=clock()};env.announce("츠쿠요미","35스터드 · 12° 안에 보이는 대상이 없습니다") end
+    elseif kind=="ItachiTsukuyomiEnd" then
+        if data.target==me and victim and victim.kind=="Tsukuyomi" and data.reason~="done" then victim=nil;clearWorld() end
+    elseif kind=="ItachiAmaterasu" then
+        VFX.amaterasu(data)
+        if mine then cast={kind="Amaterasu",start=data.start,center=data.center}
+            combo={untilTime=data.start+I.Amaterasu.BurnEnd,text="흑염이 타는 중 · R 스사노오로 연계",key="R",from=data.start+I.Amaterasu.Spread} end
+    elseif kind=="ItachiAmaterasuFail" then
+        if mine then
+            local why=({blocked="적이 시야를 가리고 있습니다 · 바닥을 바라보세요",wall="벽이나 가파른 면에는 붙지 않습니다",range="65스터드 안의 지면을 바라보세요"})[data.reason] or "유효한 지면이 아닙니다"
+            env.announce("아마테라스",why)
+        end
+    elseif kind=="ItachiAmaterasuEnd" then
+        VFX.endAmaterasu(data.owner,data.start)
+    elseif kind=="ItachiSusanoo" then
+        if model then VFX.susanoo(model,data) end
+        if mine then cast={kind="Susanoo",start=data.start,direction=data.direction};combo.untilTime=0 end
+    elseif kind=="ItachiSusanooThrust" then
+        VFX.susanooThrust(data.owner,data.target)
+        if mine and cast and cast.kind=="Susanoo" then cast.target=data.target end
+    elseif kind=="ItachiSusanooHit" then
+        VFX.susanooHit(data.owner,data.point)
+        if mine then kick(.25,.3) end
+        if data.target==me and me then victim={kind="Seal",start=data.start,caster=model} end
+    elseif kind=="ItachiSusanooMiss" then
+        VFX.susanooMiss(data.owner)
+        if mine then env.announce("토츠카의 검","빗나감 · 봉인 없음") end
+    elseif kind=="ItachiSusanooSealed" then
+        VFX.sound("Seal",data.point,.8,2)
+    elseif kind=="ItachiSusanooEnd" then
+        VFX.susanooEnd(data.owner,data.reason~="done")
+        if mine and cast and cast.kind=="Susanoo" then cast.ended=clock() end
+        if victim and victim.kind=="Seal" and victim.caster==model then victim=nil end
+    elseif kind=="ItachiMirrorHit" then
+        VFX.mirrorHit(data.owner)
+    end
+end
+
+---------------------------------------------------------------- render
+local function lookToward(camera,point,k)
+    local d=camera.CFrame:VectorToObjectSpace((point-camera.CFrame.Position).Unit)
+    local yaw=math.atan2(-d.X,-d.Z);local pitch=math.atan2(d.Y,math.sqrt(d.X*d.X+d.Z*d.Z))
+    return CFrame.Angles(0,yaw*k,0)*CFrame.Angles(pitch*k,0,0)
+end
+local function revealBody(m,on)
+    if on and m then
+        for _,v in m:GetDescendants() do
+            if v:IsA("BasePart") and v.Name~="HumanoidRootPart" then v.LocalTransparencyModifier=0;revealed[v]=true end
+        end
+    else
+        for v in revealed do if v.Parent then v.LocalTransparencyModifier=1 end end
+        table.clear(revealed)
+    end
+end
+local cinemaParams=RaycastParams.new();cinemaParams.FilterType=Enum.RaycastFilterType.Exclude;cinemaParams.RespectCanCollide=true
+-- A shot around the caster that never goes through walls: swings to the clearest angle when blocked.
+local function shot(camera,me,offset,look)
+    local list={VFX.folder,camera}
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    cinemaParams.FilterDescendantsInstances=list
+    local from=me.Position+Vector3.yAxis*1.5
+    local best,bestLen=nil,-1
+    for _,ang in {0,.45,-.45,.9,-.9,1.4,-1.4} do
+        local want=CFrame.Angles(0,ang,0)*offset
+        local hit=workspace:Raycast(from,want,cinemaParams)
+        local len=hit and math.max(1.5,hit.Distance-1) or want.Magnitude
+        if len>bestLen+.01 then best=want.Unit;bestLen=len end
+        if len>=want.Magnitude*.85 then break end
+    end
+    return CFrame.lookAt(from+best*bestLen,look)
+end
+-- info: {isItachi, melee, sliding, moving, alive}. Returns {fov, fovAdd, combo, ready} for Gojo.client.
+function ItachiClient.render(dt,info)
+    local n=clock()
+    local camera=workspace.CurrentCamera
+    if not arms.right then return end
+    ItachiClient.updateVictims(n)
+    local m=player.Character
+    local o={vignette=0,red=0,eye=0,lid=0,crack=0,vortex=0,world=0,label=nil}
+    local out={fov=72,fovAdd=0}
+    -- Things done to us show for every kit.
+    if victim then
+        local a=n-victim.start
+        if victim.kind=="Tsukuyomi" then
+            local cfg=I.Tsukuyomi
+            if a>cfg.End+.05 then victim=nil;clearWorld()
+            else
+                local k=a>=cfg.Eye and smoothstep(window(a,cfg.Eye,cfg.World))*(1-smoothstep(window(a,1.6,1.95))) or 0
+                o.world=k;o.vignette=.7*k;o.label=k>.05 and "츠쿠요미 · 환술 세계 · 1.4초 구속" or nil
+                o.crack=a>=cfg.Crack and smoothstep(window(a,cfg.Crack,1.75))*(1-smoothstep(window(a,1.75,1.95))) or 0
+                if a>=cfg.Wave and not victim.hit then victim.hit=true;o.red=1;kick(.12,.25) end
+                if victim.hit then o.red=math.max(o.red,.6*(1-window(a,cfg.Wave,cfg.Wave+.4))) end
+                updateWorld(a,k,m)
+                local caster=VFX.rootOf(victim.caster)
+                if caster and k>0 then env.commonLook(lookToward(camera,caster.Position+Vector3.yAxis*1.2,.85*k)*CFrame.Angles(-.08*k,0,math.sin(n*2)*.03*k)) end
+                out.fov=72-10*k;out.victim=true
+            end
+        elseif victim.kind=="Seal" then
+            local cfg=I.Susanoo
+            if a>cfg.End+.2 then victim=nil
+            else
+                local sealedNow=m and (m:GetAttribute("ItachiSealedUntil") or 0)>n
+                local caster=VFX.rootOf(victim.caster)
+                if caster then env.commonLook(lookToward(camera,caster.Position+Vector3.yAxis*11,.9)) end
+                o.vortex=sealedNow and 1 or smoothstep(window(a,cfg.StrikeEnd,cfg.Seal))
+                o.red=sealedNow and .75 or .25;o.vignette=.8
+                o.label=sealedNow and "토츠카의 검 · 봉인 중" or "토츠카의 검에 끌려 들어가는 중"
+                out.fov=82;out.victim=true
+            end
+        end
+    end
+    if not info.isItachi then
+        poseArm(arms.right,REST(1),false);poseArm(arms.left,REST(-1),false)
+        cast=nil;crow=nil;revealBody(nil,false)
+        setOverlay(o)
+        return out.victim and out or nil
+    end
+    local visible=info.alive
+    local breathe=math.sin(n*1.4)*.01
+    local swing=info.moving and math.sin(n*8) or 0
+    local R,L=REST(1,breathe+.03*swing),REST(-1,breathe-.03*swing)
+    -- Idle Mangekyo: always faintly on.
+    VFX.eyeGlow(m,.15)
+    -- Basic attack: quick knife-hand jabs, alternating hands, fingers straight, no big wind-up.
+    if info.melee and not cast then
+        local me=info.melee;local a=n-me.start
+        local wind=smoothstep(a/me.windup);local strike=1-(1-window(a,me.windup,me.windup+me.swing))^3
+        local back=smoothstep((a-me.windup-me.swing)/math.max(.05,me.duration-me.windup-me.swing))
+        local side=me.combo%2==0 and -1 or 1
+        local rest=side>0 and R or L
+        local cock=blend(rest,KNIFE(side),.25);cock.frame=cock.frame*CFrame.new(0,-.1,.15)
+        local p=blend(blend(blend(rest,cock,wind),KNIFE(side),strike),rest,back)
+        if side>0 then R=p else L=p end
+        out.fovAdd+=2*strike*(1-back)
+    end
+    if info.sliding then R.frame=R.frame*CFrame.new(0,-.1,.1);L.frame=L.frame*CFrame.new(0,-.1,.1) end
+    if not info.alive then cast=nil;crow=nil end
+    -- Crow clone: flinch, the hands dissolve fingertips-first into the crows, then come back.
+    arms.right.k,arms.left.k=1,1
+    if crow then
+        local cfg=I.CrowClone;local a=n-crow.start
+        if a>cfg.Total then crow=nil
+        else
+            local gone=smoothstep(window(a,cfg.Break,cfg.MoveFrom))*(1-smoothstep(window(a,cfg.MoveTo,cfg.Reform)))
+            arms.right.k,arms.left.k=1-gone,1-gone
+            out.fov=72-8*bump(a,0,.25)+6*bump(a,cfg.MoveFrom,cfg.MoveTo)
+            o.vignette=math.max(o.vignette,.5*bump(a,0,cfg.Reform));o.eye=math.max(o.eye,.5*bump(a,cfg.Reform-.05,cfg.Total))
+            if a<cfg.Break then env.commonLook(CFrame.Angles(.04*bump(a,0,cfg.Break),0,-.03*bump(a,0,cfg.Break))) end
+        end
+    end
+    local cinematic,shotCF=0,nil
+    if cast then
+        local a=n-cast.start
+        if cast.kind=="TsukuyomiFail" then
+            if a>.45 then cast=nil else env.commonLook(CFrame.Angles(-.05*bump(a,0,.45),0,0));o.eye=.3*bump(a,0,.45) end
+        elseif cast.kind=="Tsukuyomi" then
+            ---------------------------------------------------------------- Q
+            local cfg=I.Tsukuyomi
+            if a>cfg.End+.05 then cast=nil
+            else
+                -- 0-.3 the head dips, the right hand rises to the face and the left grips the right sleeve;
+                -- .3-.55 the Mangekyo spins; .9-1.5 the right hand extends toward the victim; then everything lowers.
+                local up=smoothstep(window(a,0,cfg.Prep))*(1-smoothstep(window(a,1.55,1.95)))
+                local reach=smoothstep(window(a,1.05,1.3))*(1-smoothstep(window(a,1.5,1.75)))
+                R=blend(blend(R,FACE,up),POINT,reach);L=blend(L,GRIP,up*(1-reach))
+                env.commonLook(CFrame.Angles(-.12*bump(a,0,.6),0,0))
+                out.fov=72-8*smoothstep(window(a,0,cfg.Prep))*(1-smoothstep(window(a,1.5,1.95)))
+                o.vignette=.55*up;o.eye=math.max(o.eye,bump(a,cfg.Prep,cfg.Eye+.25)*.9);o.red=.25*bump(a,cfg.Prep,cfg.Eye+.2)
+                VFX.eyeGlow(m,.3+.7*up)
+                if a>=cfg.Wave and not cast.waved then cast.waved=true;kick(.04,.15) end
+            end
+        elseif cast.kind=="Amaterasu" then
+            ---------------------------------------------------------------- E
+            local cfg=I.Amaterasu
+            if a>cfg.Full+.1 then cast=nil
+            else
+                -- .2-.55 the head dips, one eye closes then opens on the Mangekyo; the arms barely move.
+                env.commonLook(CFrame.Angles(-.07*bump(a,.1,.9),0,0))
+                o.lid=bump(a,.2,.42);o.eye=math.max(o.eye,bump(a,.38,.62)*.85);o.vignette=.45*bump(a,.15,1)
+                out.fov=72-6*bump(a,.2,.8)
+                R=blend(R,blend(R,SEAL(1),.12),bump(a,.15,.7))
+                VFX.eyeGlow(m,.3+.7*bump(a,.2,.9))
+                -- Heat haze: a short shake while the flames spread, stronger when close.
+                local d=cast.center and m and m:GetPivot().Position and (cast.center-m:GetPivot().Position).Magnitude or 99
+                if a>=cfg.Spread and a<cfg.Full and d<40 then kick(.03*(1-d/40)+.01,.1) end
+            end
+        elseif cast.kind=="Susanoo" then
+            ---------------------------------------------------------------- R
+            local cfg=I.Susanoo
+            if a>cfg.End+.1 or (cast.ended and n-cast.ended>.3) then cast=nil;revealBody(nil,false)
+            else
+                -- 0-.6 head down, arms lowered slowly, both eyes Mangekyo, red pressure. They stay low.
+                local low=smoothstep(window(a,0,.6))*(1-smoothstep(window(a,6.0,6.4)))
+                R=blend(R,LOW(1),low);L=blend(L,LOW(-1),low)
+                env.commonLook(CFrame.Angles(-.16*smoothstep(window(a,0,.6))*(1-smoothstep(window(a,.6,1.1)))-.1*bump(a,6.0,6.4),0,0))
+                o.vignette=.6*low;o.red=.35*bump(a,.1,1.2)+.25*bump(a,cfg.Aim,cfg.StrikeEnd);o.eye=math.max(o.eye,.45*bump(a,.3,.75))
+                VFX.eyeGlow(m,1)
+                out.fov=72-6*smoothstep(window(a,cfg.Aim,cfg.Thrust))*(1-window(a,cfg.Thrust,cfg.Tip))+10*bump(a,cfg.Thrust,cfg.StrikeEnd)
+                -- Cinematic: rear shot while Susanoo rises, over the shoulder for the mirror, side shot of the blade,
+                -- first person to aim and thrust, a side shot of the seal, then first person again.
+                local root=VFX.rootOf(m)
+                local dir=cast.direction or Vector3.new(0,0,-1)
+                local side=dir:Cross(Vector3.yAxis).Unit
+                if root then
+                    local shots={
+                        {cfg.Upper,cfg.Mirror,-dir*15+Vector3.yAxis*9+side*2.5,root.Position+Vector3.yAxis*8+dir*3},
+                        {cfg.Mirror,cfg.Blade,-dir*5.5-side*3+Vector3.yAxis*3,root.Position+Vector3.yAxis*5+dir*14},
+                        {cfg.Blade,cfg.Aim,side*17+dir*2.5+Vector3.yAxis*4,root.Position+Vector3.yAxis*7+dir*3},
+                    }
+                    if cast.target and a>=cfg.Tip then
+                        local tr=VFX.rootOf(cast.target)
+                        local mid=tr and root.Position:Lerp(tr.Position,.55) or root.Position+dir*10
+                        table.insert(shots,{cfg.StrikeEnd,cfg.SealEnd+.2,side*18+Vector3.yAxis*5+(mid-root.Position)*.5,mid+Vector3.yAxis*3})
+                    end
+                    for _,s in shots do
+                        local k=smoothstep(window(a,s[1]-.05,s[1]+.2))*(1-smoothstep(window(a,s[2]-.2,s[2]+.05)))
+                        if k>cinematic then cinematic=k;shotCF=shot(camera,root,s[3],s[4]) end
+                    end
+                end
+            end
+        end
+    end
+    if cinematic>.001 and shotCF then
+        local blended=camera.CFrame:Lerp(shotCF,smoothstep(cinematic))
+        env.commonLook(camera.CFrame:Inverse()*blended)
+        revealBody(m,cinematic>.25)
+        if cinematic>.25 then visible=false end
+        out.fov=lerp(out.fov,64,cinematic)
+    elseif next(revealed) then revealBody(nil,false) end
+    if n<shake.untilTime then
+        local k=(shake.untilTime-n)/math.max(.01,shake.duration);local p=shake.power*k
+        env.commonLook(CFrame.new((math.random()-.5)*p*4,(math.random()-.5)*p*4,0)*CFrame.Angles((math.random()-.5)*p,(math.random()-.5)*p,0))
+    end
+    local squeeze=math.min(1,camera.ViewportSize.X/math.max(1,camera.ViewportSize.Y))
+    local function narrow(p)
+        local f=p.frame
+        p.frame=CFrame.new(f.Position*Vector3.new(math.max(.72,squeeze),1,1))*f.Rotation
+        if p.shoulder then p.shoulder=p.shoulder*Vector3.new(math.max(.8,squeeze),1,1) end
+        return p
+    end
+    poseArm(arms.right,narrow(R),visible and not out.victim)
+    poseArm(arms.left,narrow(L),visible and not out.victim)
+    setOverlay(o)
+    -- Never draw our own eyes or sleeves into the first-person view (the cinematic shows the whole body).
+    if m and cinematic<=.25 then
+        for _,v in m:GetChildren() do if v:IsA("BasePart") and string.sub(v.Name,1,6)=="Itachi" then v.LocalTransparencyModifier=1 end end
+    end
+    if n<combo.untilTime and n>=(combo.from or 0) then out.combo=combo.text;out.ready=combo.key end
+    return out
+end
+-- Victim side: a sealed body is carried by the server and does not fight it; binds stop jumping.
+local heldApplied=false
+function ItachiClient.updateVictims(n)
+    local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+    local sealedNow=(m:GetAttribute("ItachiSealedUntil") or 0)>n or (victim and victim.kind=="Seal" and (m:GetAttribute("ItachiHeldUntil") or 0)>n)
+    if sealedNow~=heldApplied then
+        heldApplied=sealedNow
+        h.PlatformStand=sealedNow
+        if not sealedNow then h:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    end
+    if (m:GetAttribute("ItachiHeldUntil") or 0)>n or (m:GetAttribute("ItachiLockUntil") or 0)>n then
+        h:SetStateEnabled(Enum.HumanoidStateType.Jumping,false)
+    end
+end
+function ItachiClient.busy() return cast~=nil or crow~=nil end
+function ItachiClient.reset()
+    cast=nil;crow=nil;victim=nil;combo={untilTime=0,text=""};shake.untilTime=0
+    clearWorld();revealBody(nil,false)
+    if overlay.root then setOverlay({}) end
+end
+function ItachiClient.init(environment)
+    env=environment
+    arms.right=buildArm(1);arms.left=buildArm(-1)
+    buildOverlay()
+    UIS.WindowFocusReleased:Connect(function() shake.untilTime=0 end)
+end
+return ItachiClient
+]]></ProtectedString>
+					<string name="ScriptGuid">{F6DC28D2-DF46-A8DB-B584-F6FA35CA4337}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+					<string name="Name">ItachiClient</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					<UniqueId name="UniqueId">3b1ce979ecc6178c581e8c51ef86a192</UniqueId>
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBXAF873F2CD214EA455499439334232D47">
@@ -3923,6 +4534,8 @@ return {
         Pain = { "ShinraTensei", "BanshoTenin", "ChibakuTensei", "Dash" },
         -- All Might: tuning and judgement live in AllMightConfig / AllMightServer.
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
+        -- Uchiha Itachi: tuning and judgement live in ItachiConfig / ItachiServer. Crow Clone is a passive.
+        Itachi = { "Tsukuyomi", "Amaterasu", "Susanoo", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
@@ -3973,6 +4586,660 @@ return {
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d9</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ModuleScript" referent="RBX45D031E6CA7A08C115A4793A0EC3D164">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- Uchiha Itachi tuning. Read by ItachiServer (every combat decision), ItachiClient and ItachiVFX (timing of the
+-- visuals). Times are seconds from the key press (or from the dodge) unless noted; distances are studs.
+return {
+    Kit = { "Tsukuyomi", "Amaterasu", "Susanoo" },
+    Colors = {
+        Red = Color3.fromRGB(255, 42, 36), Crimson = Color3.fromRGB(150, 8, 12), Blood = Color3.fromRGB(70, 0, 4),
+        Black = Color3.fromRGB(6, 4, 6), Ash = Color3.fromRGB(70, 66, 66), Ember = Color3.fromRGB(255, 70, 40),
+        Gold = Color3.fromRGB(255, 196, 96), Cloak = Color3.fromRGB(14, 12, 18), Cloud = Color3.fromRGB(196, 18, 28),
+        CloudRim = Color3.fromRGB(240, 236, 236), Skin = Color3.fromRGB(236, 206, 180), Nail = Color3.fromRGB(96, 70, 128),
+        Crow = Color3.fromRGB(10, 10, 14), Moon = Color3.fromRGB(200, 10, 16),
+    },
+    -- Passive: rolled on the server before a dodgeable hit lands. A dodge cancels the whole hit (no damage, no
+    -- knockback); it never chains with itself because the internal cooldown starts on the dodge.
+    CrowClone = {
+        Chance = 0.2, InternalCooldown = 25, Distance = 12, SideStep = 8,
+        Break = 0.1, MoveFrom = 0.25, MoveTo = 0.45, Reform = 0.65, Total = 0.85,
+        ClearRadius = 3,              -- no character may stand this close to the landing spot
+        -- Hit kinds the clone can dodge. Everything else (DoT, status, genjutsu, shockwaves, explosions, environment,
+        -- falls, and ultimates flagged "Ultimate") always lands. An unlabelled hit is treated as undodgeable.
+        Dodgeable = { Basic = true, Melee = true, Kick = true, Weapon = true, Dash = true, Projectile = true },
+    },
+    -- Q: one target in a 12-degree cone, 35 studs, in sight. The victim's own client shows the genjutsu world.
+    Tsukuyomi = {
+        Cooldown = 16, FailCooldown = 1.5, Range = 35, Angle = 12, Damage = 12,
+        Prep = 0.3, Eye = 0.55, World = 0.9, Wave = 1.35, Crack = 1.5, End = 1.95,
+        Bind = 1.4,                   -- Eye .. End: no move, jump, dash or skills
+        CasterSpeed = 0.35, Busy = 1.5,
+    },
+    -- E: the point the screen centre looks at on valid ground. Black flames, never orange.
+    Amaterasu = {
+        Cooldown = 20, FailCooldown = 1, Range = 65, MaxSlope = 35,
+        StartRadius = 3, Radius = 20, FlameHeight = 5, StepHeight = 6,
+        Ignite = 0.55, Spread = 0.8, Full = 1.5, BurnEnd = 6, Gone = 6.7,
+        EntryDamage = 10, TickDamage = 6, Tick = 1, MaxTicks = 5,        -- 10 + 5 x 6 = 40 per target at most
+        Slow = 0.8, CasterSpeed = 0.5, Busy = 0.85,
+    },
+    -- R: Susanoo forms around the caster, the Yata Mirror guards the front, the Totsuka Blade thrusts and seals.
+    Susanoo = {
+        Cooldown = 90,
+        Ribs = 0.6, Upper = 1.1, Mirror = 1.8, Blade = 2.5, Aim = 3.2, Thrust = 3.65, Tip = 3.9, StrikeEnd = 4.15,
+        Seal = 4.6, SealHit = 5.0, SealEnd = 5.35, MirrorBreak = 5.5, End = 6.4, SealFor = 1.8,
+        Reach = 35, Width = 4, Damage1 = 55, Damage2 = 25,
+        MirrorReduction = 0.6, MirrorArc = 75,           -- frontal half-angle in degrees
+        Height = 14, Hand = Vector3.new(5.5, 6, -3.5),   -- right hand relative to the caster's root (studs)
+        LiftHeight = 3, SealPoint = 0.55,                -- the victim is drawn to this fraction of the blade
+    },
+    -- Placeholder sounds (built-in assets); replace with uploaded ids.
+    Sounds = {
+        Caw = { id = "rbxasset://sounds/electronicpingshort.mp3", speed = 1.9 },
+        Flutter = { id = "rbxasset://sounds/swordslash.wav", speed = 1.6 },
+        Eye = { id = "rbxasset://sounds/electronicpingshort.mp3", speed = 0.55 },
+        Genjutsu = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.3 },
+        Wave = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.6 },
+        Crack = { id = "rbxasset://sounds/impact_generic.mp3", speed = 1.4 },
+        Ignite = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.55 },
+        Burn = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.35 },
+        Hum = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.22 },
+        Mirror = { id = "rbxasset://sounds/electronicpingshort.mp3", speed = 0.4 },
+        Thrust = { id = "rbxasset://sounds/swordslash.wav", speed = 0.5 },
+        Impact = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.45 },
+        Seal = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.6 },
+    },
+}
+]]></ProtectedString>
+				<string name="ScriptGuid">{AEA0231B-4690-4D23-BCB1-7076635A141B}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ItachiConfig</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">eb00461523e648ba084e50acd307fbad</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ModuleScript" referent="RBX43A77BB167F168A0DF469A798F29EF26">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- Uchiha Itachi world effects, run on every client from the server's Itachi* events: real flapping crows, feathers,
+-- the black Amaterasu field, Susanoo with the Yata Mirror and the Totsuka Blade, the seal, eye glow and bowed heads.
+-- Nothing here touches gameplay: positions come from the server, every part is anchored and non-collidable, crows and
+-- flames are pooled, distant fields draw fewer flames, and each effect has a hard lifetime.
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local Debris=game:GetService("Debris")
+local RS=game:GetService("ReplicatedStorage")
+local I=require(RS:WaitForChild("ItachiConfig"))
+local COLORS=I.Colors
+
+local VFX={}
+VFX.Sounds=I.Sounds
+local folder=Instance.new("Folder");folder.Name="ItachiFX";folder.Parent=workspace
+VFX.folder=folder
+local active={}
+local function clock() return workspace:GetServerTimeNow() end
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function window(a,from,to) return math.clamp((a-from)/(to-from),0,1) end
+local function bump(a,from,to) local k=window(a,from,to);return math.sin(k*math.pi) end
+VFX.smoothstep=smoothstep;VFX.window=window;VFX.bump=bump
+local function run(duration,update,cleanup,start)
+    local e={start=start or clock(),duration=duration,update=update,cleanup=cleanup}
+    table.insert(active,e);return e
+end
+VFX.run=run
+local function part(name,size,color,cf,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
+    p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
+    p.Material=material or Enum.Material.Neon;p.Shape=shape or Enum.PartType.Block;p.Parent=folder
+    return p
+end
+VFX.part=part
+function VFX.sound(name,position,volume,duration,speedScale)
+    local cue=VFX.Sounds[name];if not cue then return end
+    local holder=part("ItachiSound",Vector3.one*.1,Color3.new(),CFrame.new(position));holder.Transparency=1
+    local s=Instance.new("Sound");s.SoundId=cue.id;s.Volume=volume or .6;s.PlaybackSpeed=cue.speed*(speedScale or 1)
+    s.RollOffMinDistance=14;s.RollOffMaxDistance=260;s.Parent=holder;s:Play()
+    Debris:AddItem(holder,duration or 3)
+    return s,holder
+end
+local function rootOf(model) return model and model:FindFirstChild("HumanoidRootPart") end
+VFX.rootOf=rootOf
+local PARK=CFrame.new(0,-5000,0)
+-- Level of detail: effects far from the camera draw fewer pieces.
+local function detail(position)
+    local cam=workspace.CurrentCamera
+    local d=cam and (cam.CFrame.Position-position).Magnitude or 0
+    return d>140 and .3 or d>80 and .6 or 1
+end
+VFX.detail=detail
+
+---------------------------------------------------------------- crows and feathers
+-- A crow: body, head, beak, tail, two wings that flap about the shoulder line, two red eyes. Pooled.
+local crowPool={}
+local function buildCrow()
+    local m=Instance.new("Model");m.Name="ItachiCrow"
+    local function cp(name,size,color,shape,material)
+        local p=part(name,size,color,PARK,shape,material or Enum.Material.SmoothPlastic);p.Parent=m;return p
+    end
+    local c={model=m}
+    c.body=cp("Body",Vector3.new(.55,.5,1.1),COLORS.Crow,Enum.PartType.Ball)
+    c.head=cp("Head",Vector3.new(.38,.38,.38),COLORS.Crow,Enum.PartType.Ball)
+    c.beak=cp("Beak",Vector3.new(.1,.1,.32),Color3.fromRGB(30,30,34))
+    c.tail=cp("Tail",Vector3.new(.42,.05,.6),COLORS.Crow)
+    c.wl=cp("Wing",Vector3.new(1.3,.05,.55),COLORS.Crow);c.wr=cp("Wing",Vector3.new(1.3,.05,.55),COLORS.Crow)
+    c.el=cp("Eye",Vector3.one*.07,COLORS.Red,Enum.PartType.Ball,Enum.Material.Neon);c.er=cp("Eye",Vector3.one*.07,COLORS.Red,Enum.PartType.Ball,Enum.Material.Neon)
+    m.Parent=folder
+    return c
+end
+local function acquireCrow() return table.remove(crowPool) or buildCrow() end
+local function releaseCrow(c)
+    for _,p in c.model:GetChildren() do p.CFrame=PARK end
+    table.insert(crowPool,c)
+end
+-- Places a crow at `cf` (looking along -Z) with wings at `flap` radians and an overall `size`.
+local function poseCrow(c,cf,flap,size)
+    local s=size or 1
+    local function at(p,offset,base) p.CFrame=cf*CFrame.new(offset*s)*(base or CFrame.identity) end
+    for _,p in {c.body,c.head,c.beak,c.tail,c.wl,c.wr,c.el,c.er} do
+        local base=p:GetAttribute("BaseSize");if not base then base=p.Size;p:SetAttribute("BaseSize",base) end
+        p.Size=base*s
+    end
+    at(c.body,Vector3.zero);at(c.head,Vector3.new(0,.12,-.6));at(c.beak,Vector3.new(0,.08,-.86),CFrame.Angles(-.15,0,0))
+    at(c.tail,Vector3.new(0,.04,.75),CFrame.Angles(.15,0,0))
+    c.wl.CFrame=cf*CFrame.new(-.18*s,.12*s,-.05*s)*CFrame.Angles(0,0,flap)*CFrame.new(-.6*s,0,0)
+    c.wr.CFrame=cf*CFrame.new(.18*s,.12*s,-.05*s)*CFrame.Angles(0,0,-flap)*CFrame.new(.6*s,0,0)
+    at(c.el,Vector3.new(-.13,.2,-.72));at(c.er,Vector3.new(.13,.2,-.72))
+end
+-- One crow following path(u) for `life` seconds, facing its direction of travel and flapping.
+function VFX.crow(path,life,size,flapRate,start)
+    local c=acquireCrow();local last=path(0);local rate=flapRate or 22;local seed=math.random()*6
+    return run(life,function(a)
+        local u=a/life;local p=path(u)
+        local dir=p-last;last=p
+        local cf=dir.Magnitude>.001 and CFrame.lookAt(p,p+dir) or CFrame.new(p)
+        poseCrow(c,cf,math.sin(a*rate+seed)*.9,size)
+    end,function() releaseCrow(c) end,start)
+end
+local function feather(position,velocity,life)
+    local p=part("ItachiFeather",Vector3.new(.08,.02,.5),COLORS.Crow,CFrame.new(position)*CFrame.Angles(math.random()*6,math.random()*6,0),nil,Enum.Material.SmoothPlastic)
+    local v=velocity;local spin=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5)*6
+    run(life,function(a,dt)
+        v=v*(1-dt*1.8)+Vector3.new(math.sin(a*5)*.6,-1.2,0)*dt
+        p.CFrame=(p.CFrame+v*dt)*CFrame.Angles(spin.X*dt,spin.Y*dt,spin.Z*dt)
+        p.Transparency=smoothstep((a-life*.6)/(life*.4))
+    end,function() p:Destroy() end)
+end
+VFX.feather=feather
+function VFX.feathers(center,count,spread,life)
+    count=math.max(1,math.floor(count*detail(center)))
+    for _=1,count do
+        local o=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5)*spread
+        feather(center+o,o.Unit*(1+math.random()*3)+Vector3.yAxis*math.random()*2,life or 1.2)
+    end
+end
+
+---------------------------------------------------------------- bodies
+-- Hides (1) or shows (0) a character for this client; `reveal` lets feet come back first (0..1 from the floor up).
+function VFX.setBodyAlpha(model,alpha,reveal)
+    local root=rootOf(model);if not root then return end
+    local floorY=root.Position.Y-3;local top=root.Position.Y+2.6
+    for _,v in model:GetDescendants() do
+        if (v:IsA("BasePart") and v.Name~="HumanoidRootPart") or v:IsA("Decal") then
+            local a=alpha
+            if reveal and v:IsA("BasePart") then
+                local h=(v.Position.Y-floorY)/(top-floorY)
+                a=h<=reveal*1.15-.05 and 0 or 1
+            end
+            v.LocalTransparencyModifier=a
+        end
+    end
+end
+-- Mangekyo glow on the third-person eyes.
+function VFX.eyeGlow(model,level)
+    if not model then return end
+    for _,v in model:GetDescendants() do
+        if v:IsA("PointLight") and v.Name=="ItachiEyeGlow" then v.Brightness=.25+3.5*level;v.Range=2.5+5*level end
+    end
+end
+
+---------------------------------------------------------------- passive: Crow Clone
+-- 0-.1 flinch and feathers; .1-.25 the body breaks into crows; .25-.45 they fly to the new spot;
+-- .45-.65 they spiral back and the body reforms feet first; the eyes flash; .65-.85 recovery.
+function VFX.crowClone(model,data)
+    local cfg=I.CrowClone;local start=data.start
+    local from,to=data.from,data.to
+    VFX.sound("Caw",from,.8,2);VFX.sound("Flutter",from,.6,2)
+    VFX.feathers(from+Vector3.yAxis*.5,14,2.5,1)
+    local n=math.max(6,math.floor(16*detail(from)))
+    for i=1,n do
+        local ang=i/n*math.pi*2;local h=-2+(i%5)*1
+        local burst=from+Vector3.new(math.cos(ang)*2.5,h+1.5,math.sin(ang)*2.5)
+        local seed=math.random()*6
+        VFX.crow(function(u)
+            -- burst out (0-.25 of life), fly (.25-.6), spiral down onto the new spot (.6-1)
+            local k1=smoothstep(u/.25);local k2=smoothstep((u-.25)/.35);local k3=smoothstep((u-.6)/.4)
+            local a=from:Lerp(burst,k1)
+            local b=a:Lerp(to+(burst-from)*.8+Vector3.yAxis*1.2,k2)+Vector3.yAxis*math.sin(k2*math.pi)*2
+            local spiral=to+Vector3.new(math.cos(ang+u*9+seed)*(1.6*(1-k3)+.2),-2.4+3.6*(1-k3)+(i%5)*.5*(1-k3),math.sin(ang+u*9+seed)*(1.6*(1-k3)+.2))
+            return b:Lerp(spiral,k3)
+        end,cfg.Reform-cfg.Break,.75+math.random()*.35,24,start+cfg.Break)
+    end
+    run(cfg.Total+.05,function(a)
+        if a<cfg.Break then VFX.setBodyAlpha(model,0)
+        elseif a<cfg.MoveTo then VFX.setBodyAlpha(model,1)
+        elseif a<cfg.Reform then VFX.setBodyAlpha(model,0,smoothstep(window(a,cfg.MoveTo,cfg.Reform)))
+        else VFX.setBodyAlpha(model,0) end
+        VFX.eyeGlow(model,bump(a,cfg.Reform-.05,cfg.Total))
+    end,function() VFX.setBodyAlpha(model,0);VFX.eyeGlow(model,0) end,start)
+    task.delay(math.max(0,start+cfg.MoveTo-clock()),function() VFX.sound("Flutter",to,.6,2,.8) end)
+end
+
+---------------------------------------------------------------- Q: Tsukuyomi (what everyone sees)
+-- The caster's eyes flare; at the wave a red ring runs from the outstretched hand to the victim, whose head bows.
+function VFX.tsukuyomi(model,data)
+    local cfg=I.Tsukuyomi;local start=data.start
+    local root=rootOf(model);local target=data.target
+    if root then VFX.sound("Eye",root.Position,.7,2) end
+    run(cfg.End,function(a)
+        VFX.eyeGlow(model,.3+.7*window(a,cfg.Prep,cfg.Eye))
+    end,function() VFX.eyeGlow(model,0) end,start)
+    task.delay(math.max(0,start+cfg.Wave-.18-clock()),function()
+        local r=rootOf(model);local tr=rootOf(target);if not r or not tr then return end
+        local from=r.Position+Vector3.yAxis*1;local to=tr.Position+Vector3.yAxis*1
+        local ring=part("ItachiWave",Vector3.new(.2,2,2),COLORS.Red,CFrame.new(from),Enum.PartType.Cylinder)
+        run(.2,function(a)
+            local u=a/.2;local p=from:Lerp(to,u)
+            ring.CFrame=CFrame.lookAt(p,to)*CFrame.Angles(0,math.pi/2,0);ring.Size=Vector3.new(.2,1+3*u,1+3*u);ring.Transparency=.2+.5*u
+        end,function() ring:Destroy() end)
+        VFX.sound("Wave",to,.7,2)
+    end)
+end
+
+---------------------------------------------------------------- E: Amaterasu
+-- Flames are pooled: a black core spike and a dark red halo slightly larger behind it. Never orange.
+local flamePool={}
+local function acquireFlame()
+    local f=table.remove(flamePool)
+    if not f then
+        f={core=part("ItachiFlame",Vector3.one,COLORS.Black,PARK,Enum.PartType.Ball,Enum.Material.SmoothPlastic),
+            halo=part("ItachiFlameHalo",Vector3.one,COLORS.Crimson,PARK,Enum.PartType.Ball,Enum.Material.Neon)}
+        f.halo.Transparency=.55
+    end
+    return f
+end
+local function releaseFlame(f) f.core.CFrame=PARK;f.halo.CFrame=PARK;table.insert(flamePool,f) end
+local function edge(seed,angle)
+    return .82+.1*math.sin(angle*3+seed)+.06*math.sin(angle*7+seed*2.3)+.04*math.sin(angle*13+seed*.7)
+end
+VFX.edge=edge
+local function fieldRadius(age)
+    local cfg=I.Amaterasu
+    if age<cfg.Ignite then return 0 end
+    if age<cfg.Spread then return cfg.StartRadius*smoothstep(window(age,cfg.Ignite,cfg.Ignite+.12)) end
+    if age<cfg.BurnEnd then return cfg.StartRadius+(cfg.Radius-cfg.StartRadius)*smoothstep(window(age,cfg.Spread,cfg.Full)) end
+    return cfg.Radius*(1-smoothstep(window(age,cfg.BurnEnd,cfg.Gone)))
+end
+VFX.fieldRadius=fieldRadius
+local fieldsByKey={}
+function VFX.amaterasu(data)
+    local cfg=I.Amaterasu;local start=data.start;local center=data.center;local seed=data.seed
+    local key=tostring(data.owner)..":"..tostring(start)
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.RespectCanCollide=true
+    local list={folder};for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    params.FilterDescendantsInstances=list
+    -- Flame spots on a jittered grid inside the edge, each on real floor and not behind a wall from the centre.
+    local spots={}
+    local step=1.7/math.sqrt(detail(center))
+    for x=-cfg.Radius,cfg.Radius,step do
+        for z=-cfg.Radius,cfg.Radius,step do
+            local o=Vector3.new(x+(math.random()-.5)*step,0,z+(math.random()-.5)*step)
+            local d=o.Magnitude;local ang=math.atan2(o.Z,o.X)
+            if d<=cfg.Radius*edge(seed,ang) then
+                local floor=workspace:Raycast(center+o+Vector3.yAxis*(cfg.StepHeight+1),Vector3.yAxis*-(cfg.StepHeight*2+2),params)
+                if floor and math.abs(floor.Position.Y-center.Y)<=cfg.StepHeight and floor.Normal.Y>.6 then
+                    local blocked=d>1 and workspace:Raycast(center+Vector3.yAxis*1.5,Vector3.new(o.X,floor.Position.Y-center.Y,o.Z),params)
+                    if not blocked then
+                        local edgeK=d/(cfg.Radius*edge(seed,ang))
+                        table.insert(spots,{pos=floor.Position,d=d/edge(seed,ang),h=(1.2+math.random()*3.8)*(1-.45*edgeK),w=.5+math.random()*.6,ph=math.random()*6})
+                    end
+                end
+            end
+        end
+    end
+    -- Faint black marker where the eye looks, before ignition.
+    local marker=part("ItachiMarker",Vector3.new(.05,3,3),COLORS.Black,CFrame.new(center+Vector3.yAxis*.05)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder,Enum.Material.SmoothPlastic)
+    marker.Transparency=.5
+    local scorch=part("ItachiScorch",Vector3.new(.06,1,1),Color3.fromRGB(12,8,8),CFrame.new(center+Vector3.yAxis*.04)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder,Enum.Material.SmoothPlastic)
+    scorch.Transparency=1
+    local glow=part("ItachiFieldGlow",Vector3.new(.08,1,1),COLORS.Blood,CFrame.new(center+Vector3.yAxis*.06)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder)
+    glow.Transparency=1
+    local ash=Instance.new("ParticleEmitter");ash.Color=ColorSequence.new(Color3.fromRGB(30,26,26));ash.LightEmission=0
+    ash.Size=NumberSequence.new(.6,1.6);ash.Transparency=NumberSequence.new(.4,1);ash.Lifetime=NumberRange.new(1.2,2.2)
+    ash.Speed=NumberRange.new(2,5);ash.SpreadAngle=Vector2.new(25,25);ash.Rate=0;ash.Parent=glow
+    local sparks=Instance.new("ParticleEmitter");sparks.Color=ColorSequence.new(COLORS.Ember,COLORS.Crimson);sparks.LightEmission=1
+    sparks.Size=NumberSequence.new(.14,0);sparks.Lifetime=NumberRange.new(.5,1);sparks.Speed=NumberRange.new(4,9);sparks.SpreadAngle=Vector2.new(35,35)
+    sparks.Rate=0;sparks.Parent=glow
+    local light=Instance.new("PointLight");light.Color=COLORS.Crimson;light.Brightness=0;light.Range=24;light.Parent=glow
+    local burn=nil
+    local flames={}
+    local e=run(cfg.Gone+.05,function(a)
+        marker.Transparency=a<cfg.Ignite and .45+.2*math.sin(a*20) or 1
+        if a>=cfg.Ignite and not flames.lit then
+            flames.lit=true
+            VFX.sound("Ignite",center,.9,3)
+            local s;s,burn=VFX.sound("Burn",center,.5,cfg.Gone-cfg.Ignite+.2);if s then s.Looped=true end
+        end
+        local r=fieldRadius(a)
+        local fade=a>=cfg.BurnEnd and 1-smoothstep(window(a,cfg.BurnEnd,cfg.Gone)) or 1
+        for i,s in spots do
+            local on=a>=cfg.Ignite and s.d<=r
+            local f=flames[i]
+            if on then
+                if not f then f=acquireFlame();flames[i]=f;s.born=a end
+                local grow=smoothstep((a-s.born)/.25)
+                local flick=.75+.25*math.sin(a*9+s.ph)+.12*math.sin(a*23+s.ph*2)
+                local h=s.h*grow*flick*fade
+                local w=s.w*(1+.15*math.sin(a*7+s.ph))
+                f.core.Size=Vector3.new(w,math.max(.05,h),w);f.core.CFrame=CFrame.new(s.pos+Vector3.yAxis*h*.5)*CFrame.Angles(0,a*1.2+s.ph,math.sin(a*5+s.ph)*.12)
+                f.halo.Size=Vector3.new(w*1.35,math.max(.05,h*1.12),w*1.35);f.halo.CFrame=f.core.CFrame*CFrame.new(0,-h*.04,0)
+                f.halo.Transparency=.5+.2*math.sin(a*11+s.ph)
+            elseif f then releaseFlame(f);flames[i]=nil end
+        end
+        local k=r/cfg.Radius
+        scorch.Size=Vector3.new(.06,r*2.1+.01,r*2.1+.01);scorch.Transparency=a<cfg.Ignite and 1 or .15+.6*(1-fade)
+        glow.Size=Vector3.new(.08,r*2.3+.01,r*2.3+.01);glow.Transparency=a<cfg.Ignite and 1 or .82-.1*math.sin(a*6)
+        light.Brightness=a<cfg.Ignite and 0 or (2+.6*math.sin(a*13))*fade
+        ash.Rate=a>=cfg.Ignite and 30*k*fade*detail(center) or 0
+        sparks.Rate=a>=cfg.Ignite and 40*k*fade*detail(center) or 0
+        if burn then local s=burn:FindFirstChildOfClass("Sound");if s then s.Volume=.55*fade end end
+    end,function()
+        for i,f in flames do if type(i)=="number" then releaseFlame(f) end end
+        marker:Destroy();scorch:Destroy();glow:Destroy()
+        if burn then burn:Destroy() end
+        fieldsByKey[key]=nil
+    end,start)
+    fieldsByKey[key]=e
+    -- Heat haze is a short, local camera shake handled by ItachiClient during the spread.
+    return e
+end
+function VFX.endAmaterasu(owner,start)
+    local e=fieldsByKey[tostring(owner)..":"..tostring(start)]
+    if e then e.dead=true end
+end
+-- Small black flames at the feet of anyone standing in a field (ItachiBurnUntil), on every client.
+local feet={}
+local function feetFire(model,on)
+    local f=feet[model]
+    if on and not f then
+        local root=rootOf(model);if not root then return end
+        local holder=part("ItachiFeetFire",Vector3.new(2.4,.2,2.4),COLORS.Black,root.CFrame*CFrame.new(0,-2.8,0));holder.Transparency=1
+        local em=Instance.new("ParticleEmitter");em.Color=ColorSequence.new(COLORS.Black,COLORS.Crimson);em.LightEmission=0
+        em.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.5),NumberSequenceKeypoint.new(1,0)});em.Transparency=NumberSequence.new(.1,1)
+        em.Lifetime=NumberRange.new(.3,.6);em.Speed=NumberRange.new(2,4);em.SpreadAngle=Vector2.new(15,15);em.Rate=30
+        em.EmissionDirection=Enum.NormalId.Top;em.Parent=holder
+        feet[model]={holder=holder,root=root}
+    elseif not on and f then f.holder:Destroy();feet[model]=nil end
+end
+
+---------------------------------------------------------------- R: Susanoo
+-- A translucent red chakra skeleton built in stages around the caster: ribs one by one, spine, shoulders, arms, hands
+-- and head; the Yata Mirror on the left hand; the Totsuka Blade from red-gold liquid in the right hand.
+local function chakraPart(name,size,shape,color)
+    local p=part(name,size,color or COLORS.Red,PARK,shape,Enum.Material.ForceField);p.Transparency=1
+    return p
+end
+local function neonPart(name,size,shape,color)
+    local p=part(name,size,color or COLORS.Red,PARK,shape,Enum.Material.Neon);p.Transparency=1
+    return p
+end
+local ultras={}
+function VFX.susanoo(model,data)
+    local cfg=I.Susanoo;local start=data.start;local owner=data.owner
+    local s={parts={},model=model,flags={},direction=data.direction}
+    ultras[owner]=s
+    local function add(p,stage,at,dur,offset,alpha)
+        table.insert(s.parts,{p=p,stage=stage,at=at,dur=dur,offset=offset,alpha=alpha or .25});return p
+    end
+    local H=cfg.Height/14
+    -- Six rib pairs, one pair after another: each rib is three segments curving from the spine around to the front.
+    for i=0,5 do
+        for _,side in {-1,1} do
+            local y=(9.2-i*1.05)*H;local r=(4.2-math.abs(i-2)*.2)*H
+            for seg=0,2 do
+                local theta=math.rad(30+seg*45)
+                local mid=Vector3.new(side*math.sin(theta)*r,y,math.cos(theta)*r*.7+.6*H)
+                local tangent=Vector3.new(side*math.cos(theta),0,-math.sin(theta)*.7)
+                local p=chakraPart("SusanooRib",Vector3.new(.3,.3,r*.85),Enum.PartType.Block)
+                add(p,"ribs",cfg.Ribs+i*.07,.15,CFrame.lookAt(mid,mid+tangent))
+            end
+        end
+    end
+    for i=0,7 do add(chakraPart("SusanooSpine",Vector3.new(1.1,.85,1)*H,Enum.PartType.Block),"spine",cfg.Upper+i*.03,.15,CFrame.new(0,(1.6+i*1.4)*H,2.8*H)) end
+    add(chakraPart("SusanooTorso",Vector3.new(12,10,8)*H,Enum.PartType.Ball),"torso",1.3,.3,CFrame.new(0,12*H,1.2*H),.55)
+    add(chakraPart("SusanooHead",Vector3.new(4.2,4.6,4.2)*H,Enum.PartType.Ball),"head",1.6,.2,CFrame.new(0,19*H,.6*H))
+    add(chakraPart("SusanooNose",Vector3.new(.6,.6,3)*H,Enum.PartType.Block),"head",1.62,.2,CFrame.new(0,18.8*H,-2.6*H))
+    add(chakraPart("SusanooJaw",Vector3.new(3.2,1.2,2.4)*H,Enum.PartType.Block),"head",1.64,.2,CFrame.new(0,16.9*H,-.4*H))
+    for _,x in {-1,1} do add(chakraPart("SusanooHorn",Vector3.new(.5,3,.5)*H,Enum.PartType.Block),"head",1.66,.2,CFrame.new(x*1.4*H,21.6*H,1*H)*CFrame.Angles(-.45,0,x*.4)) end
+    s.eyes={}
+    for _,x in {-1,1} do local e=neonPart("SusanooEye",Vector3.new(.7,.35,.2)*H,Enum.PartType.Block,COLORS.Gold);table.insert(s.eyes,{p=e,offset=CFrame.new(x*.9*H,19.3*H,-2*H)}) end
+    -- Arms: shoulder ball, upper arm, forearm, hand with four fingers and a thumb. Posed every frame.
+    local function arm(side)
+        local a={side=side}
+        a.shoulder=add(chakraPart("SusanooShoulder",Vector3.one*3*H,Enum.PartType.Ball),"arms",1.35,.18,nil)
+        a.upper=add(chakraPart("SusanooArm",Vector3.new(1.5,7,1.5)*H,Enum.PartType.Block),"arms",1.42,.2,nil)
+        a.fore=add(chakraPart("SusanooArm",Vector3.new(1.3,6.5,1.3)*H,Enum.PartType.Block),"arms",1.5,.2,nil)
+        a.hand=add(chakraPart("SusanooHand",Vector3.new(2.6,2.8,1.1)*H,Enum.PartType.Block),"hands",1.58,.2,nil)
+        a.fingers={}
+        for f=1,4 do table.insert(a.fingers,add(chakraPart("SusanooFinger",Vector3.new(.45,1.8,.45)*H,Enum.PartType.Block),"hands",1.6+f*.02,.15,nil)) end
+        a.thumb=add(chakraPart("SusanooThumb",Vector3.new(.5,1.4,.5)*H,Enum.PartType.Block),"hands",1.66,.15,nil)
+        return a
+    end
+    s.L=arm(-1);s.R=arm(1)
+    -- Yata Mirror: a gold rim and a red flowing face, carried by the left hand.
+    s.mirrorFace=chakraPart("YataMirror",Vector3.new(.3,11,11)*H,Enum.PartType.Cylinder,Color3.fromRGB(255,90,60))
+    s.mirrorRim=neonPart("YataMirrorRim",Vector3.new(.25,11.8,11.8)*H,Enum.PartType.Cylinder,COLORS.Gold)
+    -- Totsuka Blade: a red-gold neon core with a pointed tip, and liquid blobs that gather into it.
+    s.blade=neonPart("TotsukaBlade",Vector3.new(.8,.8,1),Enum.PartType.Block,Color3.fromRGB(255,60,30))
+    s.bladeGlow=chakraPart("TotsukaGlow",Vector3.new(1.6,1.6,1),Enum.PartType.Block,COLORS.Gold)
+    s.tip=neonPart("TotsukaTip",Vector3.new(.6,.6,1.6),Enum.PartType.Block,COLORS.Gold)
+    s.blobs={}
+    for i=1,10 do table.insert(s.blobs,{p=neonPart("TotsukaLiquid",Vector3.one*.9,Enum.PartType.Ball,i%2==0 and COLORS.Gold or COLORS.Red),o=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5)*8}) end
+    local trailOn=false
+    local hum=nil
+    local root0=rootOf(model)
+    if root0 then VFX.sound("Eye",root0.Position,.8,2);local snd;snd,hum=VFX.sound("Hum",root0.Position,.5,cfg.End+.3);if snd then snd.Looped=true end end
+    s.effect=run(cfg.End+.1,function(a)
+        local root=rootOf(model);if not root then return end
+        local flatDir=s.direction or Vector3.new(0,0,-1)
+        local base=CFrame.lookAt(root.Position-Vector3.yAxis*3,root.Position-Vector3.yAxis*3+flatDir)
+        local lean=-.12*smoothstep(window(a,cfg.Aim,cfg.Thrust))*(1-smoothstep(window(a,5.35,5.9)))
+        local body=base*CFrame.Angles(lean,0,0)
+        local fadeAll=smoothstep(window(a,5.6,6.1));local ribsFade=smoothstep(window(a,6.0,6.35))
+        for _,e in s.parts do
+            local k=smoothstep(window(a,e.at,e.at+e.dur))*(e.stage=="ribs" and 1-ribsFade or 1-fadeAll)
+            e.p.Transparency=1-(1-e.alpha)*k
+            if e.offset then e.p.CFrame=body*e.offset end
+            if e.stage=="ribs" and k>0 and not e.played then e.played=true;if math.random()<.35 then VFX.sound("Crack",root.Position,.35,1,1.3) end end
+        end
+        for _,e in s.eyes do e.p.CFrame=body*e.offset;e.p.Transparency=1-smoothstep(window(a,1.65,1.8))*(1-fadeAll) end
+        if a>=1.05 and not s.flags.ring then
+            s.flags.ring=true
+            local ring=part("SusanooRing",Vector3.new(.1,2,2),COLORS.Red,CFrame.new(root.Position-Vector3.yAxis*2.9)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder)
+            run(.9,function(b) local k=b/.9;ring.Size=Vector3.new(.1,4+22*k,4+22*k);ring.Transparency=.2+.8*k end,function() ring:Destroy() end)
+        end
+        -- Arm angles (positive pitch swings a hanging arm forward).
+        local mUp=smoothstep(window(a,cfg.Mirror,cfg.Mirror+.4))*(1-smoothstep(window(a,5.5,5.95)))
+        local raise=smoothstep(window(a,cfg.Blade,cfg.Blade+.5));local pull=smoothstep(window(a,cfg.Aim,cfg.Thrust))
+        local thrust=1-(1-window(a,cfg.Thrust,cfg.Thrust+.25))^4;local lower=smoothstep(window(a,5.35,5.9))
+        local function lerp(x,y,t) return x+(y-x)*t end
+        local rSh=lerp(lerp(lerp(.25,1,raise),.25,pull),1.55,thrust);local rEl=lerp(lerp(lerp(.45,1.5,raise),1.9,pull),.05,thrust)
+        rSh=lerp(rSh,.25,lower);rEl=lerp(rEl,.45,lower)
+        local poses={[-1]={sh=.25+.95*mUp,el=.45-.1*mUp,yaw=0,roll=-.15+.3*mUp},[1]={sh=rSh,el=rEl,yaw=-.35*pull*(1-thrust),roll=.15}}
+        for _,A in {s.L,s.R} do
+            local P=poses[A.side]
+            local sh=body*CFrame.new(A.side*7.4*H,13.4*H,1*H)*CFrame.Angles(0,P.yaw,0)*CFrame.Angles(P.sh,0,P.roll*A.side)
+            A.shoulder.CFrame=sh
+            A.upper.CFrame=sh*CFrame.new(0,-3.5*H,0)
+            local el=sh*CFrame.new(0,-7*H,0)*CFrame.Angles(P.el,0,0)
+            A.fore.CFrame=el*CFrame.new(0,-3.25*H,0)
+            local hand=el*CFrame.new(0,-6.9*H,0)
+            A.hand.CFrame=hand
+            for f,fp in A.fingers do fp.CFrame=hand*CFrame.new((-1.5+f)*.6*H*A.side,-2*H,-.1)*CFrame.Angles(.35,0,0) end
+            A.thumb.CFrame=hand*CFrame.new(A.side*1.5*H,-.6*H,-.4*H)*CFrame.Angles(0,0,A.side*.8)
+            A.handFrame=hand
+        end
+        -- Mirror on the left hand, its face turned forward; ripples when hit.
+        local mk=smoothstep(window(a,cfg.Mirror+.1,cfg.Mirror+.5))*(1-smoothstep(window(a,5.5,5.8)))
+        -- The cylinder's axis (X) is turned along the forearm, so the face looks where the arm points.
+        local mf=s.L.handFrame*CFrame.new(0,-3.2*H,-1.4*H)*CFrame.Angles(0,0,math.pi/2)*CFrame.Angles(a*.6,0,0)
+        s.mirrorFace.CFrame=mf;s.mirrorRim.CFrame=mf*CFrame.new(.05,0,0)
+        s.mirrorFace.Transparency=1-.6*mk;s.mirrorRim.Transparency=1-.85*mk
+        if a>=cfg.Mirror+.2 and not s.flags.mirror then s.flags.mirror=true;VFX.sound("Mirror",root.Position,.8,2) end
+        if a>=cfg.MirrorBreak and not s.flags.mirrorBreak then
+            s.flags.mirrorBreak=true
+            for _=1,math.floor(30*detail(mf.Position)) do
+                local o=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5)*10*H
+                local m=part("MirrorShard",Vector3.one*(.3+math.random()*.4),COLORS.Red,CFrame.new(mf.Position+o),Enum.PartType.Ball)
+                local v=o.Unit*(2+math.random()*4)+Vector3.yAxis*2
+                run(.9,function(b,dt) m.CFrame+=v*dt;m.Transparency=b/.9 end,function() m:Destroy() end)
+            end
+        end
+        -- Blade: liquid gathers in the right hand, forms, then extends on the thrust to the target (or the reach).
+        local hand=s.R.handFrame*CFrame.new(0,-2.2*H,0)
+        local gather=window(a,cfg.Blade,cfg.Blade+.4);local form=smoothstep(window(a,cfg.Blade+.3,cfg.Aim))
+        for _,b in s.blobs do
+            local on=gather>0 and form<1
+            b.p.Transparency=on and .1+.8*form or 1
+            b.p.CFrame=CFrame.new(hand.Position+b.o*(1-smoothstep(gather)))
+            b.p.Size=Vector3.one*(.5+.8*(1-form))*2*H
+        end
+        if a>=cfg.Blade and not s.flags.liquid then s.flags.liquid=true;VFX.sound("Seal",hand.Position,.5,2,1.5) end
+        local aimPoint=hand.Position+flatDir*20+Vector3.yAxis*(4*(1-pull))
+        local tr=rootOf(s.target)
+        if tr and a>=cfg.Thrust then aimPoint=tr.Position+Vector3.yAxis*1
+        elseif a>=cfg.Thrust then aimPoint=root.Position+flatDir*cfg.Reach end
+        local full=(aimPoint-hand.Position).Magnitude
+        local len=12*H*form
+        if a>=cfg.Thrust then len=lerp(12*H,full,1-(1-window(a,cfg.Thrust,cfg.Tip))^3) end
+        if not tr and a>=cfg.Tip then len=lerp(full,12*H,smoothstep(window(a,cfg.Tip+.1,cfg.StrikeEnd+.2))) end
+        if tr and a>=cfg.Seal then len=lerp(full,9*H,smoothstep(window(a,cfg.SealEnd,5.7))) end
+        local bk=form*(1-smoothstep(window(a,5.35,5.7)))
+        local dir=CFrame.lookAt(hand.Position,aimPoint)
+        s.blade.Size=Vector3.new(.7+.15*math.sin(a*11),.7+.15*math.sin(a*11),math.max(.05,len));s.blade.CFrame=dir*CFrame.new(0,0,-len/2)
+        s.bladeGlow.Size=Vector3.new(1.7,1.7,math.max(.05,len));s.bladeGlow.CFrame=s.blade.CFrame
+        s.tip.CFrame=dir*CFrame.new(0,0,-len-.8)*CFrame.Angles(0,0,math.pi/4)
+        s.blade.Transparency=1-bk;s.bladeGlow.Transparency=1-.6*bk;s.tip.Transparency=1-bk
+        if a>=cfg.Thrust and a<cfg.Tip+.1 then
+            trailOn=true
+            local p=hand.Position:Lerp(aimPoint,math.random())
+            local sp=part("TotsukaTrail",Vector3.one*(.4+math.random()*.5),math.random()<.3 and COLORS.Gold or COLORS.Red,CFrame.new(p),Enum.PartType.Ball)
+            run(.3,function(b) sp.Transparency=b/.3 end,function() sp:Destroy() end)
+        elseif trailOn then trailOn=false end
+        -- The sealed body is drawn into the blade: red-gold vortex rings around it.
+        if tr and a>=cfg.StrikeEnd and a<cfg.SealEnd+.2 then
+            if math.random()<.5 then
+                local ring=part("SealVortex",Vector3.new(.1,4,4),math.random()<.5 and COLORS.Gold or COLORS.Red,CFrame.new(tr.Position),Enum.PartType.Cylinder)
+                local spin=math.random()*6
+                run(.5,function(b) local k=b/.5;ring.CFrame=CFrame.new(tr.Position)*CFrame.Angles(spin+b*10,b*6,math.pi/2);ring.Size=Vector3.new(.1,5*(1-k)+.3,5*(1-k)+.3);ring.Transparency=k end,function() ring:Destroy() end)
+            end
+        end
+        VFX.eyeGlow(model,1-fadeAll)
+        if hum then local snd=hum:FindFirstChildOfClass("Sound");if snd then snd.Volume=.5*(1-fadeAll) end end
+    end,function()
+        for _,e in s.parts do e.p:Destroy() end
+        for _,e in s.eyes do e.p:Destroy() end
+        s.mirrorFace:Destroy();s.mirrorRim:Destroy();s.blade:Destroy();s.bladeGlow:Destroy();s.tip:Destroy()
+        for _,b in s.blobs do b.p:Destroy() end
+        if hum then hum:Destroy() end
+        VFX.eyeGlow(model,0)
+        if ultras[owner]==s then ultras[owner]=nil end
+    end,start)
+    return s
+end
+function VFX.susanooThrust(owner,target)
+    local s=ultras[owner];if not s then return end
+    s.target=target
+    local root=rootOf(s.model);if root then VFX.sound("Thrust",root.Position,.9,2) end
+end
+function VFX.susanooHit(owner,point)
+    VFX.sound("Impact",point,1,2)
+    local flash=part("TotsukaFlash",Vector3.one*2,Color3.fromRGB(255,240,200),CFrame.new(point),Enum.PartType.Ball)
+    run(.35,function(a) local k=a/.35;flash.Size=Vector3.one*(2+8*k);flash.Transparency=k;flash.Color=COLORS.Gold:Lerp(COLORS.Red,k) end,function() flash:Destroy() end)
+end
+function VFX.susanooMiss(owner)
+    local s=ultras[owner];if not s then return end
+    s.target=nil
+end
+function VFX.susanooEnd(owner,early)
+    local s=ultras[owner];if not s then return end
+    if early then s.effect.dead=true end
+end
+function VFX.mirrorHit(owner)
+    local s=ultras[owner];if not s then return end
+    local cf=s.mirrorFace.CFrame
+    local ring=part("MirrorRipple",Vector3.new(.1,4,4),COLORS.Red,cf,Enum.PartType.Cylinder)
+    run(.45,function(a) local k=a/.45;ring.CFrame=cf*CFrame.new(-.3,0,0);ring.Size=Vector3.new(.1,4+10*k,4+10*k);ring.Transparency=.1+.9*k end,function() ring:Destroy() end)
+    VFX.sound("Mirror",cf.Position,.8,2,1.4)
+end
+
+---------------------------------------------------------------- per-frame state shared by every kit
+-- Bodies in a seal are hidden; Tsukuyomi victims bow their heads; feet burn inside Amaterasu.
+local sealedShown={}
+local neckBow={}
+RunService.RenderStepped:Connect(function(dt)
+    local n=clock()
+    for i=#active,1,-1 do
+        local e=active[i];local age=n-e.start
+        if age>e.duration or e.dead then
+            table.remove(active,i)
+            if e.cleanup then local ok,err=pcall(e.cleanup);if not ok then warn("ItachiVFX cleanup",err) end end
+        elseif age>=0 then
+            local ok,err=pcall(e.update,age,dt);if not ok then warn("ItachiVFX",err);e.dead=true end
+        end
+    end
+    for _,model in workspace:GetChildren() do
+        if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
+            local hide=(model:GetAttribute("ItachiSealedUntil") or 0)>n
+            if hide~=(sealedShown[model]==true) then
+                sealedShown[model]=hide or nil
+                for _,v in model:GetDescendants() do if (v:IsA("BasePart") and v.Name~="HumanoidRootPart") or v:IsA("Decal") then v.LocalTransparencyModifier=hide and 1 or 0 end end
+            end
+            feetFire(model,(model:GetAttribute("ItachiBurnUntil") or 0)>n)
+            local bow=(model:GetAttribute("ItachiTsukuyomiUntil") or 0)>n
+            local neck=model:FindFirstChild("Neck",true)
+            if neck and neck:IsA("Motor6D") then
+                local k=neckBow[model] or 0
+                k+=((bow and 1 or 0)-k)*math.min(1,dt*10);neckBow[model]=k>.001 and k or nil
+                if k>.001 then neck.Transform=CFrame.Angles(-.45*k,0,0) end
+            end
+        end
+    end
+    for model,f in feet do
+        if not model.Parent then f.holder:Destroy();feet[model]=nil else f.holder.CFrame=f.root.CFrame*CFrame.new(0,-2.8,0) end
+    end
+    for model in sealedShown do if not model.Parent then sealedShown[model]=nil end end
+end)
+return VFX
+]]></ProtectedString>
+				<string name="ScriptGuid">{A25C62A6-BA9E-9648-CB67-EE1C6F31CC90}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ItachiVFX</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">42b07f9f3fb5caf5a81106e1587a7bea</UniqueId>
 			</Properties>
 		</Item>
 		<Item class="ModuleScript" referent="RBX7046A0E954B0A982B373DECCF22207A2">
@@ -5230,6 +6497,474 @@ return VFX
 			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c6</UniqueId>
 		</Properties>
+		<Item class="ModuleScript" referent="RBX9FD476CE2399D81F6C3ADA282E6EF20C">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- Uchiha Itachi: server-side judgement for the Crow Clone passive, Tsukuyomi (Q), Amaterasu (E) and Susanoo (R).
+-- Required by Combat.server.luau, which owns the shared player state (cooldowns, busy time, generation) and passes
+-- its helpers in through Itachi.init. Clients send only the key and their camera ray; the dodge roll, targets, line
+-- of sight, the ground under Amaterasu, every damage tick, the bind and the seal are decided here.
+-- Status priority on a victim: Seal > Tsukuyomi bind > Amaterasu slow. A sealed body cannot be bound or burned.
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local RS=game:GetService("ReplicatedStorage")
+local I=require(RS:WaitForChild("ItachiConfig"))
+
+local Itachi={}
+local ctx
+local KIT={};for _,skill in I.Kit do KIT[skill]=true end
+local rng=Random.new()
+local crowReady={}    -- [player] = clock time the passive can fire again
+local binds={}        -- [caster player] = {t, start} Tsukuyomi in progress
+local fields={}       -- list of Amaterasu fields
+local ultras={}       -- [caster player] = Susanoo in progress
+local sealed={}       -- [victim model] = {t, align, attachment, home, owner}
+
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function flat(v,fallback)
+    local f=Vector3.new(v.X,0,v.Z)
+    return f.Magnitude>.05 and f.Unit or fallback or Vector3.new(0,0,-1)
+end
+local function alive(t) return t and t.m.Parent and t.r.Parent and t.h.Parent and t.h.Health>0 end
+local function now() return ctx.clock() end
+-- World geometry only: every character is excluded and non-collidable parts are ignored.
+local function worldParams(extra)
+    local list={}
+    for _,t in ctx.targets(nil) do table.insert(list,t.m) end
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    if extra then for _,v in extra do table.insert(list,v) end end
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances=list;params.RespectCanCollide=true
+    return params
+end
+local function groundBelow(position,params,depth)
+    local hit=workspace:Raycast(position+Vector3.yAxis*3,Vector3.yAxis*-(depth or 200),params)
+    return hit
+end
+local function hipOf(t)
+    local hip=t.h.HipHeight+(t.r.Size.Y/2)
+    return t.h.RigType==Enum.HumanoidRigType.R6 and 3 or math.max(2,hip)
+end
+local function stillCaster(p,s,m,generation)
+    return ctx.states[p]==s and ctx.character(p)==m and s.generation==generation and ctx.kitOf(p)=="Itachi"
+end
+local function setUntil(m,attribute,untilTime)
+    if m and m.Parent then m:SetAttribute(attribute,untilTime) end
+end
+local function heldByOthers(m,n)
+    return (m:GetAttribute("PainHeldUntil") or 0)>n or (m:GetAttribute("AllMightHeldUntil") or 0)>n
+end
+local function isSealed(m,n) return (m:GetAttribute("ItachiSealedUntil") or 0)>n end
+local function headOf(t) local head=t.m:FindFirstChild("Head");return head and head.Position or t.r.Position+Vector3.yAxis*1.5 end
+local function lineOfSight(from,to,params)
+    return workspace:Raycast(from,to-from,params)==nil
+end
+-- A spot is safe when there is floor under it, no wall in the way, nothing solid inside it and nobody on it.
+local function safeSpot(from,to,params,except)
+    local path=to-from
+    if path.Magnitude>.1 and workspace:Blockcast(CFrame.new(from),Vector3.new(2.2,3.6,2.2),path,params) then return nil end
+    local floor=groundBelow(to,params,14);if not floor then return nil end
+    local under=groundBelow(from,params,14)
+    local hip=under and from.Y-under.Position.Y or 3
+    local stand=Vector3.new(to.X,floor.Position.Y+hip,to.Z)
+    local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude;overlap.FilterDescendantsInstances=params.FilterDescendantsInstances;overlap.RespectCanCollide=true
+    if #workspace:GetPartBoundsInBox(CFrame.new(stand),Vector3.new(2.4,4.4,2.4),overlap)>0 then return nil end
+    for _,t in ctx.targets(except) do
+        if (Vector3.new(t.r.Position.X,0,t.r.Position.Z)-Vector3.new(stand.X,0,stand.Z)).Magnitude<I.CrowClone.ClearRadius then return nil end
+    end
+    return stand
+end
+
+---------------------------------------------------------------- passive: Crow Clone
+-- Called by Combat.damage before anything is dealt. Returns true when the hit is cancelled entirely.
+function Itachi.tryDodge(owner,t,kind)
+    if not ctx or not I.CrowClone.Dodgeable[kind or ""] then return false end
+    local victim=Players:GetPlayerFromCharacter(t.m)
+    if not victim or ctx.kitOf(victim)~="Itachi" or not alive(t) then return false end
+    local n=now()
+    if (crowReady[victim] or 0)>n or heldByOthers(t.m,n) or isSealed(t.m,n) then return false end
+    if rng:NextNumber()>=I.CrowClone.Chance then return false end
+    local cfg=I.CrowClone
+    crowReady[victim]=n+cfg.InternalCooldown
+    -- Back means away from whoever struck; then back-left/right, then straight left/right. No safe spot: stay put.
+    local attacker=owner and owner.Character and owner.Character:FindFirstChild("HumanoidRootPart")
+    local away=attacker and flat(t.r.Position-attacker.Position,-t.r.CFrame.LookVector) or -flat(t.r.CFrame.LookVector)
+    local side=away:Cross(Vector3.yAxis).Unit
+    local params=worldParams()
+    local from=t.r.Position;local to=nil
+    for _,d in {away,(away+side*.7).Unit,(away-side*.7).Unit,side,-side} do
+        for _,dist in {cfg.Distance,cfg.Distance*.66} do
+            to=safeSpot(from,from+d*dist,params,t.m);if to then break end
+        end
+        if to then break end
+    end
+    t.m:SetAttribute("ItachiCrowUntil",n+cfg.Total)
+    t.m:SetAttribute("ItachiGuardUntil",math.max(t.m:GetAttribute("ItachiGuardUntil") or 0,n+cfg.Total)) -- the cancelled hit's push/grab
+    ctx.fx:FireAllClients("ItachiCrow",{owner=victim.UserId,start=n,from=from,to=to or from,moved=to~=nil,attacker=attacker and attacker.Position or nil})
+    if to then
+        local m,generation=t.m,ctx.states[victim] and ctx.states[victim].generation
+        local rotation=t.r.CFrame.Rotation
+        task.delay(cfg.MoveFrom+(cfg.MoveTo-cfg.MoveFrom)*.5,function()
+            local s=ctx.states[victim]
+            if not s or s.generation~=generation or victim.Character~=m or not alive(t) then return end
+            t.r.AssemblyLinearVelocity=Vector3.zero
+            m:PivotTo(CFrame.new(to)*rotation)
+        end)
+    end
+    return true
+end
+
+---------------------------------------------------------------- Q: Tsukuyomi
+local function releaseBind(p,reason)
+    local b=binds[p];if not b then return end
+    binds[p]=nil
+    local m=b.t.m
+    if m.Parent then
+        if (m:GetAttribute("ItachiTsukuyomiUntil") or 0)>0 then m:SetAttribute("ItachiTsukuyomiUntil",0) end
+        if not isSealed(m,now()) then m:SetAttribute("ItachiHeldUntil",0) end
+        if b.t.h.Parent then ctx.updateSpeed(m,b.t.h) end
+    end
+    ctx.fx:FireAllClients("ItachiTsukuyomiEnd",{owner=p.UserId,target=m,reason=reason})
+end
+local function tsukuyomi(p,s,m,h,r,aim,aimOrigin)
+    local cfg=I.Tsukuyomi;local n=now()
+    local head=m:FindFirstChild("Head")
+    local origin=head and head.Position or r.Position+Vector3.yAxis*1.5
+    if typeof(aimOrigin)=="Vector3" and (aimOrigin-origin).Magnitude<=12 then origin=aimOrigin end
+    local params=worldParams()
+    local best,bestAngle=nil,math.rad(cfg.Angle)
+    for _,t in ctx.targets(m) do
+        local to=headOf(t)-origin;local dist=to.Magnitude
+        if dist<=cfg.Range and dist>.5 and not isSealed(t.m,n) and (t.m:GetAttribute("ItachiTsukuyomiUntil") or 0)<=n then
+            local angle=math.acos(math.clamp(to.Unit:Dot(aim),-1,1))
+            if angle<=bestAngle and lineOfSight(origin,headOf(t),params) then best=t;bestAngle=angle end
+        end
+    end
+    if not best then
+        s.cooldowns.Tsukuyomi=n+cfg.FailCooldown
+        ctx.fx:FireClient(p,"ItachiTsukuyomiFail",{owner=p.UserId})
+        return
+    end
+    s.cooldowns.Tsukuyomi=n+cfg.Cooldown;s.busyUntil=n+cfg.Busy
+    m:SetAttribute("ItachiCastSpeed",cfg.CasterSpeed);m:SetAttribute("ItachiCastSpeedUntil",n+cfg.End)
+    local t=best;local generation=s.generation
+    binds[p]={t=t,start=n}
+    ctx.fx:FireAllClients("ItachiTsukuyomi",{owner=p.UserId,target=t.m,start=n})
+    task.delay(cfg.Eye,function()
+        if binds[p]==nil or binds[p].t~=t then return end
+        if not stillCaster(p,s,m,generation) or not alive(t) then releaseBind(p,"lost");return end
+        t.m:SetAttribute("ItachiTsukuyomiUntil",n+cfg.End)
+        t.m:SetAttribute("ItachiHeldUntil",math.max(t.m:GetAttribute("ItachiHeldUntil") or 0,n+cfg.End))
+        ctx.updateSpeed(t.m,t.h)
+    end)
+    task.delay(cfg.Wave,function()
+        if binds[p]==nil or binds[p].t~=t then return end
+        if not stillCaster(p,s,m,generation) or not alive(t) then releaseBind(p,"lost");return end
+        ctx.damage(p,t,cfg.Damage,"Genjutsu")
+    end)
+    task.delay(cfg.End,function() if binds[p] and binds[p].t==t then releaseBind(p,"done") end end)
+end
+
+---------------------------------------------------------------- E: Amaterasu
+-- The flame edge is irregular; clients draw the same shape from the same seed.
+function Itachi.edge(seed,angle)
+    return .82+.1*math.sin(angle*3+seed)+.06*math.sin(angle*7+seed*2.3)+.04*math.sin(angle*13+seed*.7)
+end
+local function fieldRadius(f,age)
+    local cfg=I.Amaterasu
+    if age<cfg.Ignite then return 0 end
+    if age<cfg.Spread then return cfg.StartRadius end
+    if age<cfg.BurnEnd then return cfg.StartRadius+(cfg.Radius-cfg.StartRadius)*smoothstep((age-cfg.Spread)/(cfg.Full-cfg.Spread)) end
+    return cfg.Radius*(1-smoothstep((age-cfg.BurnEnd)/(cfg.Gone-cfg.BurnEnd)))
+end
+local function amaterasu(p,s,m,h,r,aim,aimOrigin)
+    local cfg=I.Amaterasu;local n=now()
+    local head=m:FindFirstChild("Head")
+    local origin=head and head.Position or r.Position+Vector3.yAxis*1.5
+    if typeof(aimOrigin)=="Vector3" and (aimOrigin-origin).Magnitude<=12 then origin=aimOrigin end
+    -- Characters are not excluded: a body in the centre of the screen blocks the floor behind it.
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.FilterDescendantsInstances={m};params.RespectCanCollide=true
+    local hit=workspace:Raycast(origin,aim*cfg.Range,params)
+    local reason=nil
+    if not hit then reason="range"
+    else
+        local model=hit.Instance:FindFirstAncestorOfClass("Model")
+        if model and model:FindFirstChildOfClass("Humanoid") then reason="blocked"
+        elseif hit.Normal.Y<math.cos(math.rad(cfg.MaxSlope)) then reason="wall" end
+    end
+    if reason then
+        s.cooldowns.Amaterasu=n+cfg.FailCooldown
+        ctx.fx:FireClient(p,"ItachiAmaterasuFail",{owner=p.UserId,reason=reason})
+        return
+    end
+    s.cooldowns.Amaterasu=n+cfg.Cooldown;s.busyUntil=n+cfg.Busy
+    m:SetAttribute("ItachiCastSpeed",cfg.CasterSpeed);m:SetAttribute("ItachiCastSpeedUntil",n+cfg.Spread)
+    local seed=rng:NextNumber(0,math.pi*2)
+    local f={owner=p,ownerModel=m,center=hit.Position,start=n,seed=seed,hits={},params=worldParams()}
+    table.insert(fields,f)
+    ctx.fx:FireAllClients("ItachiAmaterasu",{owner=p.UserId,center=hit.Position,normal=hit.Normal,start=n,seed=seed})
+end
+-- Inside: within the irregular edge, not behind a wall from the centre, feet on (or within the flame height of)
+-- floor that belongs to the field (slopes and steps up to StepHeight). Airborne bodies above the flames are safe.
+local function insideField(f,t,radius)
+    local cfg=I.Amaterasu
+    local d=t.r.Position-f.center
+    local horizontal=Vector3.new(d.X,0,d.Z)
+    if horizontal.Magnitude>radius*Itachi.edge(f.seed,math.atan2(d.Z,d.X)) then return false end
+    local floor=groundBelow(t.r.Position,f.params,40)
+    local feet=t.r.Position.Y-hipOf(t)
+    if not floor or math.abs(floor.Position.Y-f.center.Y)>cfg.StepHeight then return false end
+    if feet-floor.Position.Y>cfg.FlameHeight then return false end
+    local from=f.center+Vector3.yAxis*1.5
+    local to=Vector3.new(t.r.Position.X,floor.Position.Y+1.5,t.r.Position.Z)
+    return horizontal.Magnitude<1 or lineOfSight(from,to,f.params)
+end
+local function stepFields(n)
+    local cfg=I.Amaterasu
+    for i=#fields,1,-1 do
+        local f=fields[i];local age=n-f.start
+        if age>=cfg.Gone then table.remove(fields,i)
+        elseif age>=cfg.Ignite and age<cfg.BurnEnd then
+            local radius=fieldRadius(f,age)
+            for _,t in ctx.targets(f.ownerModel) do
+                if not isSealed(t.m,n) and insideField(f,t,radius) then
+                    local h=f.hits[t.m]
+                    if not h then
+                        h={ticks=0,next=n+cfg.Tick};f.hits[t.m]=h
+                        ctx.damage(f.owner,t,cfg.EntryDamage,"DoT")
+                    elseif not h.next then h.next=n+cfg.Tick
+                    elseif n>=h.next and h.ticks<cfg.MaxTicks then
+                        h.ticks+=1;h.next=n+cfg.Tick
+                        ctx.damage(f.owner,t,cfg.TickDamage,"DoT")
+                    end
+                    t.m:SetAttribute("ItachiSlowUntil",n+.25)
+                    t.m:SetAttribute("ItachiBurnUntil",n+.3)
+                elseif f.hits[t.m] then f.hits[t.m].next=nil end   -- ticks stop while outside
+            end
+        end
+    end
+end
+
+---------------------------------------------------------------- R: Susanoo
+local function handPoint(u)
+    return (u.base*CFrame.new(I.Susanoo.Hand)).Position
+end
+local function freeVictim(model,position)
+    local v=sealed[model];if not v then return end
+    sealed[model]=nil
+    if v.align then v.align:Destroy() end
+    if v.attachment then v.attachment:Destroy() end
+    if model.Parent then
+        model:SetAttribute("ItachiSealedUntil",0);model:SetAttribute("ItachiHeldUntil",0)
+        if position and v.t.r.Parent then v.t.r.AssemblyLinearVelocity=Vector3.zero;model:PivotTo(CFrame.new(position)*v.rotation) end
+        if v.t.h.Parent then ctx.updateSpeed(model,v.t.h) end
+    end
+end
+local function moveVictim(v,position)
+    if v.t.r.Anchored then v.t.r.CFrame=CFrame.new(position)*v.rotation
+    elseif v.align then v.align.Position=position end
+end
+local function captureVictim(u,t)
+    local v={t=t,owner=u.p,home=t.r.Position,rotation=t.r.CFrame.Rotation}
+    ctx.flights[t.m]=nil;ctx.doraKnockbacks[t.m]=nil
+    if not t.r.Anchored then
+        local attachment=Instance.new("Attachment");attachment.Name="ItachiSealAttachment";attachment.Parent=t.r
+        local align=Instance.new("AlignPosition");align.Name="ItachiSeal";align.Mode=Enum.PositionAlignmentMode.OneAttachment
+        align.Attachment0=attachment;align.Position=t.r.Position;align.MaxForce=math.max(30000,t.r.AssemblyMass*workspace.Gravity*30)
+        align.MaxVelocity=120;align.Responsiveness=60;align.Parent=t.r
+        v.attachment=attachment;v.align=align
+    end
+    sealed[t.m]=v
+    -- A Tsukuyomi bind on the same body yields to the seal.
+    for caster,b in binds do if b.t.m==t.m then releaseBind(caster,"sealed") end end
+    return v
+end
+-- Back on safe ground: where it was struck, else in front of the caster, else beside the caster.
+local function releaseSpot(u,v)
+    local params=worldParams()
+    local home=v.home
+    local floor=groundBelow(home,params,30)
+    if floor then
+        local spot=Vector3.new(home.X,floor.Position.Y+hipOf(v.t),home.Z)
+        local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude;overlap.FilterDescendantsInstances=params.FilterDescendantsInstances;overlap.RespectCanCollide=true
+        if #workspace:GetPartBoundsInBox(CFrame.new(spot),Vector3.new(2.4,4.4,2.4),overlap)==0 then return spot end
+    end
+    local front=u.base.Position+u.direction*6
+    local f2=groundBelow(front,params,30)
+    if f2 then return Vector3.new(front.X,f2.Position.Y+hipOf(v.t),front.Z) end
+    return u.base.Position+u.direction*3
+end
+local function endUltra(p,reason)
+    local u=ultras[p];if not u then return end
+    ultras[p]=nil
+    local m=u.model
+    if m.Parent then
+        for _,attribute in {"ItachiGuardUntil","ItachiMirrorUntil","ItachiLockUntil"} do m:SetAttribute(attribute,0) end
+        if u.h.Parent then ctx.updateSpeed(m,u.h) end
+    end
+    if u.victim then
+        local v=sealed[u.victim.t.m]
+        if v then freeVictim(u.victim.t.m,alive(v.t) and releaseSpot(u,v) or nil) end
+    end
+    ctx.fx:FireAllClients("ItachiSusanooEnd",{owner=p.UserId,reason=reason})
+end
+local function firstAhead(m,origin,direction,reach,width,params)
+    local best,bestAlong=nil,math.huge
+    for _,t in ctx.targets(m) do
+        local rel=t.r.Position-origin;local along=rel:Dot(direction)
+        local side=Vector3.new(rel.X,0,rel.Z)-direction*along
+        if along>0 and along<=reach and side.Magnitude<=width and math.abs(rel.Y)<10 and along<bestAlong and not isSealed(t.m,now())
+            and lineOfSight(origin,t.r.Position,params) then best=t;bestAlong=along end
+    end
+    return best
+end
+local function susanoo(p,s,m,h,r,aim)
+    local cfg=I.Susanoo;local n=now()
+    s.cooldowns.Susanoo=n+cfg.Cooldown;s.busyUntil=n+cfg.End
+    local direction=flat(aim,flat(r.CFrame.LookVector))
+    local base=CFrame.lookAt(r.Position,r.Position+direction)
+    m:SetAttribute("ItachiLockUntil",n+cfg.End)
+    m:SetAttribute("ItachiGuardUntil",math.max(m:GetAttribute("ItachiGuardUntil") or 0,n+cfg.End))
+    m:SetAttribute("ItachiMirrorFrom",n+cfg.Mirror);m:SetAttribute("ItachiMirrorUntil",n+cfg.MirrorBreak)
+    ctx.updateSpeed(m,h)
+    ultras[p]={p=p,s=s,model=m,h=h,r=r,start=n,direction=direction,base=base,generation=s.generation,flags={}}
+    ctx.fx:FireAllClients("ItachiSusanoo",{owner=p.UserId,start=n,direction=direction,position=r.Position})
+end
+local function stepUltra(p,u,n)
+    local cfg=I.Susanoo;local a=n-u.start
+    if not stillCaster(p,u.s,u.model,u.generation) or u.h.Health<=0 then endUltra(p,"caster");return end
+    if a>=cfg.End then endUltra(p,"done");return end
+    local f=u.flags
+    if a>=cfg.Thrust and not f.pick then
+        f.pick=true
+        local origin=u.r.Position
+        u.target=firstAhead(u.model,origin,u.direction,cfg.Reach,cfg.Width,worldParams())
+        ctx.fx:FireAllClients("ItachiSusanooThrust",{owner=p.UserId,start=u.start,target=u.target and u.target.m or nil})
+    end
+    if a>=cfg.Tip and not f.tip then
+        f.tip=true
+        local t=u.target
+        if t and alive(t) and (t.r.Position-u.r.Position).Magnitude<=cfg.Reach+5 then
+            local point=t.r.Position
+            ctx.damage(p,t,cfg.Damage1,"Ultimate")
+            if alive(t) then
+                u.victim=captureVictim(u,t)
+                t.m:SetAttribute("ItachiHeldUntil",u.start+cfg.Seal+cfg.SealFor+.1);ctx.updateSpeed(t.m,t.h)
+            end
+            ctx.fx:FireAllClients("ItachiSusanooHit",{owner=p.UserId,target=t.m,point=point,start=u.start})
+        else
+            u.target=nil
+            ctx.fx:FireAllClients("ItachiSusanooMiss",{owner=p.UserId,start=u.start})
+        end
+    end
+    local v=u.victim
+    if v then
+        local t=v.t
+        if not alive(t) then freeVictim(t.m,nil);u.victim=nil;return end
+        local hand=handPoint(u)
+        local tip=v.home+Vector3.yAxis*1.5
+        local into=hand:Lerp(tip,cfg.SealPoint)
+        local lift=smoothstep((a-cfg.Tip)/(cfg.StrikeEnd-cfg.Tip))
+        local draw=smoothstep((a-cfg.StrikeEnd)/(cfg.Seal-cfg.StrikeEnd))
+        local suck=smoothstep((a-cfg.Seal)/(cfg.SealEnd-cfg.Seal))
+        local pos=(v.home+Vector3.yAxis*cfg.LiftHeight*lift):Lerp(into,draw*.45)
+        pos=pos:Lerp(into,suck)
+        moveVictim(v,pos)
+        if a>=cfg.SealHit and not f.d2 then f.d2=true;ctx.damage(p,t,cfg.Damage2,"Ultimate") end
+        if a>=cfg.SealEnd and not f.gone and alive(t) then
+            f.gone=true
+            t.m:SetAttribute("ItachiSealedUntil",u.start+cfg.Seal+cfg.SealFor)
+            ctx.fx:FireAllClients("ItachiSusanooSealed",{owner=p.UserId,target=t.m,point=into})
+        end
+    end
+end
+local function stepSealed(n)
+    for model,v in sealed do
+        if not model.Parent or not v.t.r.Parent then sealed[model]=nil
+        elseif not ultras[v.owner] then freeVictim(model,alive(v.t) and v.home or nil) end
+    end
+end
+
+---------------------------------------------------------------- loop
+RunService.Heartbeat:Connect(function()
+    if not ctx then return end
+    local n=now()
+    stepFields(n)
+    for p,u in ultras do stepUltra(p,u,n) end
+    stepSealed(n)
+end)
+Players.PlayerRemoving:Connect(function(p)
+    releaseBind(p,"left");endUltra(p,"left");crowReady[p]=nil
+    for i=#fields,1,-1 do if fields[i].owner==p then table.remove(fields,i) end end
+end)
+
+---------------------------------------------------------------- hooks used by Combat
+function Itachi.init(context) ctx=context end
+function Itachi.handles(skill) return KIT[skill]==true end
+function Itachi.speedFactor(m,n)
+    local factor=1
+    if (m:GetAttribute("ItachiSlowUntil") or 0)>n then factor*=I.Amaterasu.Slow end
+    if (m:GetAttribute("ItachiCastSpeedUntil") or 0)>n then factor*=m:GetAttribute("ItachiCastSpeed") or 1 end
+    if (m:GetAttribute("ItachiLockUntil") or 0)>n then factor=0 end
+    return factor
+end
+function Itachi.held(m,n) return (m:GetAttribute("ItachiHeldUntil") or 0)>n or isSealed(m,n) end
+function Itachi.noJump(m,n) return Itachi.held(m,n) or (m:GetAttribute("ItachiLockUntil") or 0)>n end
+-- Susanoo's Yata Mirror: hits from the front lose 60%. Clients show a red ripple on the mirror.
+function Itachi.damageFactor(attacker,victim,kind)
+    local n=now()
+    if (victim:GetAttribute("ItachiMirrorUntil") or 0)<=n or (victim:GetAttribute("ItachiMirrorFrom") or math.huge)>n then return 1 end
+    local vr=victim:FindFirstChild("HumanoidRootPart");local ar=attacker and attacker:FindFirstChild("HumanoidRootPart")
+    if not vr or not ar then return 1 end
+    local to=flat(ar.Position-vr.Position);local facing=flat(vr.CFrame.LookVector)
+    if to:Dot(facing)<math.cos(math.rad(I.Susanoo.MirrorArc)) then return 1 end
+    local owner=Players:GetPlayerFromCharacter(victim)
+    if owner then ctx.fx:FireAllClients("ItachiMirrorHit",{owner=owner.UserId,from=ar.Position}) end
+    return 1-I.Susanoo.MirrorReduction
+end
+-- Susanoo (and a crow clone mid-dodge) is not staggered.
+function Itachi.filterKnockback(victim,velocity)
+    if (victim:GetAttribute("ItachiGuardUntil") or 0)>now() then return nil end
+    return velocity
+end
+function Itachi.guarded(model) return (model:GetAttribute("ItachiGuardUntil") or 0)>now() end
+-- Called by Combat after the request passed its own checks (kit, rate limit, domain lock, alive, not held).
+function Itachi.request(p,s,m,h,r,skill,aim,aimOrigin)
+    local n=now()
+    if s.busyUntil>n or s.slide or (m:GetAttribute("RootedUntil") or 0)>n or (m:GetAttribute("ItachiCrowUntil") or 0)>n then return end
+    if (s.cooldowns[skill] or 0)>n then return end
+    s.basicUntil=0
+    if skill=="Tsukuyomi" then tsukuyomi(p,s,m,h,r,aim,aimOrigin)
+    elseif skill=="Amaterasu" then amaterasu(p,s,m,h,r,aim,aimOrigin)
+    elseif skill=="Susanoo" then susanoo(p,s,m,h,r,aim) end
+    ctx.sendState(p,s)
+end
+-- Character change, respawn or death: every bind, field, Susanoo and seal this player owns ends at once.
+function Itachi.reset(p)
+    releaseBind(p,"reset");endUltra(p,"reset")
+    for i=#fields,1,-1 do
+        if fields[i].owner==p then ctx.fx:FireAllClients("ItachiAmaterasuEnd",{owner=p.UserId,start=fields[i].start});table.remove(fields,i) end
+    end
+    for model,v in sealed do if v.owner==p then freeVictim(model,alive(v.t) and v.home or nil) end end
+    local m=p.Character
+    if m then
+        for _,attribute in {"ItachiCrowUntil","ItachiGuardUntil","ItachiMirrorUntil","ItachiMirrorFrom","ItachiLockUntil","ItachiCastSpeedUntil"} do m:SetAttribute(attribute,0) end
+    end
+end
+return Itachi
+]]></ProtectedString>
+				<string name="ScriptGuid">{FB5315C4-C318-7AC9-3634-6EE8638B6F51}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">ItachiServer</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">c40942bb8a49fe338369df2d5033bedc</UniqueId>
+			</Properties>
+		</Item>
 		<Item class="ModuleScript" referent="RBX089796F3EAF30DC183A1AA6C7A3C9100">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
@@ -5358,7 +7093,7 @@ local function releaseMover(model,keepHeld)
 end
 local function guarded(model)
     local n=ctx.clock()
-    return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n
+    return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n or (model:GetAttribute("ItachiGuardUntil") or 0)>n
 end
 local function startMover(t,owner,spec)
     if not alive(t) or guarded(t.m) then return end
@@ -5489,14 +7224,14 @@ local function smashImpact(p,e,n)
         local point=t.r.Position
         if movers[t.m] and movers[t.m].kind=="Hold" then releaseMover(t.m,true) end
         e.hit[t.m]=true
-        ctx.damage(p,t,cfg.Damage*factor)
+        ctx.damage(p,t,cfg.Damage*factor,"Melee")
         local direction=flat(t.r.Position-r.Position,e.direction)
         if alive(t) then knock(p,t,direction,cfg.Knockback,cfg.KnockLift,cfg.KnockTime,cfg.WallDamage) end
         -- The shockwave: everyone else near the point of impact, once each, pushed away from it.
         for _,other in ctx.targets(m) do
             if not e.hit[other.m] and (other.r.Position-point).Magnitude<=cfg.ShockRadius then
                 e.hit[other.m]=true
-                ctx.damage(p,other,cfg.ShockDamage*factor)
+                ctx.damage(p,other,cfg.ShockDamage*factor,"Shockwave")
                 if alive(other) then knock(p,other,flat(other.r.Position-point,direction),cfg.ShockKnock,2.5,.35,nil,true) end
             end
         end
@@ -5636,7 +7371,7 @@ local function ultraShock(p,u,center,n)
             local d=t.r.Position-center
             if Vector3.new(d.X,0,d.Z).Magnitude<=cfg.ShockRadius and math.abs(d.Y)<=cfg.ShockHeight then
                 u.hit[t.m]=true
-                ctx.damage(p,t,cfg.ShockDamage)
+                ctx.damage(p,t,cfg.ShockDamage,"Shockwave")
                 if alive(t) then ctx.launch(t,flat(d,u.direction)*42+Vector3.yAxis*26) end
             end
         end
@@ -5699,11 +7434,11 @@ local function stepUltra(p,u,n)
     end
     -- Hits, once each.
     if c>=cfg.Punch1 and not u.damaged[1] then
-        u.damaged[1]=true;ctx.damage(p,t,cfg.Damage1)
+        u.damaged[1]=true;ctx.damage(p,t,cfg.Damage1,"Ultimate")
         ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=1,target=t.m,position=t.r.Position,direction=u.direction})
     end
     if c>=cfg.Punch2 and not u.damaged[2] then
-        u.damaged[2]=true;ctx.damage(p,t,cfg.Damage2)
+        u.damaged[2]=true;ctx.damage(p,t,cfg.Damage2,"Ultimate")
         ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=2,target=t.m,position=t.r.Position,direction=u.direction})
     end
     if c>=cfg.Uppercut and not u.damaged[3] then
@@ -5711,7 +7446,7 @@ local function stepUltra(p,u,n)
         u.launchFrom=t.r.Anchored and (movers[t.m] and movers[t.m].last) or t.r.Position
         local ceiling=u.roof and (u.roof-6-u.launchFrom.Y) or cfg.ApexHeight
         u.apexRise=math.clamp(math.min(cfg.ApexHeight,ceiling),8,cfg.ApexHeight)
-        ctx.damage(p,t,cfg.Damage3)
+        ctx.damage(p,t,cfg.Damage3,"Ultimate")
         ultraShock(p,u,Vector3.new(r.Position.X,u.base.Y,r.Position.Z),n)
         ctx.fx:FireAllClients("AllMightUltraUppercut",{owner=p.UserId,start=n,target=t.m,position=u.launchFrom,ground=u.base,
             direction=u.direction,apex=u.launchFrom+u.direction*7+Vector3.yAxis*u.apexRise,launch=cfg.Apex-cfg.Launch,radius=cfg.ShockRadius})
@@ -5759,7 +7494,7 @@ local function stepMover(model,mv,n)
         local _,hit=drive(mv,desired,{direction=-mv.direction,pitch=(mv.light and -.3 or -.75)*math.sin(u*math.pi)})
         if hit and not mv.walled then
             mv.walled=true
-            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage) end
+            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage,"Environment") end
             ctx.fx:FireAllClients("AllMightWallHit",{position=mv.last,normal=hit.Normal})
             local floor=groundBelow(mv.last,mv.params)
             mv.kind="Fall";mv.start=n;mv.from=mv.last;mv.to=floor and floor+Vector3.yAxis*mv.hip or mv.last;mv.duration=.25
@@ -5937,6 +7672,7 @@ local function startMover(t,owner,spec)
     if not alive(t) then return end
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
     if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
+    if (t.m:GetAttribute("ItachiGuardUntil") or 0)>ctx.clock() then return end -- and Susanoo, or a crow clone mid-dodge
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end
@@ -6014,7 +7750,7 @@ local function shinraTensei(p,s,m,h,r,aim)
                 local power=1-math.clamp(distance/cfg.Radius,0,1)
                 task.delay(cfg.WaveTime*distance/cfg.Radius,function()
                     if not alive(t) then return end
-                    ctx.damage(p,t,cfg.Damage)
+                    ctx.damage(p,t,cfg.Damage,"Shockwave")
                     if alive(t) then knockback(p,t,center,power) end
                 end)
             end
@@ -6063,7 +7799,7 @@ local function banshoStrike(p,s,m,r,pull)
         ctx.fx:FireAllClients("PainBanshoCancel",{owner=p.UserId,target=t.m,reason="lost"})
         return
     end
-    ctx.damage(p,t,cfg.StrikeDamage)
+    ctx.damage(p,t,cfg.StrikeDamage,"Melee")
     ctx.fx:FireAllClients("PainBanshoStrike",{owner=p.UserId,target=t.m,position=t.r.Position})
     if alive(t) then
         local direction=flat(t.r.Position-r.Position,flat(r.CFrame.LookVector))
@@ -6172,7 +7908,7 @@ local function stepChibaku(p,c,n)
     -- Two pulses of damage while the victims are being dragged up.
     while c.ticks<#cfg.TickTimes and age>=cfg.TickTimes[c.ticks+1] do
         c.ticks+=1
-        for _,v in c.captured do if alive(v.t) then ctx.damage(p,v.t,cfg.TickDamage) end end
+        for _,v in c.captured do if alive(v.t) then ctx.damage(p,v.t,cfg.TickDamage,"DoT") end end
     end
     for model,v in c.captured do
         local t=v.t
@@ -6197,7 +7933,7 @@ local function stepChibaku(p,c,n)
             local t=v.t
             if model.Parent then model:SetAttribute("PainSealedUntil",0) end
             if alive(t) then
-                ctx.damage(p,t,cfg.FinalDamage)
+                ctx.damage(p,t,cfg.FinalDamage,"Ultimate")
                 releaseMover(model,true)
                 if alive(t) then
                     -- Fall straight down onto the floor beneath, then lie knocked down for a moment.
@@ -6230,7 +7966,7 @@ local function stepMover(model,mv,n,dt)
         local _,hit=drive(mv,desired,{direction=-mv.direction,pitch=-.5*math.sin(u*math.pi)})
         if hit and not mv.walled then
             mv.walled=true
-            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage) end
+            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage,"Environment") end
             ctx.fx:FireAllClients("PainWallHit",{position=mv.last,normal=hit.Normal})
             -- Stop dead against the wall, then slide down to the floor below.
             local floor=groundBelow(mv.last,mv.params)
@@ -6634,6 +8370,36 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"AllMightGlove",hand.Size*Vector3.new(1.35,1.2,1.35),CFrame.new(0,-.02,0),glove) end
         end
+    elseif kind=="Itachi" then
+        -- Mangekyo Sharingan on both eyes (red disc, black pinwheel, black pupil) and Akatsuki sleeves with red clouds
+        -- on both forearms, purple nails. Clients drive ItachiEyeGlow: faint at rest, bright on Q/E, strongest on R.
+        local front=-head.Size.Z/2-.012
+        local red,black,white=Color3.fromRGB(214,16,24),Color3.fromRGB(8,6,8),Color3.fromRGB(245,244,240)
+        for _,x in {-.21,.21} do
+            local iris=attach(head,"ItachiSharingan",Vector3.new(.012,.26,.26),CFrame.new(x,.13,front)*CFrame.Angles(0,math.pi/2,0),red,Enum.Material.Neon,Enum.PartType.Cylinder)
+            for blade=0,2 do
+                attach(head,"ItachiSharingan",Vector3.new(.014,.2,.05),CFrame.new(x,.13,front-.004)*CFrame.Angles(0,0,blade*math.pi*2/3)*CFrame.new(0,.04,0)*CFrame.Angles(0,0,.5),black)
+            end
+            attach(head,"ItachiSharingan",Vector3.new(.016,.06,.06),CFrame.new(x,.13,front-.008)*CFrame.Angles(0,math.pi/2,0),black,nil,Enum.PartType.Cylinder)
+            local glow=Instance.new("PointLight");glow.Name="ItachiEyeGlow";glow.Color=red;glow.Brightness=.25;glow.Range=2.5;glow.Parent=iris
+        end
+        local cloak=Color3.fromRGB(14,12,18)
+        for _,side in {"Left","Right"} do
+            local arm=character:FindFirstChild(side.."LowerArm") or character:FindFirstChild(side.." Arm")
+            if arm then
+                -- Wide, open sleeve with the red lining showing at the cuff.
+                local sleeve=attach(arm,"ItachiSleeve",arm.Size*Vector3.new(1.45,.85,1.45),CFrame.new(0,arm.Size.Y*.06,0),cloak)
+                attach(arm,"ItachiSleeveLining",Vector3.new(sleeve.Size.X*.92,.05,sleeve.Size.Z*.92),CFrame.new(0,-sleeve.Size.Y*.44,0),Color3.fromRGB(150,10,16))
+                local outward=side=="Left" and -1 or 1
+                for i,offset in {Vector3.new(0,0,0),Vector3.new(0,.18,-.14),Vector3.new(0,-.14,.15)} do
+                    local at=CFrame.new(outward*(sleeve.Size.X/2+.01),offset.Y,offset.Z)
+                    attach(arm,"ItachiCloudRim",Vector3.new(.02,.3,.3)*(i==1 and 1.25 or 1),at,white,nil,Enum.PartType.Cylinder)
+                    attach(arm,"ItachiCloud",Vector3.new(.025,.24,.24)*(i==1 and 1.25 or 1),at*CFrame.new(outward*.006,0,0),red,nil,Enum.PartType.Cylinder)
+                end
+            end
+            local hand=character:FindFirstChild(side.."Hand")
+            if hand then attach(hand,"ItachiNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(96,70,128)) end
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end
@@ -6684,6 +8450,7 @@ local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
+local Itachi=require(script.Parent:WaitForChild("ItachiServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
@@ -6754,6 +8521,8 @@ local function damage(owner,t,amount,kind)
         victimState.parryHit=true
         return
     end
+    -- Itachi's Crow Clone: rolled here, before anything lands. A dodged hit deals nothing at all.
+    if Itachi.tryDodge(owner,t,kind) then return end
     local dealt=amount
     -- Pain takes less damage while holding Chibaku Tensei.
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then dealt*=.7 end
@@ -6761,6 +8530,8 @@ local function damage(owner,t,amount,kind)
     if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
     -- One For All: buffed basic attacks hit harder, a buffed All Might takes less.
     dealt*=AllMight.damageFactor(attacker,t.m,kind)
+    -- Susanoo's Yata Mirror takes 60% off frontal hits.
+    dealt*=Itachi.damageFactor(attacker,t.m,kind)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -6779,16 +8550,17 @@ local function updateSpeed(m,h)
     end
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
     speed*=AllMight.speedFactor(m,n)
+    speed*=Itachi.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
     local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
     if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
-    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n)
+    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
+    local noJump=held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -6848,6 +8620,7 @@ end
 local function launch(t,velocity)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then return end -- Chibaku Tensei: strong stagger resistance
     velocity=AllMight.filterKnockback(t.m,velocity);if not velocity then return end -- Plus Ultra guard / One For All
+    velocity=Itachi.filterKnockback(t.m,velocity);if not velocity then return end -- Susanoo / a crow clone's cancelled hit
     local victim=Players:GetPlayerFromCharacter(t.m)
     if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
     elseif t.r.Anchored then
@@ -7023,7 +8796,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                 task.delay((pulse-1)*cfg.Tick,function()
                     if p.Character~=m or not m.Parent or h.Health<=0 then return end
                     for _,t in targets(m) do
-                        if (t.r.Position-r.Position).Magnitude<=cfg.Radius then damage(p,t,cfg.Damage) end
+                        if (t.r.Position-r.Position).Magnitude<=cfg.Radius then damage(p,t,cfg.Damage,"Status") end
                     end
                     fx:FireAllClients("HakiPulse",{owner=p.UserId,position=r.Position,radius=cfg.Radius,pulse=pulse})
                 end)
@@ -7039,7 +8812,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             if ray then finish=origin+direction*math.max(0,ray.Distance-.5) end
             for _,t in targets(m) do
                 local along=math.clamp((t.r.Position-origin):Dot(direction),0,(finish-origin).Magnitude)
-                if (origin+direction*along-t.r.Position).Magnitude<=cfg.Width then damage(p,t,cfg.Damage) end
+                if (origin+direction*along-t.r.Position).Magnitude<=cfg.Width then damage(p,t,cfg.Damage,"Projectile") end
             end
             fx:FireAllClients("DivineDeparture",{owner=p.UserId,from=origin,to=finish,width=cfg.Width})
         end)
@@ -7114,7 +8887,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         local distance=cfg.MinDistance+(cfg.Distance-cfg.MinDistance)*charged/cfg.MaxCharge
         delayed(p,s,m,windup,function()
             local start,finish,victims=dashStrike(m,r,flat,distance,cfg.Width)
-            for _,t in victims do damage(p,t,cfg.Damage) end
+            for _,t in victims do damage(p,t,cfg.Damage,"Dash") end
             fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish,charged=charged,distance=distance})
         end)
     elseif kind=="Breath" then
@@ -7133,7 +8906,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             fx:FireAllClients("FlameGod",{owner=p.UserId,from=start,to=finish})
             -- Too fast to see: the cuts land only after the user is already past.
             task.delay(cfg.HitDelay,function()
-                for _,t in victims do damage(p,t,cfg.Damage) end
+                for _,t in victims do damage(p,t,cfg.Damage,"Ultimate") end
             end)
             -- The cut lands after the turn; recoil follows just after the user sees the result.
             task.delay(cfg.RecoilDelay,function()
@@ -7157,7 +8930,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             for _,t in targets(m) do
                 local distance=(t.r.Position-center).Magnitude
                 if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
+                    damage(p,t,cfg.Damage,"Explosion")
                     local power=1-.5*distance/cfg.Radius
                     launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
                 end
@@ -7176,7 +8949,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             for _,t in targets(m) do
                 local distance=(t.r.Position-center).Magnitude
                 if distance<=cfg.Radius then
-                    damage(p,t,cfg.Damage)
+                    damage(p,t,cfg.Damage,"Ultimate")
                     local power=1-.55*distance/cfg.Radius
                     launch(t,outward(center,t,r.CFrame.LookVector)*cfg.Knockback*power+Vector3.new(0,cfg.Lift*power,0))
                 end
@@ -7200,7 +8973,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                     for _,t in targets(m) do
                         local delta=t.r.Position-center
                         if Vector3.new(delta.X,delta.Y*.65,delta.Z).Magnitude<=cfg.Radius then
-                            damage(p,t,cfg.Damage);launch(t,outward(center,t,direction)*cfg.Knockback+Vector3.yAxis*cfg.Lift)
+                            damage(p,t,cfg.Damage,"Explosion");launch(t,outward(center,t,direction)*cfg.Knockback+Vector3.yAxis*cfg.Lift)
                         end
                     end
                 end)
@@ -7254,7 +9027,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
                 fx:FireAllClients("DoraShrink",{owner=p.UserId,from=origin,position=finish,duration=cfg.ShrinkDuration})
             else
                 if best then
-                    damage(p,best,cfg.CannonDamage)
+                    damage(p,best,cfg.CannonDamage,"Projectile")
                     local flat=Vector3.new(aim.X,0,aim.Z);flat=flat.Magnitude>.01 and flat.Unit or r.CFrame.LookVector
                     local excluded={m};for _,other in targets(nil) do table.insert(excluded,other.m) end
                     local wallParams=rayParams(m);wallParams.FilterDescendantsInstances=excluded
@@ -7298,7 +9071,7 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
             fx:FireAllClients("HandBlast",{owner=p.UserId,from=from,to=center,radius=cfg.Radius})
             for _,t in targets(m) do
                 if (t.r.Position-center).Magnitude<=cfg.Radius then
-                    damage(p,t,cfg.Damage);launch(t,flat*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
+                    damage(p,t,cfg.Damage,"Explosion");launch(t,flat*cfg.Knockback+Vector3.new(0,cfg.Lift,0))
                 end
             end
         end)
@@ -7340,7 +9113,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
         if skill=="ThunderclapRelease" then releaseThunder(p,s,aim);return end
         local n=clock()
         local m,h,r=character(p);if not m or s.thunderHold or s.busyUntil>n or s.hold or s.slide then return end
-        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
+        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
         local enhanced=s.charges>0 and s.chargesUntil>n
         if (s.cooldowns.Thunderclap or 0)>n or (not enhanced and s.energy<C.Thunderclap.Cost) then return end
         local hold={start=n,model=m,generation=s.generation,direction=aim.Unit}
@@ -7362,8 +9135,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
-    -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
-    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
+    -- Held by Pain (pulled, thrown, sealed), All Might (smashed, carried, launched) or Itachi (Tsukuyomi, sealed):
+    -- no attacks, dashes or skills. Susanoo locks its own caster too.
+    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
+    if (m:GetAttribute("ItachiLockUntil") or 0)>n then return end
     if skill=="Thunderclap" then return end
     if Pain.handles(skill) then
         if kitOf(p)=="Pain" then Pain.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
@@ -7371,6 +9146,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     end
     if AllMight.handles(skill) then
         if kitOf(p)=="AllMight" then AllMight.request(p,s,m,h,r,skill,aim.Unit) end
+        return
+    end
+    if Itachi.handles(skill) then
+        if kitOf(p)=="Itachi" then Itachi.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
     end
     if skill=="BasicAttack" or skill=="Slide" then
@@ -7394,7 +9173,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
                 local finish=r.Position
                 for _,t in targets(m) do
                     local path=finish-start;local along=path.Magnitude>0 and math.clamp((t.r.Position-start):Dot(path.Unit),0,path.Magnitude) or 0
-                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage) end
+                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage,"Weapon") end
                 end
             end)
         end)
@@ -7413,7 +9192,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
                     local delta=t.r.Position-origin;local along=delta:Dot(look)
                     if along>0 and along<=cfg.CounterReach and (delta-look*along).Magnitude<=3 and along<dist then best=t;dist=along end
                 end
-                if best then damage(p,best,cfg.CounterDamage) end
+                if best then damage(p,best,cfg.CounterDamage,"Weapon") end
                 fx:FireAllClients("ShanksCounter",{owner=p.UserId,position=origin+look*math.min(dist,cfg.CounterReach)})
             else fx:FireAllClients("ShanksParryEnd",{owner=p.UserId}) end
         end)
@@ -7481,7 +9260,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Itachi.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -7501,7 +9280,7 @@ RunService.Heartbeat:Connect(function(dt)
             model:PivotTo(CFrame.new(position)*k.from.Rotation);t.r.AssemblyLinearVelocity=Vector3.zero;k.last=travelled
             if wall or progress>=1 then
                 doraKnockbacks[model]=nil
-                if wall then damage(k.owner,t,C.Pocket.CannonWallDamage-C.Pocket.CannonDamage);fx:FireAllClients("DoraWallHit",{position=position,owner=k.owner.UserId}) end
+                if wall then damage(k.owner,t,C.Pocket.CannonWallDamage-C.Pocket.CannonDamage,"Environment");fx:FireAllClients("DoraWallHit",{position=position,owner=k.owner.UserId}) end
             end
         end
     end
@@ -7576,7 +9355,7 @@ RunService.Heartbeat:Connect(function(dt)
             local projection=math.clamp((t.r.Position-shot.position):Dot(shot.direction),0,segmentLength)
             local closest=shot.position+shot.direction*projection
             if not shot.hit[t.m] and (t.r.Position-closest).Magnitude<=cfg.Radius+2 then
-                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage)
+                shot.hit[t.m]=true;damage(shot.owner,t,cfg.Damage,shot.kind=="Purple" and "Ultimate" or "Projectile")
                 if shot.kind=="Red" and not t.r.Anchored then t.r.AssemblyLinearVelocity+=shot.direction*34 end
             end
         end
@@ -7609,7 +9388,7 @@ RunService.Heartbeat:Connect(function(dt)
                 if t.m.Parent and t.h.Health>0 then
                     local delta=t.r.Position-d.center
                     if delta.Magnitude>C.Domain.Radius-2 then t.r.CFrame=CFrame.new(d.center+delta.Unit*(C.Domain.Radius-2))*t.r.CFrame.Rotation end
-                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage) end
+                    if n>=d.nextTick then damage(d.owner,t,C.Domain.Damage,"DoT") end
                 end
             end
             if n>=d.nextTick then d.nextTick=n+C.Domain.Tick end
@@ -7620,6 +9399,8 @@ Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,d
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,projectiles=projectiles,kitOf=kitOf})
 AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
+Itachi.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
@@ -7627,7 +9408,7 @@ local function joined(p)
         clearPurpleHover(s);clearDoraFlight(s)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Itachi.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

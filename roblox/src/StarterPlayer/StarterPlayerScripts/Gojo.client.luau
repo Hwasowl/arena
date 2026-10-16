@@ -14,6 +14,7 @@ local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local PainClient=require(script.Parent:WaitForChild("PainClient"))
 local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
+local ItachiClient=require(script.Parent:WaitForChild("ItachiClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
 local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.Parent=camera
@@ -143,13 +144,16 @@ local KITS={
         slots={{"ShinraTensei","Q","신라천정"},{"BanshoTenin","E","만상천인"},{"ChibakuTensei","R","지폭천성"},{"Dash","SHIFT","대시"}}},
     AllMight={title="オールマイト  ·  올마이트",energy="ONE FOR ALL",hint="Q 풀 파워 10초 · E 유나이티드 스테이츠 오브 스매시 · R PLUS ULTRA (E 적중 직후 R 연계)   /   SHIFT 대시   /   7 캐릭터",handScale=1,
         slots={{"OneForAll","Q","원 포 올: 풀 파워"},{"UnitedStatesOfSmash","E","UNITED STATES OF SMASH"},{"PlusUltra","R","PLUS ULTRA!"},{"Dash","SHIFT","대시"}}},
+    Itachi={title="うちはイタチ  ·  우치하 이타치",energy="MANGEKYO SHARINGAN",hint="Q 츠쿠요미 · E 아마테라스 (바라본 바닥) · R 스사노오 · 패시브 까마귀 분신   /   SHIFT 대시   /   8 캐릭터",handScale=1,
+        slots={{"Tsukuyomi","Q","츠쿠요미"},{"Amaterasu","E","아마테라스"},{"Susanoo","R","스사노오 · 토츠카의 검"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
 local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
+local ITACHI_KINDS={Tsukuyomi=true,Amaterasu=true,Susanoo=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
@@ -649,10 +653,10 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(630,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(720,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight"} do
+local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Itachi="이타치"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Itachi"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
     b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
@@ -665,12 +669,13 @@ local function announce(name,sub)
 end
 PainClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce,blur=blur})
 AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+ItachiClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or C.Colors.Blue
-    PainClient.reset();AllMightClient.reset()
+    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or C.Colors.Blue
+    PainClient.reset();AllMightClient.reset();ItachiClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -694,11 +699,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
+    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local attackButton=Instance.new("TextButton");attackButton.Name="BasicAttackButton"
@@ -716,7 +721,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Eight]="Itachi"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -746,6 +751,7 @@ end)
 event.OnClientEvent:Connect(function(kind,data)
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
     if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
+    if string.sub(kind,1,6)=="Itachi" then ItachiClient.onEvent(kind,data);return end
     if kind=="BasicAttack" then
         bodyMotion(data,false)
         if data.owner==player.UserId then
@@ -1472,6 +1478,13 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if AllMightClient.busy() then desiredFov=mightOut.fov end
         desiredFov+=mightOut.fovAdd
     end
+    -- Itachi: own techniques for the Itachi kit; the Tsukuyomi world and the seal view for anyone caught in them.
+    local isItachi=current()=="Itachi"
+    local itachiOut=ItachiClient.render(dt,{isItachi=isItachi,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0,sliding=sliding~=nil})
+    if itachiOut then
+        if (isItachi and ItachiClient.busy()) or itachiOut.victim then desiredFov=itachiOut.fov end
+        desiredFov+=itachiOut.fovAdd
+    end
     if n<fovKickUntil then desiredFov=94 end
     if h then h.CameraOffset=h.CameraOffset:Lerp(Vector3.new(0,-1.3*lean,0),math.min(1,dt*10)) end
     camera.FieldOfView+=(desiredFov-camera.FieldOfView)*math.min(1,dt*8)
@@ -1544,8 +1557,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         entry.p.Color=entry.source.Color;entry.p.Transparency=(isDora and alive) and entry.source.Transparency or 1
     end
     if doraTool and dora.tools[doraTool] then dora.show(dora.tools[doraTool],true);dora.tools[doraTool]:PivotTo(camera.CFrame*doraToolFrame) end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isItachi)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isItachi)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -1596,7 +1609,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         end
         if reze and not transformed and (entry.skill=="Rampage" or entry.skill=="Kick") then text=entry.name.." (변신 필요)";cooldown=math.max(cooldown,.001) end
         entry.b.Text=entry.key.."\n"..text..(cooldown>0 and string.format("  %.1f",cooldown) or "")
-        entry.stroke.Thickness=((painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) or (mightOut and mightOut.rReady and entry.key=="R" and cooldown<=0)) and 3 or 1
+        entry.stroke.Thickness=((painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) or (mightOut and mightOut.rReady and entry.key=="R" and cooldown<=0) or (itachiOut and itachiOut.ready==entry.key and cooldown<=0)) and 3 or 1
         entry.b.TextTransparency=doraPeek>.08 and .75 or 0
         entry.b.BackgroundTransparency=doraPeek>.08 and .9 or cooldown>0 and .5 or .12
     end
@@ -1609,6 +1622,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             comboLabel.Text=painOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         elseif mightOut and mightOut.combo then
             comboLabel.Text=mightOut.combo;comboLabel.TextTransparency=mightOut.rReady and .1+.25*math.abs(math.sin(n*9)) or .15
+        elseif itachiOut and itachiOut.combo then
+            comboLabel.Text=itachiOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         elseif isDora and dora.rotorUntil>n then
             comboLabel.Text=string.format("대나무 헬리콥터   %.1f초 · SPACE ↑ / CTRL ↓",dora.rotorUntil-n);comboLabel.TextTransparency=0
         else comboLabel.Text="" end
@@ -1626,7 +1641,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();PainClient.reset();AllMightClient.reset()
+    clearCastVFX();PainClient.reset();AllMightClient.reset();ItachiClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)

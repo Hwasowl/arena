@@ -66,6 +66,7 @@ local function startMover(t,owner,spec)
     if not alive(t) then return end
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
     if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
+    if (t.m:GetAttribute("ItachiGuardUntil") or 0)>ctx.clock() then return end -- and Susanoo, or a crow clone mid-dodge
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end
@@ -143,7 +144,7 @@ local function shinraTensei(p,s,m,h,r,aim)
                 local power=1-math.clamp(distance/cfg.Radius,0,1)
                 task.delay(cfg.WaveTime*distance/cfg.Radius,function()
                     if not alive(t) then return end
-                    ctx.damage(p,t,cfg.Damage)
+                    ctx.damage(p,t,cfg.Damage,"Shockwave")
                     if alive(t) then knockback(p,t,center,power) end
                 end)
             end
@@ -192,7 +193,7 @@ local function banshoStrike(p,s,m,r,pull)
         ctx.fx:FireAllClients("PainBanshoCancel",{owner=p.UserId,target=t.m,reason="lost"})
         return
     end
-    ctx.damage(p,t,cfg.StrikeDamage)
+    ctx.damage(p,t,cfg.StrikeDamage,"Melee")
     ctx.fx:FireAllClients("PainBanshoStrike",{owner=p.UserId,target=t.m,position=t.r.Position})
     if alive(t) then
         local direction=flat(t.r.Position-r.Position,flat(r.CFrame.LookVector))
@@ -301,7 +302,7 @@ local function stepChibaku(p,c,n)
     -- Two pulses of damage while the victims are being dragged up.
     while c.ticks<#cfg.TickTimes and age>=cfg.TickTimes[c.ticks+1] do
         c.ticks+=1
-        for _,v in c.captured do if alive(v.t) then ctx.damage(p,v.t,cfg.TickDamage) end end
+        for _,v in c.captured do if alive(v.t) then ctx.damage(p,v.t,cfg.TickDamage,"DoT") end end
     end
     for model,v in c.captured do
         local t=v.t
@@ -326,7 +327,7 @@ local function stepChibaku(p,c,n)
             local t=v.t
             if model.Parent then model:SetAttribute("PainSealedUntil",0) end
             if alive(t) then
-                ctx.damage(p,t,cfg.FinalDamage)
+                ctx.damage(p,t,cfg.FinalDamage,"Ultimate")
                 releaseMover(model,true)
                 if alive(t) then
                     -- Fall straight down onto the floor beneath, then lie knocked down for a moment.
@@ -359,7 +360,7 @@ local function stepMover(model,mv,n,dt)
         local _,hit=drive(mv,desired,{direction=-mv.direction,pitch=-.5*math.sin(u*math.pi)})
         if hit and not mv.walled then
             mv.walled=true
-            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage) end
+            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage,"Environment") end
             ctx.fx:FireAllClients("PainWallHit",{position=mv.last,normal=hit.Normal})
             -- Stop dead against the wall, then slide down to the floor below.
             local floor=groundBelow(mv.last,mv.params)

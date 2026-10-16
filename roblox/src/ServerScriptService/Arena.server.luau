@@ -269,6 +269,36 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"AllMightGlove",hand.Size*Vector3.new(1.35,1.2,1.35),CFrame.new(0,-.02,0),glove) end
         end
+    elseif kind=="Itachi" then
+        -- Mangekyo Sharingan on both eyes (red disc, black pinwheel, black pupil) and Akatsuki sleeves with red clouds
+        -- on both forearms, purple nails. Clients drive ItachiEyeGlow: faint at rest, bright on Q/E, strongest on R.
+        local front=-head.Size.Z/2-.012
+        local red,black,white=Color3.fromRGB(214,16,24),Color3.fromRGB(8,6,8),Color3.fromRGB(245,244,240)
+        for _,x in {-.21,.21} do
+            local iris=attach(head,"ItachiSharingan",Vector3.new(.012,.26,.26),CFrame.new(x,.13,front)*CFrame.Angles(0,math.pi/2,0),red,Enum.Material.Neon,Enum.PartType.Cylinder)
+            for blade=0,2 do
+                attach(head,"ItachiSharingan",Vector3.new(.014,.2,.05),CFrame.new(x,.13,front-.004)*CFrame.Angles(0,0,blade*math.pi*2/3)*CFrame.new(0,.04,0)*CFrame.Angles(0,0,.5),black)
+            end
+            attach(head,"ItachiSharingan",Vector3.new(.016,.06,.06),CFrame.new(x,.13,front-.008)*CFrame.Angles(0,math.pi/2,0),black,nil,Enum.PartType.Cylinder)
+            local glow=Instance.new("PointLight");glow.Name="ItachiEyeGlow";glow.Color=red;glow.Brightness=.25;glow.Range=2.5;glow.Parent=iris
+        end
+        local cloak=Color3.fromRGB(14,12,18)
+        for _,side in {"Left","Right"} do
+            local arm=character:FindFirstChild(side.."LowerArm") or character:FindFirstChild(side.." Arm")
+            if arm then
+                -- Wide, open sleeve with the red lining showing at the cuff.
+                local sleeve=attach(arm,"ItachiSleeve",arm.Size*Vector3.new(1.45,.85,1.45),CFrame.new(0,arm.Size.Y*.06,0),cloak)
+                attach(arm,"ItachiSleeveLining",Vector3.new(sleeve.Size.X*.92,.05,sleeve.Size.Z*.92),CFrame.new(0,-sleeve.Size.Y*.44,0),Color3.fromRGB(150,10,16))
+                local outward=side=="Left" and -1 or 1
+                for i,offset in {Vector3.new(0,0,0),Vector3.new(0,.18,-.14),Vector3.new(0,-.14,.15)} do
+                    local at=CFrame.new(outward*(sleeve.Size.X/2+.01),offset.Y,offset.Z)
+                    attach(arm,"ItachiCloudRim",Vector3.new(.02,.3,.3)*(i==1 and 1.25 or 1),at,white,nil,Enum.PartType.Cylinder)
+                    attach(arm,"ItachiCloud",Vector3.new(.025,.24,.24)*(i==1 and 1.25 or 1),at*CFrame.new(outward*.006,0,0),red,nil,Enum.PartType.Cylinder)
+                end
+            end
+            local hand=character:FindFirstChild(side.."Hand")
+            if hand then attach(hand,"ItachiNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(96,70,128)) end
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end

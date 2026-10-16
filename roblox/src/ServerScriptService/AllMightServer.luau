@@ -123,7 +123,7 @@ local function releaseMover(model,keepHeld)
 end
 local function guarded(model)
     local n=ctx.clock()
-    return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n
+    return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n or (model:GetAttribute("ItachiGuardUntil") or 0)>n
 end
 local function startMover(t,owner,spec)
     if not alive(t) or guarded(t.m) then return end
@@ -254,14 +254,14 @@ local function smashImpact(p,e,n)
         local point=t.r.Position
         if movers[t.m] and movers[t.m].kind=="Hold" then releaseMover(t.m,true) end
         e.hit[t.m]=true
-        ctx.damage(p,t,cfg.Damage*factor)
+        ctx.damage(p,t,cfg.Damage*factor,"Melee")
         local direction=flat(t.r.Position-r.Position,e.direction)
         if alive(t) then knock(p,t,direction,cfg.Knockback,cfg.KnockLift,cfg.KnockTime,cfg.WallDamage) end
         -- The shockwave: everyone else near the point of impact, once each, pushed away from it.
         for _,other in ctx.targets(m) do
             if not e.hit[other.m] and (other.r.Position-point).Magnitude<=cfg.ShockRadius then
                 e.hit[other.m]=true
-                ctx.damage(p,other,cfg.ShockDamage*factor)
+                ctx.damage(p,other,cfg.ShockDamage*factor,"Shockwave")
                 if alive(other) then knock(p,other,flat(other.r.Position-point,direction),cfg.ShockKnock,2.5,.35,nil,true) end
             end
         end
@@ -401,7 +401,7 @@ local function ultraShock(p,u,center,n)
             local d=t.r.Position-center
             if Vector3.new(d.X,0,d.Z).Magnitude<=cfg.ShockRadius and math.abs(d.Y)<=cfg.ShockHeight then
                 u.hit[t.m]=true
-                ctx.damage(p,t,cfg.ShockDamage)
+                ctx.damage(p,t,cfg.ShockDamage,"Shockwave")
                 if alive(t) then ctx.launch(t,flat(d,u.direction)*42+Vector3.yAxis*26) end
             end
         end
@@ -464,11 +464,11 @@ local function stepUltra(p,u,n)
     end
     -- Hits, once each.
     if c>=cfg.Punch1 and not u.damaged[1] then
-        u.damaged[1]=true;ctx.damage(p,t,cfg.Damage1)
+        u.damaged[1]=true;ctx.damage(p,t,cfg.Damage1,"Ultimate")
         ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=1,target=t.m,position=t.r.Position,direction=u.direction})
     end
     if c>=cfg.Punch2 and not u.damaged[2] then
-        u.damaged[2]=true;ctx.damage(p,t,cfg.Damage2)
+        u.damaged[2]=true;ctx.damage(p,t,cfg.Damage2,"Ultimate")
         ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=2,target=t.m,position=t.r.Position,direction=u.direction})
     end
     if c>=cfg.Uppercut and not u.damaged[3] then
@@ -476,7 +476,7 @@ local function stepUltra(p,u,n)
         u.launchFrom=t.r.Anchored and (movers[t.m] and movers[t.m].last) or t.r.Position
         local ceiling=u.roof and (u.roof-6-u.launchFrom.Y) or cfg.ApexHeight
         u.apexRise=math.clamp(math.min(cfg.ApexHeight,ceiling),8,cfg.ApexHeight)
-        ctx.damage(p,t,cfg.Damage3)
+        ctx.damage(p,t,cfg.Damage3,"Ultimate")
         ultraShock(p,u,Vector3.new(r.Position.X,u.base.Y,r.Position.Z),n)
         ctx.fx:FireAllClients("AllMightUltraUppercut",{owner=p.UserId,start=n,target=t.m,position=u.launchFrom,ground=u.base,
             direction=u.direction,apex=u.launchFrom+u.direction*7+Vector3.yAxis*u.apexRise,launch=cfg.Apex-cfg.Launch,radius=cfg.ShockRadius})
@@ -524,7 +524,7 @@ local function stepMover(model,mv,n)
         local _,hit=drive(mv,desired,{direction=-mv.direction,pitch=(mv.light and -.3 or -.75)*math.sin(u*math.pi)})
         if hit and not mv.walled then
             mv.walled=true
-            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage) end
+            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage,"Environment") end
             ctx.fx:FireAllClients("AllMightWallHit",{position=mv.last,normal=hit.Normal})
             local floor=groundBelow(mv.last,mv.params)
             mv.kind="Fall";mv.start=n;mv.from=mv.last;mv.to=floor and floor+Vector3.yAxis*mv.hip or mv.last;mv.duration=.25

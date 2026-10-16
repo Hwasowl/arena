@@ -18,6 +18,8 @@ return {
         Pain = { "ShinraTensei", "BanshoTenin", "ChibakuTensei", "Dash" },
         -- All Might: tuning and judgement live in AllMightConfig / AllMightServer.
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
+        -- Uchiha Itachi: tuning and judgement live in ItachiConfig / ItachiServer. Crow Clone is a passive.
+        Itachi = { "Tsukuyomi", "Amaterasu", "Susanoo", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
