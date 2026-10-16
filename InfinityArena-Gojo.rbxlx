@@ -829,6 +829,7 @@ local nextAimAt=0
 local event=RS:WaitForChild("GojoFX")
 local selectRemote=RS:WaitForChild("SelectCharacter")
 local PainClient=require(script.Parent:WaitForChild("PainClient"))
+local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
 local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.Parent=camera
@@ -955,12 +956,15 @@ local KITS={
         slots={{"Pocket","Q","주머니 뒤지기"},{"BambooCopter","E","대나무 헬리콥터"},{"AnywhereDoor","R","어디로든 문"},{"Dash","SHIFT","대시"}}},
     Pain={title="天道ペイン  ·  천도 페인",energy="CHAKRA",hint="Q 신라천정 밀어내기 · E 만상천인 끌어당기기 → 찌르기 · R 지폭천성   /   SHIFT 대시   /   6 캐릭터",handScale=1,
         slots={{"ShinraTensei","Q","신라천정"},{"BanshoTenin","E","만상천인"},{"ChibakuTensei","R","지폭천성"},{"Dash","SHIFT","대시"}}},
+    AllMight={title="オールマイト  ·  올마이트",energy="ONE FOR ALL",hint="Q 풀 파워 10초 · E 유나이티드 스테이츠 오브 스매시 · R PLUS ULTRA (E 적중 직후 R 연계)   /   SHIFT 대시   /   7 캐릭터",handScale=1,
+        slots={{"OneForAll","Q","원 포 올: 풀 파워"},{"UnitedStatesOfSmash","E","UNITED STATES OF SMASH"},{"PlusUltra","R","PLUS ULTRA!"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
+local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Breath" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
@@ -1460,10 +1464,10 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(540,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(630,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain"} do
+local PICK_NAMES={Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
     b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
@@ -1475,12 +1479,13 @@ local function announce(name,sub)
     task.delay(2,function() tween(title,.6,{TextTransparency=1});tween(subtitle,.6,{TextTransparency=1}) end)
 end
 PainClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce,blur=blur})
+AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or C.Colors.Blue
-    PainClient.reset()
+    energy.TextColor3=name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or C.Colors.Blue
+    PainClient.reset();AllMightClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -1504,11 +1509,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) then return end
+    if cast or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) then return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local attackButton=Instance.new("TextButton");attackButton.Name="BasicAttackButton"
@@ -1526,7 +1531,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -1555,6 +1560,7 @@ end)
 
 event.OnClientEvent:Connect(function(kind,data)
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
+    if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
     if kind=="BasicAttack" then
         bodyMotion(data,false)
         if data.owner==player.UserId then
@@ -2232,6 +2238,13 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local isPain=current()=="Pain"
     local painOut=PainClient.render(dt,{isPain=isPain,melee=melee,sliding=sliding~=nil,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0})
     if painOut and PainClient.busy() then desiredFov=painOut.fov end
+    -- All Might: custom arms and camera; the buff adds FOV on top of whatever else is happening.
+    local isAllMight=current()=="AllMight"
+    local mightOut=AllMightClient.render(dt,{isAllMight=isAllMight,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0,sliding=sliding~=nil})
+    if mightOut then
+        if AllMightClient.busy() then desiredFov=mightOut.fov end
+        desiredFov+=mightOut.fovAdd
+    end
     if n<fovKickUntil then desiredFov=94 end
     if h then h.CameraOffset=h.CameraOffset:Lerp(Vector3.new(0,-1.3*lean,0),math.min(1,dt*10)) end
     camera.FieldOfView+=(desiredFov-camera.FieldOfView)*math.min(1,dt*8)
@@ -2304,8 +2317,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         entry.p.Color=entry.source.Color;entry.p.Transparency=(isDora and alive) and entry.source.Transparency or 1
     end
     if doraTool and dora.tools[doraTool] then dora.show(dora.tools[doraTool],true);dora.tools[doraTool]:PivotTo(camera.CFrame*doraToolFrame) end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -2356,7 +2369,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         end
         if reze and not transformed and (entry.skill=="Rampage" or entry.skill=="Kick") then text=entry.name.." (변신 필요)";cooldown=math.max(cooldown,.001) end
         entry.b.Text=entry.key.."\n"..text..(cooldown>0 and string.format("  %.1f",cooldown) or "")
-        entry.stroke.Thickness=(painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) and 3 or 1
+        entry.stroke.Thickness=((painOut and painOut.combo and (entry.key=="Q" or entry.key=="R") and cooldown<=0) or (mightOut and mightOut.rReady and entry.key=="R" and cooldown<=0)) and 3 or 1
         entry.b.TextTransparency=doraPeek>.08 and .75 or 0
         entry.b.BackgroundTransparency=doraPeek>.08 and .9 or cooldown>0 and .5 or .12
     end
@@ -2367,6 +2380,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
         elseif painOut and painOut.combo then
             comboLabel.Text=painOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
+        elseif mightOut and mightOut.combo then
+            comboLabel.Text=mightOut.combo;comboLabel.TextTransparency=mightOut.rReady and .1+.25*math.abs(math.sin(n*9)) or .15
         elseif isDora and dora.rotorUntil>n then
             comboLabel.Text=string.format("대나무 헬리콥터   %.1f초 · SPACE ↑ / CTRL ↓",dora.rotorUntil-n);comboLabel.TextTransparency=0
         else comboLabel.Text="" end
@@ -2383,7 +2398,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();PainClient.reset()
+    clearCastVFX();PainClient.reset();AllMightClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)
@@ -2401,6 +2416,654 @@ end)
 					<int64 name="SourceAssetId">-1</int64>
 					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003df</UniqueId>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBXAF873F2CD214EA455499439334232D47">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[-- All Might on the client: huge first-person arms (blue suit, red/white bands, muscled forearms, yellow gloves with
+-- jointed fingers), camera work for each technique (including the short Plus Ultra cinematic), screen overlays
+-- and shouts, the buff timer, and the local side of being smashed, carried or launched.
+-- Gojo.client.luau owns input and the shared HUD; it forwards AllMight* events here and asks for the arm pose every
+-- frame. All judgement stays on the server.
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local UIS=game:GetService("UserInputService")
+local Lighting=game:GetService("Lighting")
+local A=require(RS:WaitForChild("AllMightConfig"))
+local VFX=require(RS:WaitForChild("AllMightVFX"))
+local COLORS=A.Colors
+local player=Players.LocalPlayer
+local smoothstep=VFX.smoothstep
+local function clock() return workspace:GetServerTimeNow() end
+local function easeOut(x,power) x=math.clamp(x,0,1);return 1-(1-x)^(power or 2) end
+local function window(a,from,to) return math.clamp((a-from)/(to-from),0,1) end
+
+local AllMightClient={}
+local env
+local cast=nil            -- the local player's own technique in progress
+local buffStart,buffUntil,fatigueUntil=0,0,0
+local auras={}            -- [owner userId] = buff aura effect
+local heldApplied=false
+local shake={untilTime=0,power=0,duration=.1}
+local freeze={at=0,length=0}   -- hitstop: local animation time stops for `length` at `at`
+local comboUntil=0
+local revealed={}         -- own body parts shown during the cinematic
+
+---------------------------------------------------------------- arms
+-- Hand frame: origin at the wrist, +Y toward the knuckles, palm facing -Z, back of the hand +Z.
+-- The forearm runs from the wrist along -Y; the upper arm joins the elbow to a shoulder point in camera space.
+local arms={}
+local GLOVE,BLUE,MUSCLE=COLORS.Glove,COLORS.Blue,Color3.fromRGB(64,106,218)
+local function vmPart(model,name,size,color,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.Shape=shape or Enum.PartType.Block
+    p.Material=material or Enum.Material.SmoothPlastic;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false
+    p.CastShadow=false;p.Transparency=1;p.Parent=model
+    return p
+end
+local FINGERS={ -- x along the knuckles from the thumb side; three phalanx lengths
+    {x=.078,a=.1,b=.07,c=.056},{x=.027,a=.108,b=.076,c=.06},{x=-.024,a=.102,b=.072,c=.056},{x=-.072,a=.086,b=.06,c=.05},
+}
+local FOREARM=.95
+local MUSCLES={ -- forearm bulges in the hand frame (x is mirrored by side): extensor, brachioradialis, flexor
+    {at=Vector3.new(.03,-.38,.1),size=Vector3.new(.25,.46,.2)},
+    {at=Vector3.new(.1,-.66,.07),size=Vector3.new(.3,.56,.27)},
+    {at=Vector3.new(-.08,-.6,-.06),size=Vector3.new(.27,.52,.24)},
+}
+local function buildArm(side)
+    local m=Instance.new("Model");m.Name=side>0 and "AllMightRightArm" or "AllMightLeftArm";m.Parent=env.viewmodel
+    local a={side=side,thumbSide=side>0 and -1 or 1,model=m,fingers={},muscles={}}
+    a.palm=vmPart(m,"Glove",Vector3.new(.25,.25,.13),GLOVE)
+    a.cuff=vmPart(m,"GloveCuff",Vector3.new(.2,.32,.32),GLOVE,Enum.PartType.Cylinder)
+    a.knuckles=vmPart(m,"Knuckles",Vector3.new(.25,.06,.11),Color3.fromRGB(240,190,30))
+    for i,f in FINGERS do
+        a.fingers[i]={def=f,a=vmPart(m,"Finger",Vector3.new(.058,f.a,.058),GLOVE),b=vmPart(m,"Finger",Vector3.new(.054,f.b,.054),GLOVE),
+            c=vmPart(m,"Finger",Vector3.new(.05,f.c,.05),GLOVE)}
+    end
+    a.thumb={a=vmPart(m,"Thumb",Vector3.new(.064,.09,.064),GLOVE),b=vmPart(m,"Thumb",Vector3.new(.058,.075,.058),GLOVE)}
+    a.forearm=vmPart(m,"Forearm",Vector3.new(FOREARM,.27,.27),BLUE,Enum.PartType.Cylinder)
+    a.white=vmPart(m,"WhiteBand",Vector3.new(.07,.31,.31),COLORS.White,Enum.PartType.Cylinder)
+    a.red=vmPart(m,"RedBand",Vector3.new(.06,.3,.3),COLORS.Red,Enum.PartType.Cylinder)
+    for i,spec in MUSCLES do a.muscles[i]={spec=spec,p=vmPart(m,"ForearmMuscle",spec.size,MUSCLE,Enum.PartType.Ball)} end
+    a.elbow=vmPart(m,"Elbow",Vector3.one*.33,BLUE,Enum.PartType.Ball)
+    a.upper=vmPart(m,"UpperArm",Vector3.new(1,.4,.4),BLUE,Enum.PartType.Cylinder)
+    a.bicep=vmPart(m,"Bicep",Vector3.new(.5,.46,.6),MUSCLE,Enum.PartType.Ball)
+    a.stripe=vmPart(m,"RedStripe",Vector3.new(.08,.44,.44),COLORS.Red,Enum.PartType.Cylinder)
+    a.deltoid=vmPart(m,"Deltoid",Vector3.new(.8,.72,.8),BLUE,Enum.PartType.Ball)
+    a.glow=Instance.new("PointLight");a.glow.Color=COLORS.Gold;a.glow.Range=3;a.glow.Brightness=0;a.glow.Parent=a.palm
+    return a
+end
+local function handFrame(position,fingerDir,palmNormal)
+    local y=fingerDir.Unit
+    local z=-(palmNormal-y*palmNormal:Dot(y))
+    if z.Magnitude<.01 then z=Vector3.zAxis end
+    z=z.Unit
+    return CFrame.fromMatrix(position,y:Cross(z),y,z)
+end
+-- pose: {frame, curl (0..1 or per finger, thumb 5th), flex 0..1, shoulder Vector3, glow 0..1}
+local ALONG=CFrame.Angles(0,0,math.pi/2)
+local function poseArm(a,pose,visible)
+    local cam=workspace.CurrentCamera.CFrame
+    local world=cam*pose.frame
+    local function put(p,cf) p.CFrame=cf;p.Transparency=visible and 0 or 1 end
+    local flex=math.clamp(pose.flex or 0,0,1)
+    put(a.palm,world*CFrame.new(0,.12,0))
+    put(a.cuff,world*CFrame.new(0,-.07,0)*ALONG)
+    put(a.knuckles,world*CFrame.new(0,.25,.01))
+    for i,f in a.fingers do
+        local d=f.def
+        local c=math.clamp(type(pose.curl)=="table" and pose.curl[i] or pose.curl or 0,0,1)
+        local base=world*CFrame.new(d.x*a.thumbSide,.25,0)
+        local pa=base*CFrame.Angles(-c*1.5,0,0)
+        put(f.a,pa*CFrame.new(0,d.a/2,0))
+        local pb=pa*CFrame.new(0,d.a,0)*CFrame.Angles(-c*1.65,0,0)
+        put(f.b,pb*CFrame.new(0,d.b/2,0))
+        local pc=pb*CFrame.new(0,d.b,0)*CFrame.Angles(-c*1.1,0,0)
+        put(f.c,pc*CFrame.new(0,d.c/2,0))
+    end
+    local tc=math.clamp(type(pose.curl)=="table" and pose.curl[5] or pose.curl or 0,0,1)
+    local thumb=world*CFrame.new(a.thumbSide*.11,.07,-.03)*CFrame.Angles(0,0,-a.thumbSide*(.85-.7*tc))*CFrame.Angles(-.3-tc*.75,0,0)
+    put(a.thumb.a,thumb*CFrame.new(0,.045,0))
+    local tip=thumb*CFrame.new(0,.09,0)*CFrame.Angles(-tc*.9,a.thumbSide*tc*.5,0)
+    put(a.thumb.b,tip*CFrame.new(0,.037,0))
+    -- Forearm with the suit's white and red bands; the muscles swell as the fist clenches.
+    put(a.forearm,world*CFrame.new(0,-FOREARM/2-.05,0)*ALONG)
+    put(a.white,world*CFrame.new(0,-.2,0)*ALONG)
+    put(a.red,world*CFrame.new(0,-.28,0)*ALONG)
+    for _,mu in a.muscles do
+        mu.p.Size=mu.spec.size*(1+.2*flex)
+        put(mu.p,world*CFrame.new(mu.spec.at.X*a.side,mu.spec.at.Y,mu.spec.at.Z*(1+.25*flex)))
+    end
+    local elbow=(world*CFrame.new(0,-FOREARM-.05,0)).Position
+    local shoulder=(cam*CFrame.new(pose.shoulder or Vector3.new(a.side*.95,-1.05,.12))).Position
+    put(a.elbow,CFrame.new(elbow))
+    local span=shoulder-elbow
+    local mid=elbow+span*.5
+    if span.Magnitude>.05 then
+        a.upper.Size=Vector3.new(span.Magnitude+.12,.4,.4)
+        put(a.upper,CFrame.lookAt(mid,shoulder)*CFrame.Angles(0,math.pi/2,0))
+        local side=cam.RightVector*a.side
+        a.bicep.Size=Vector3.new(.5,.46,.62)*(1+.22*flex)
+        put(a.bicep,CFrame.lookAt(elbow+span*.42+cam.UpVector*.1,shoulder)*CFrame.new(0,0,0)*CFrame.Angles(0,math.pi/2,0)*CFrame.new(0,.06,0))
+        put(a.stripe,CFrame.lookAt(elbow+span*.72,shoulder)*CFrame.Angles(0,math.pi/2,0))
+        put(a.deltoid,CFrame.new(shoulder+side*.05+cam.UpVector*(.06+.06*flex)))
+    end
+    a.glow.Brightness=(pose.glow or 0)*3
+end
+local function fist(position,forward,palm,curl,flex,shoulder,glow)
+    return {frame=handFrame(position,forward,palm),curl=curl or 1,flex=flex or 0,shoulder=shoulder,glow=glow}
+end
+-- Blends two poses (positions, directions, curls, shoulder).
+local function blend(p,q,t)
+    if t<=0 then return p elseif t>=1 then return q end
+    local curl
+    if type(p.curl)=="table" or type(q.curl)=="table" then
+        curl={}
+        for i=1,5 do
+            local x=type(p.curl)=="table" and p.curl[i] or p.curl
+            local y=type(q.curl)=="table" and q.curl[i] or q.curl
+            curl[i]=x+(y-x)*t
+        end
+    else curl=p.curl+(q.curl-p.curl)*t end
+    local sp=p.shoulder or Vector3.zero;local sq=q.shoulder or Vector3.zero
+    return {frame=p.frame:Lerp(q.frame,t),curl=curl,flex=(p.flex or 0)+((q.flex or 0)-(p.flex or 0))*t,
+        shoulder=(p.shoulder and q.shoulder) and sp:Lerp(sq,t) or q.shoulder or p.shoulder,glow=(p.glow or 0)+((q.glow or 0)-(p.glow or 0))*t}
+end
+-- Fingers close one after another: index first, then middle, ring, little, thumb last.
+local function rollingCurl(k,from,to)
+    local out={}
+    for i=1,5 do out[i]=from+(to-from)*smoothstep((k-(i-1)*.12)/.5) end
+    return out
+end
+
+---------------------------------------------------------------- screen
+local overlay={}
+local function makeShout(parent,size,color,stroke)
+    local l=Instance.new("TextLabel");l.AnchorPoint=Vector2.new(.5,.5);l.Position=UDim2.fromScale(.5,.42);l.Size=UDim2.fromScale(1,.2)
+    l.BackgroundTransparency=1;l.Font=Enum.Font.GothamBlack;l.TextScaled=true;l.TextColor3=color;l.TextStrokeColor3=stroke
+    l.TextStrokeTransparency=0;l.TextTransparency=1;l.ZIndex=7;l.Text="";l.Parent=parent
+    local c=Instance.new("UITextSizeConstraint");c.MaxTextSize=size;c.Parent=l
+    return l
+end
+local function buildOverlay()
+    local frame=Instance.new("Frame");frame.Name="AllMightOverlay";frame.Size=UDim2.fromScale(1,1);frame.BackgroundTransparency=1;frame.ZIndex=4;frame.Parent=env.gui
+    overlay.root=frame
+    overlay.edges={}
+    for i,spec in {{UDim2.fromScale(1,.32),UDim2.fromScale(0,0),90},{UDim2.fromScale(1,.32),UDim2.fromScale(0,.68),-90},{UDim2.fromScale(.26,1),UDim2.fromScale(0,0),0},{UDim2.fromScale(.26,1),UDim2.fromScale(.74,0),180}} do
+        local e=Instance.new("Frame");e.Size=spec[1];e.Position=spec[2];e.BackgroundColor3=Color3.fromRGB(8,6,4);e.BorderSizePixel=0;e.BackgroundTransparency=1;e.ZIndex=4;e.Parent=frame
+        local g=Instance.new("UIGradient");g.Rotation=spec[3];g.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)});g.Parent=e
+        overlay.edges[i]=e
+    end
+    -- Speed lines: thin bars around the centre that slide outward.
+    overlay.lines={}
+    for i=1,28 do
+        local l=Instance.new("Frame");l.AnchorPoint=Vector2.new(.5,.5);l.BorderSizePixel=0;l.BackgroundColor3=COLORS.Wind
+        l.BackgroundTransparency=1;l.ZIndex=5;l.Size=UDim2.fromOffset(3,120);l.Parent=frame
+        overlay.lines[i]={f=l,angle=(i-1)/28*math.pi*2+math.random()*.15,seed=math.random()}
+    end
+    overlay.flash=Instance.new("Frame");overlay.flash.Size=UDim2.fromScale(1,1);overlay.flash.BackgroundColor3=Color3.new(1,1,1)
+    overlay.flash.BackgroundTransparency=1;overlay.flash.BorderSizePixel=0;overlay.flash.ZIndex=6;overlay.flash.Parent=frame
+    overlay.shout=makeShout(frame,110,COLORS.Gold,Color3.fromRGB(120,40,8))
+    overlay.sub=makeShout(frame,40,Color3.new(1,1,1),Color3.fromRGB(30,40,90));overlay.sub.Position=UDim2.fromScale(.5,.56);overlay.sub.Size=UDim2.fromScale(1,.07)
+    overlay.grade=Instance.new("ColorCorrectionEffect");overlay.grade.Name="AllMightGrade";overlay.grade.Parent=Lighting
+end
+local shoutState={text="",start=0,life=0,sub=""}
+local function shout(text,life,sub,color)
+    shoutState={text=text,start=clock(),life=life,sub=sub or "",color=color or COLORS.Gold}
+end
+local function setOverlay(vignette,lines,linesColor,flash,flashColor,contrast,lineCenter)
+    for _,e in overlay.edges do e.BackgroundTransparency=1-math.clamp(vignette,0,1) end
+    local vp=workspace.CurrentCamera.ViewportSize
+    local n=clock()
+    local cx,cy=(lineCenter or Vector2.new(.5,.5)).X,(lineCenter or Vector2.new(.5,.5)).Y
+    for _,l in overlay.lines do
+        if lines>.01 then
+            local travel=(n*2.2+l.seed)%1
+            local radius=(.28+.5*travel)*math.max(vp.X,vp.Y)*.5
+            local x=cx*vp.X+math.cos(l.angle)*radius;local y=cy*vp.Y+math.sin(l.angle)*radius
+            l.f.Position=UDim2.fromOffset(x,y);l.f.Rotation=math.deg(l.angle)+90
+            l.f.Size=UDim2.fromOffset(2+3*lines,60+160*lines*travel)
+            l.f.BackgroundColor3=linesColor or COLORS.Wind
+            l.f.BackgroundTransparency=1-math.clamp(lines*(1-travel)*.9,0,1)
+        else l.f.BackgroundTransparency=1 end
+    end
+    overlay.flash.BackgroundColor3=flashColor or Color3.new(1,1,1)
+    overlay.flash.BackgroundTransparency=1-math.clamp(flash,0,.95)
+    overlay.grade.Contrast=contrast or 0;overlay.grade.Saturation=(contrast or 0)*.3
+    -- Shouts punch in big and settle.
+    local age=n-shoutState.start
+    if shoutState.text~="" and age<shoutState.life then
+        local inK=easeOut(age/.12,3);local out=smoothstep((age-shoutState.life+.35)/.35)
+        overlay.shout.Text=shoutState.text;overlay.shout.TextColor3=shoutState.color
+        overlay.shout.Size=UDim2.fromScale(1,.2*(1.6-.6*inK));overlay.shout.TextTransparency=out;overlay.shout.TextStrokeTransparency=out
+        overlay.sub.Text=shoutState.sub;overlay.sub.TextTransparency=shoutState.sub~="" and out or 1;overlay.sub.TextStrokeTransparency=overlay.sub.TextTransparency
+    else
+        overlay.shout.TextTransparency=1;overlay.shout.TextStrokeTransparency=1;overlay.sub.TextTransparency=1;overlay.sub.TextStrokeTransparency=1
+    end
+end
+local function kick(power,duration) if power>=shake.power or clock()>shake.untilTime then shake.power=power;shake.untilTime=clock()+duration;shake.duration=duration end end
+local function stop(at,length) freeze.at=at;freeze.length=length end
+-- Local animation time with hitstop applied: the pose holds still during a freeze.
+local function animTime(n,start)
+    local a=n-start
+    local fa=freeze.at-start
+    if a>fa and fa>=0 then a=math.max(fa,a-freeze.length) end
+    return a
+end
+
+---------------------------------------------------------------- events
+local function ownerOf(data)
+    local owner=Players:GetPlayerByUserId(data.owner)
+    return owner and owner.Character,owner==player
+end
+local function rootOf(model) return model and model:FindFirstChild("HumanoidRootPart") end
+function AllMightClient.onEvent(kind,data)
+    local model,mine=ownerOf(data)
+    local root=rootOf(model)
+    if kind=="AllMightPowerCast" then
+        VFX.powerCast(model,data)
+        if root then VFX.sound("Heartbeat",root.Position,.6,1.2) end
+        if mine then cast={kind="Power",start=data.start,prep=data.prep,open=data.open} end
+    elseif kind=="AllMightPowerOn" then
+        if auras[data.owner] then auras[data.owner].dead=true end
+        auras[data.owner]=VFX.powerAura(model,data.untilTime)
+        if mine then buffStart=data.start;buffUntil=data.untilTime end
+    elseif kind=="AllMightPowerOff" then
+        if auras[data.owner] then auras[data.owner].dead=true;auras[data.owner]=nil end
+        VFX.powerOff(model)
+        if mine then
+            buffUntil=0
+            if data.fatigue>0 then fatigueUntil=clock()+data.fatigue;env.announce("ONE FOR ALL","힘이 빠진다 · 이동 속도 -15% "..data.fatigue.."초") end
+        end
+    elseif kind=="AllMightSmashCast" then
+        VFX.smashCast(model,data)
+        if mine then cast={kind="Smash",start=data.start,buffed=data.buffed} end
+    elseif kind=="AllMightSmashDash" then
+        VFX.smashDash(model,data)
+    elseif kind=="AllMightSmashContact" then
+        if mine and cast and cast.kind=="Smash" then cast.contact=data.target end
+    elseif kind=="AllMightSmashBump" then
+        VFX.bump(data)
+        if mine and cast and cast.kind=="Smash" then cast.bump=data.start;kick(.05,.2) end
+    elseif kind=="AllMightSmashImpact" then
+        VFX.smashImpact(data)
+        if mine and cast and cast.kind=="Smash" then
+            cast.impact=data.start;cast.hit=data.hit
+            if data.hit then
+                stop(data.start,.08);kick(.12,.4);comboUntil=data.start+A.UnitedStatesOfSmash.PunchEnd+A.UnitedStatesOfSmash.Hold+A.UnitedStatesOfSmash.Return-A.UnitedStatesOfSmash.Impact
+                shout("SMASH!",1,"UNITED STATES OF SMASH",data.buffed and COLORS.Gold or Color3.new(1,1,1))
+                VFX.sound("VoiceSmash",data.position,1,2)
+            else kick(.03,.15) end
+        else
+            local me=rootOf(player.Character)
+            if me and (me.Position-data.position).Magnitude<40 then kick(.04,.3) end
+        end
+    elseif kind=="AllMightSmashEnd" then
+        if mine and cast and cast.kind=="Smash" then cast.ended=clock() end
+    elseif kind=="AllMightKnock" then
+        VFX.knockTrail(data.model,data.duration,data.heavy)
+        if data.model==player.Character then kick(data.heavy and .08 or .03,.3) end
+    elseif kind=="AllMightWallHit" then
+        VFX.wallHit(data.position,data.normal)
+    elseif kind=="AllMightUltraCast" then
+        VFX.ultraCast(model,data)
+        if root then VFX.sound("Rumble",root.Position,.6,1.2,1.4) end
+        if mine then cast={kind="Ultra",start=data.start,direction=data.direction,buffed=data.buffed};comboUntil=0 end
+    elseif kind=="AllMightUltraDash" then
+        VFX.ultraDash(model,data)
+        if mine and cast and cast.kind=="Ultra" then cast.dash=data.start end
+    elseif kind=="AllMightUltraFail" then
+        VFX.ultraFail(data)
+        if mine and cast and cast.kind=="Ultra" then cast.fail=data.start;env.announce("PLUS ULTRA","돌진 경로에 적이 없다 · 재사용 대기 30초") end
+    elseif kind=="AllMightUltraContact" then
+        if mine and cast and cast.kind=="Ultra" then cast.contact=data.start;cast.target=data.target end
+        VFX.ultraChase(model,data.target,A.PlusUltra.Uppercut,data.start+A.PlusUltra.Lift)
+    elseif kind=="AllMightUltraPunch" then
+        VFX.ultraPunch(data)
+        if mine then
+            if data.index==1 then kick(.1,.35);stop(data.start,.05) else kick(.05,.2) end
+        end
+    elseif kind=="AllMightUltraUppercut" then
+        VFX.ultraUppercut(data,data.target)
+        if mine and cast and cast.kind=="Ultra" then
+            cast.uppercut=data.start;cast.apex=data.apex
+            stop(data.start,.12);kick(.16,.55)
+            shout("PLUS ULTRA!!!",1.6,"",COLORS.Gold)
+            VFX.sound("VoiceUltra",data.position,1,3)
+        else
+            local me=rootOf(player.Character)
+            if me and (me.Position-data.position).Magnitude<90 then kick(.07,.5) end
+        end
+    elseif kind=="AllMightUltraApex" then
+        VFX.ultraApex(data.position)
+        if mine and cast and cast.kind=="Ultra" then cast.apexAt=data.start end
+    elseif kind=="AllMightUltraLand" then
+        VFX.ultraLand(data.position)
+        if mine then kick(.06,.3) end
+    elseif kind=="AllMightUltraLost" or kind=="AllMightUltraEnd" then
+        if mine and cast and cast.kind=="Ultra" and data.reason~="finished" then cast.ended=clock() end
+    end
+end
+
+---------------------------------------------------------------- per frame
+local function lookToward(camera,point,k,maxPitch)
+    local d=camera.CFrame:VectorToObjectSpace((point-camera.CFrame.Position).Unit)
+    local yaw=math.atan2(-d.X,-d.Z);local pitch=math.clamp(math.atan2(d.Y,math.sqrt(d.X*d.X+d.Z*d.Z)),-maxPitch,maxPitch)
+    return CFrame.Angles(0,yaw*k,0)*CFrame.Angles(pitch*k,0,0)
+end
+-- Shows (or hides again) the caster's own body for the cinematic shots.
+local function revealBody(m,on)
+    if on and m then
+        for _,v in m:GetDescendants() do
+            if v:IsA("BasePart") and v.Name~="HumanoidRootPart" then v.LocalTransparencyModifier=0;revealed[v]=true end
+        end
+    else
+        for v in revealed do if v.Parent then v.LocalTransparencyModifier=1 end end
+        table.clear(revealed)
+    end
+end
+local cinemaParams=RaycastParams.new();cinemaParams.FilterType=Enum.RaycastFilterType.Exclude;cinemaParams.RespectCanCollide=true
+-- A pulled-back side view framing both bodies; the camera never goes through walls.
+local function cinematicFrame(camera,me,target,direction)
+    local mid=(me.Position+target.Position)/2
+    local side=direction:Cross(Vector3.yAxis).Unit
+    local want=me.Position+side*9-direction*7+Vector3.yAxis*2
+    local list={VFX.folder,camera}
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    table.insert(list,target.Parent)
+    cinemaParams.FilterDescendantsInstances=list
+    local from=me.Position+Vector3.yAxis*1.5
+    local hit=workspace:Raycast(from,want-from,cinemaParams)
+    if hit then want=from+(want-from).Unit*math.max(1.5,hit.Distance-1) end
+    return CFrame.lookAt(want,mid+Vector3.yAxis*1.5)
+end
+-- info: {isAllMight, melee, sliding, moving, alive}. Returns {fov, fovAdd, combo, rReady} for Gojo.client.
+function AllMightClient.render(dt,info)
+    local n=clock()
+    local camera=workspace.CurrentCamera
+    if not arms.right then return end
+    AllMightClient.updateVictims(n)
+    local m=player.Character
+    if not info.isAllMight then
+        poseArm(arms.right,fist(Vector3.zero,Vector3.yAxis,-Vector3.zAxis),false);poseArm(arms.left,fist(Vector3.zero,Vector3.yAxis,-Vector3.zAxis),false)
+        setOverlay(0,0,nil,0,nil,0);cast=nil;revealBody(nil,false)
+        return nil
+    end
+    local out={fov=72,fovAdd=0}
+    local vignette,lines,linesColor,flash,flashColor,contrast=0,0,nil,0,nil,0
+    local lineCenter=nil
+    local buffed=n<buffUntil
+    local visible=info.alive
+    -- Idle: loosely clenched fists low at both sides, a slow breath. Running: the body leans and the arms pump.
+    local t=n
+    local swing=info.moving and math.sin(t*(buffed and 11 or 9)) or 0
+    local breathe=math.sin(t*1.6)*.012
+    local run=info.moving and 1 or 0
+    local function restFor(side)
+        local s=swing*side
+        local pos=Vector3.new(side*.56,-.66+breathe-.05*run+.06*math.max(0,s)*run,-.98-.24*s*run)
+        return fist(pos,Vector3.new(-side*.12,.42+.2*s*run,-1),Vector3.new(-side,-.25,0),.72,.15,Vector3.new(side*.98,-1.06+.04*run,.14+.12*s*run))
+    end
+    local R,L=restFor(1),restFor(-1)
+    if info.moving and not cast then env.commonLook(CFrame.new(0,-.12*run,0)*CFrame.Angles(-.035*run,0,swing*.006)) end
+    if buffed then
+        R.glow=.6+.3*math.sin(n*14);L.glow=R.glow
+        out.fovAdd=7*smoothstep((n-buffStart)/.4)*smoothstep((buffUntil-n)/.4)
+        vignette=.08
+    end
+    -- Shared M1 punches: heavy straight punches, alternating fists, with the shoulder driving through.
+    if info.melee and not cast then
+        local me=info.melee;local a=n-me.start
+        local wind=smoothstep(a/me.windup);local strike=smoothstep((a-me.windup)/me.swing)
+        local back=smoothstep((a-me.windup-me.swing)/math.max(.05,me.duration-me.windup-me.swing))
+        local side=me.combo%2==0 and -1 or 1
+        local rest=side>0 and R or L
+        local cock=fist(Vector3.new(side*.7,-.6,-.62),Vector3.new(-side*.15,.2,-1),Vector3.new(-side*.3,-1,0),1,.7,Vector3.new(side*1.05,-1.0,.3))
+        local hit=fist(Vector3.new(side*.12,-.3,-1.5),Vector3.new(0,.05,-1),Vector3.new(0,-1,0),1,1,Vector3.new(side*.78,-.86,-.25))
+        local pose=blend(blend(blend(rest,cock,wind),hit,strike),rest,back)
+        if side>0 then R=pose else L=pose end
+        out.fovAdd+=5*strike*(1-back)
+    end
+    if info.sliding then
+        R.frame=R.frame*CFrame.new(0,-.1,.1);L.frame=L.frame*CFrame.new(0,-.1,.1)
+    end
+    if cast and not info.alive then cast=nil end
+    local cinematic=0
+    if cast then
+        local a=animTime(n,cast.start)
+        if cast.kind=="Power" then
+            ---------------------------------------------------------------- Q
+            local cfg=A.OneForAll
+            local gather=easeOut(a/cfg.Open,2.2)
+            local open=easeOut((a-cfg.Open)/.18,3)
+            local settle=smoothstep((a-cfg.Prep)/.35)
+            -- 0–0.45: right fist to the chest, left fist to the waist, fingers closing one by one.
+            local chestR=fist(Vector3.new(.2,-.4,-.66),Vector3.new(-.6,.5,-.45),Vector3.new(-.4,-.1,-1),rollingCurl(gather,.7,1),gather,Vector3.new(.82,-.98,.02))
+            local waistL=fist(Vector3.new(-.42,-.86,-.72),Vector3.new(.2,.6,-.7),Vector3.new(.9,-.2,0),rollingCurl(gather,.7,1),gather,Vector3.new(-.82,-1.1,.05))
+            -- 0.45–0.85: arms thrown wide, chest open.
+            local wideR=fist(Vector3.new(1.05,-.36,-.86),Vector3.new(.6,.55,-.55),Vector3.new(0,-.6,-1),1,1,Vector3.new(1.08,-.95,.2),1)
+            local wideL=fist(Vector3.new(-1.05,-.36,-.86),Vector3.new(-.6,.55,-.55),Vector3.new(0,-.6,-1),1,1,Vector3.new(-1.08,-.95,.2),1)
+            R=blend(blend(blend(R,chestR,gather),wideR,open),R,settle)
+            L=blend(blend(blend(L,waistL,gather),wideL,open),L,settle)
+            local tremble=(1-open)*gather*.006
+            R.frame=CFrame.new(math.sin(n*57)*tremble,math.cos(n*49)*tremble,0)*R.frame
+            -- Camera: dips while gathering, rises and widens fast when the chest opens.
+            local dip=gather*(1-open)
+            env.commonLook(CFrame.new(0,-.35*dip+.25*open*(1-settle),0)*CFrame.Angles(-.08*dip+.05*open*(1-settle),0,0))
+            out.fov=72-6*dip+24*open*(1-smoothstep((a-cfg.Open-.15)/.5))+7*settle
+            vignette=.5*dip+.15*open*(1-settle)
+            flash=.35*open*(1-smoothstep((a-cfg.Open)/.25));flashColor=COLORS.Gold
+            lines=open*(1-settle)*.8;linesColor=COLORS.Gold
+            if a>=cfg.Open and not cast.roared then
+                cast.roared=true;kick(.06,.35)
+                shout("ONE FOR ALL — FULL POWER",1.6,"10초 · 이동 +35% · 기본공격 +25% · E +20% · 받는 피해 -15%")
+            end
+            if a>cfg.Prep+.4 then cast=nil end
+        elseif cast.kind=="Smash" then
+            ---------------------------------------------------------------- E
+            local cfg=A.UnitedStatesOfSmash
+            local crouch=easeOut(a/cfg.Crouch,2)
+            local dash=window(a,cfg.Crouch,cfg.DashEnd)
+            local draw=easeOut((a-cfg.DashEnd)/(cfg.WindEnd-cfg.DashEnd),2)
+            local punch=easeOut((a-cfg.WindEnd)/(cfg.Impact-cfg.WindEnd),3.2)
+            local holdEnd=cfg.PunchEnd+cfg.Hold
+            local back=smoothstep((a-holdEnd)/cfg.Return)
+            local gold=cast.buffed and 1 or .6
+            -- Right arm cocked back with the fist at the screen's right; left arm forward as a guard.
+            local cocked=fist(Vector3.new(.74,-.4,-.62),Vector3.new(-.25,.35,-1),Vector3.new(-.3,-1,0),1,.8,Vector3.new(1.08,-.98,.32),.5*gold)
+            local drawn=fist(Vector3.new(.92,-.3,-.4),Vector3.new(-.4,.4,-.9),Vector3.new(-.2,-1,0),1,1,Vector3.new(1.15,-.92,.45),gold)
+            local thrown=fist(Vector3.new(.04,-.2,-1.55),Vector3.new(0,.06,-1),Vector3.new(0,-1,0),1,1,Vector3.new(.62,-.82,-.42),gold)
+            local guard=fist(Vector3.new(-.36,-.5,-1.0),Vector3.new(.25,.5,-1),Vector3.new(.8,-.4,0),.9,.5,Vector3.new(-.95,-1.04,.05))
+            local tuck=fist(Vector3.new(-.62,-.72,-.6),Vector3.new(.2,.6,-.7),Vector3.new(.9,-.2,0),1,.6,Vector3.new(-1.0,-1.0,.3))
+            R=blend(blend(blend(blend(R,cocked,crouch),drawn,draw),thrown,punch),R,back)
+            L=blend(blend(blend(L,guard,crouch),tuck,punch),L,back)
+            -- Camera: low crouch, narrow view; the dash widens it; the wind-up twists right; the punch swings left.
+            local low=crouch*(1-back)
+            local twist=.14*draw*(1-punch)-.1*punch*(1-back)
+            env.commonLook(CFrame.new(0,-.9*low,0)*CFrame.Angles(-.03*low,twist,-.05*draw*(1-punch)+.04*punch*(1-back)))
+            out.fov=72-8*crouch*(1-dash)+16*dash*(1-draw)-6*draw*(1-punch)+18*punch*(1-smoothstep((a-cfg.Impact)/.4))
+            out.fov=out.fov*(1-back)+72*back
+            vignette=.55*crouch*(1-dash)+.35*draw*(1-punch)
+            lines=(dash>0 and dash<1 and not cast.bump) and .9 or 0
+            if cast.impact and cast.hit then
+                local k=1-smoothstep((n-cast.impact-.08)/.3)
+                flash=math.max(flash,.85*k);lines=math.max(lines,k)
+                contrast=.35*k
+            end
+            if a>=cfg.DashEnd+.02 and not cast.called and not cast.bump then
+                cast.called=true
+                shout("UNITED STATES OF...",cfg.Impact-cfg.DashEnd+.1,"",COLORS.Gold)
+                if m and rootOf(m) then VFX.sound("VoiceSmashLead",rootOf(m).Position,.9,1.5) end
+            end
+            -- Steam off the extended arm while it is held out.
+            if cast.impact and not cast.steamed then
+                cast.steamed=true
+                VFX.steam(function() return (camera.CFrame*CFrame.new(.1,-.2,-1.6)).Position end,cfg.Hold+.2,.05)
+            end
+            if cast.bump then
+                local k=n-cast.bump
+                R=blend(R,fist(Vector3.new(.3,-.35,-.9),Vector3.new(-.1,.3,-1),Vector3.new(0,-1,0),1,.6),smoothstep(k/.06)*(1-smoothstep((k-.1)/.3)))
+                if k>.45 then cast=nil end
+            elseif a>holdEnd+cfg.Return+.05 or (cast.ended and n-cast.ended>.3) then cast=nil end
+        elseif cast.kind=="Ultra" then
+            ---------------------------------------------------------------- R
+            local cfg=A.PlusUltra
+            local gather=easeOut(a/cfg.Windup,2)
+            local dashK=cast.dash and window(n,cast.dash,cast.dash+cfg.DashTime) or 0
+            local raised=fist(Vector3.new(.42,-.06,-.8),Vector3.new(-.15,.8,-.6),Vector3.new(-.8,-.1,-.5),rollingCurl(gather,.7,1),1,Vector3.new(.95,-.9,0),.8)
+            local drawnBack=fist(Vector3.new(.84,-.42,-.42),Vector3.new(-.4,.35,-.9),Vector3.new(-.2,-1,0),1,1,Vector3.new(1.12,-.95,.42),1)
+            R=blend(blend(R,raised,gather),drawnBack,easeOut(dashK/.4,2))
+            L=blend(L,fist(Vector3.new(-.5,-.62,-.82),Vector3.new(.2,.5,-1),Vector3.new(.8,-.4,0),1,.7,Vector3.new(-1,-1.02,.1)),gather)
+            local look=CFrame.Angles(-.12*gather*(1-dashK),0,0)
+            out.fov=72-8*gather*(1-dashK)+22*easeOut(dashK,2)
+            vignette=.45*gather*(1-dashK)
+            lines=dashK>0 and dashK<1 and 1 or 0;linesColor=COLORS.Speed
+            if cast.fail then
+                local k=n-cast.fail
+                R=blend(R,fist(Vector3.new(.3,-.7,-.7),Vector3.new(0,.2,-1),Vector3.new(0,-1,0),.8,.3),smoothstep(k/.2))
+                look=look*CFrame.Angles(-.08*math.sin(math.clamp(k/.5,0,1)*math.pi),0,.05*math.sin(math.clamp(k/.5,0,1)*math.pi))
+                lines=0
+                if k>.7 then cast=nil end
+            end
+            if cast and cast.contact then
+                local c=animTime(n,cast.contact)
+                local targetRoot=rootOf(cast.target)
+                local punch1=easeOut(c/cfg.Punch1,3)
+                local chase=window(c,cfg.Lift,cfg.ChaseEnd)
+                local wind=window(c,cfg.ChaseEnd,cfg.WindEnd)
+                local upper=easeOut((c-cfg.WindEnd)/(cfg.Uppercut-cfg.WindEnd),3)
+                local sky=window(c,cfg.Uppercut+.15,cfg.Settle)
+                local lower=smoothstep((c-cfg.Settle-.35)/(cfg.End-cfg.Settle-.35))
+                local first=fist(Vector3.new(.05,-.2,-1.5),Vector3.new(0,.08,-1),Vector3.new(0,-1,0),1,1,Vector3.new(.62,-.82,-.42),1)
+                local under=fist(Vector3.new(.62,-1.0,-.62),Vector3.new(-.2,.9,-.3),Vector3.new(-.9,0,-.3),1,.8,Vector3.new(1.0,-1.15,.2),.8)
+                local jab=fist(Vector3.new(.22,-.12,-1.3),Vector3.new(-.05,.55,-.8),Vector3.new(-.2,-.6,-.6),1,1,Vector3.new(.7,-.85,-.3),.9)
+                local coiled=fist(Vector3.new(.88,-.72,-.36),Vector3.new(-.3,.7,-.6),Vector3.new(-.6,-.5,0),1,1,Vector3.new(1.18,-1.0,.45),1)
+                local skyward=fist(Vector3.new(.24,.34,-.86),Vector3.new(-.05,1,-.15),Vector3.new(-.6,0,-.8),1,1,Vector3.new(.7,-.6,-.1),1)
+                local jabK=math.sin(window(c,cfg.Punch2-.1,cfg.Punch2+.12)*math.pi)
+                local pose=blend(R,first,punch1)
+                pose=blend(pose,under,smoothstep(window(c,cfg.Lift-.1,cfg.Lift+.25)))
+                pose=blend(pose,jab,jabK)
+                pose=blend(pose,coiled,easeOut(wind/.6,2))
+                pose=blend(pose,skyward,upper)
+                pose=blend(pose,restFor(1),lower)
+                R=pose
+                L=blend(L,fist(Vector3.new(-.6,-.78,-.66),Vector3.new(.2,.6,-.7),Vector3.new(.9,-.2,0),1,.8,Vector3.new(-1.05,-1.0,.3)),math.min(1,punch1+wind))
+                -- Camera: assist toward the target while chasing, a short cinematic for the wind-up and the
+                -- uppercut, then first person again looking up as the target becomes a light in the sky.
+                look=CFrame.identity
+                local assist=smoothstep(window(c,cfg.Lift-.1,cfg.Lift+.3))*(1-smoothstep(window(c,cfg.Uppercut+.15,cfg.Uppercut+.45)))
+                if targetRoot and assist>0 then look=lookToward(camera,targetRoot.Position+Vector3.yAxis*.5,.55*assist,1.1) end
+                local skyLook=smoothstep(window(c,cfg.Uppercut+.1,cfg.Uppercut+.5))*(1-smoothstep(window(c,cfg.Settle+.2,cfg.End)))
+                if skyLook>0 then
+                    local point=targetRoot and targetRoot.Position or cast.apex
+                    if cast.apexAt and cast.apex then point=cast.apex end
+                    if point then look=look*lookToward(camera,point,skyLook,1.4) end
+                end
+                cinematic=smoothstep(window(c,cfg.ChaseEnd-.05,cfg.ChaseEnd+.3))*(1-smoothstep(window(c,cfg.Uppercut+.08,cfg.Uppercut+.42)))
+                local fov=94-14*chase-14*wind+30*upper
+                fov=fov*(1-sky)+76*sky
+                out.fov=fov*(1-lower)+72*lower
+                vignette=.4*wind*(1-upper)+.2*chase
+                lines=math.max(chase*.7*(1-wind),upper*(1-sky))
+                linesColor=c>=cfg.Uppercut and COLORS.Gold or COLORS.Wind
+                if c>=cfg.Lift and c<cfg.ChaseEnd then lineCenter=Vector2.new(.5,.2) end
+                local f1=1-smoothstep((c-cfg.Punch1)/.25)
+                if c>=cfg.Punch1 then flash=math.max(flash,.75*f1);flashColor=Color3.new(1,1,1);lines=math.max(lines,f1) end
+                if cast.uppercut then
+                    local k=1-smoothstep((n-cast.uppercut-.12)/.4)
+                    flash=math.max(flash,.95*k);flashColor=Color3.fromRGB(255,240,190);contrast=.5*k
+                end
+                if c>=cfg.ChaseEnd and not cast.plus then
+                    cast.plus=true
+                    shout("PLUS...",cfg.Uppercut-cfg.ChaseEnd+.05,"",COLORS.Gold)
+                    if m and rootOf(m) then VFX.sound("Heartbeat",rootOf(m).Position,.9,1.2);VFX.sound("VoicePlus",rootOf(m).Position,.9,1.5) end
+                end
+                if cast.uppercut and not cast.steamed then
+                    cast.steamed=true
+                    VFX.steam(function() return (camera.CFrame*CFrame.new(.24,.3,-.9)).Position end,cfg.End-cfg.Uppercut,.06)
+                end
+                if c>cfg.End+.1 then cast=nil end
+            end
+            if cast then env.commonLook(look) end
+            if cast and cast.ended and n-cast.ended>.4 then cast=nil end
+        end
+    end
+    -- The cinematic shot blends from the first-person camera and back; the body is shown only while it lasts.
+    if cinematic>.001 and cast and cast.target and m and rootOf(m) and rootOf(cast.target) then
+        local shot=cinematicFrame(camera,rootOf(m),rootOf(cast.target),cast.direction or Vector3.new(0,0,-1))
+        local blended=camera.CFrame:Lerp(shot,smoothstep(cinematic))
+        env.commonLook(camera.CFrame:Inverse()*blended)
+        revealBody(m,cinematic>.25)
+        if cinematic>.25 then visible=false end
+    elseif next(revealed) then revealBody(nil,false) end
+    -- Camera shake, decaying over its duration.
+    if n<shake.untilTime then
+        local k=(shake.untilTime-n)/math.max(.01,shake.duration)
+        local p=shake.power*k
+        env.commonLook(CFrame.new((math.random()-.5)*p*4,(math.random()-.5)*p*4,0)*CFrame.Angles((math.random()-.5)*p,(math.random()-.5)*p,(math.random()-.5)*p*.6))
+    end
+    if n<fatigueUntil then vignette=math.max(vignette,.25*(fatigueUntil-n)/1.2) end
+    -- Narrow screens squeeze the arms inward, as for the other kits.
+    local squeeze=math.min(1,camera.ViewportSize.X/math.max(1,camera.ViewportSize.Y))
+    local function narrow(pose)
+        local f=pose.frame
+        pose.frame=CFrame.new(f.Position*Vector3.new(math.max(.72,squeeze),1,1))*f.Rotation
+        if pose.shoulder then pose.shoulder=pose.shoulder*Vector3.new(math.max(.8,squeeze),1,1) end
+        return pose
+    end
+    poseArm(arms.right,narrow(R),visible)
+    poseArm(arms.left,narrow(L),visible)
+    setOverlay(vignette,lines,linesColor,flash,flashColor,contrast,lineCenter)
+    -- Never draw our own hair or suit pieces into the first-person view (the cinematic shows the whole body).
+    if m and cinematic<=.25 then
+        for _,v in m:GetChildren() do if v:IsA("BasePart") and string.sub(v.Name,1,8)=="AllMight" then v.LocalTransparencyModifier=1 end end
+    end
+    local rWindow=n<comboUntil
+    if rWindow then out.combo="SMASH 적중 · 지금 R  PLUS ULTRA로 연계"
+    elseif buffed then out.combo=string.format("ONE FOR ALL  ·  FULL POWER   %.1f초",buffUntil-n) end
+    out.rReady=rWindow
+    return out
+end
+-- Victim side: the server moves the body; locally the humanoid stops fighting it.
+function AllMightClient.updateVictims(n)
+    local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+    local held=(m:GetAttribute("AllMightHeldUntil") or 0)>n
+    if held~=heldApplied then
+        heldApplied=held
+        h.PlatformStand=held
+        h:SetStateEnabled(Enum.HumanoidStateType.Jumping,not held)
+        if not held then h:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    end
+    -- Runs after PainClient each frame, so it decides jumping with every kit's locks in view.
+    local locked=held or (m:GetAttribute("AllMightNoJumpUntil") or 0)>n or (m:GetAttribute("PainNoJumpUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n
+    h:SetStateEnabled(Enum.HumanoidStateType.Jumping,not locked)
+end
+function AllMightClient.busy() return cast~=nil end
+function AllMightClient.buffed() return clock()<buffUntil end
+function AllMightClient.reset()
+    cast=nil;comboUntil=0;shake.untilTime=0;freeze.length=0;buffUntil=0;fatigueUntil=0
+    revealBody(nil,false)
+    if overlay.root then setOverlay(0,0,nil,0,nil,0) end
+end
+function AllMightClient.init(environment)
+    env=environment
+    arms.right=buildArm(1);arms.left=buildArm(-1)
+    buildOverlay()
+    UIS.WindowFocusReleased:Connect(function() shake.untilTime=0 end)
+end
+return AllMightClient
+]]></ProtectedString>
+					<string name="ScriptGuid">{08562B00-EA87-C9E1-B23E-CDBA3D30A03A}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+					<string name="Name">AllMightClient</string>
+					<BinaryString name="SerializedOverrides"></BinaryString>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+					<UniqueId name="UniqueId">8106f0ceb77e32d556109b0cad6d7340</UniqueId>
 				</Properties>
 			</Item>
 			<Item class="ModuleScript" referent="RBX986E4ABE680BCFEC581E9FD130CF8656">
@@ -3214,6 +3877,8 @@ return {
         Doraemon = { "Pocket", "BambooCopter", "AnywhereDoor", "Dash" },
         -- Tendo Pain: tuning and judgement live in PainAbilityConfig / PainServer.
         Pain = { "ShinraTensei", "BanshoTenin", "ChibakuTensei", "Dash" },
+        -- All Might: tuning and judgement live in AllMightConfig / AllMightServer.
+        AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
@@ -3263,6 +3928,627 @@ return {
 				<int64 name="SourceAssetId">-1</int64>
 				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 				<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003d9</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ModuleScript" referent="RBX7046A0E954B0A982B373DECCF22207A2">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- All Might tuning. Read by AllMightServer (every combat decision), AllMightClient and AllMightVFX (timing of the
+-- visuals). Times are seconds from the key press unless noted; distances are studs.
+return {
+    Kit = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra" },
+    Colors = {
+        Gold = Color3.fromRGB(255, 206, 64), GoldDeep = Color3.fromRGB(232, 150, 30), Spark = Color3.fromRGB(255, 236, 140),
+        Wind = Color3.fromRGB(236, 244, 255), Blue = Color3.fromRGB(46, 84, 196), BlueDeep = Color3.fromRGB(26, 46, 120),
+        Red = Color3.fromRGB(206, 34, 44), White = Color3.fromRGB(246, 246, 242), Glove = Color3.fromRGB(250, 204, 40),
+        Skin = Color3.fromRGB(240, 196, 160), Hair = Color3.fromRGB(255, 220, 70), Dust = Color3.fromRGB(176, 166, 150),
+        Rock = Color3.fromRGB(118, 110, 100), Steam = Color3.fromRGB(240, 240, 240), Speed = Color3.fromRGB(150, 196, 255),
+    },
+    -- Q: a self-buff. Prep (both fists clenched, chest opens) is the only vulnerable part; the buff starts at Prep.
+    OneForAll = {
+        Cooldown = 25, Prep = 0.85, Open = 0.45, Duration = 10,
+        PrepSpeed = 0.12,             -- walk speed factor while clenching (jump locked)
+        MoveSpeed = 1.35, BasicDamage = 1.25, SmashDamage = 1.2, BasicKnockback = 1.2,
+        DamageTaken = 0.85,           -- incoming damage factor while the buff lasts
+        LightKnockback = 45,          -- knockbacks below this speed are ignored, stronger ones keep HeavyKeep of their force
+        HeavyKeep = 0.8,
+        FatigueFactor = 0.85, FatigueDuration = 1.2,
+    },
+    -- E: crouch, dash, wind up, full-body punch. Damage is applied once per target per cast.
+    UnitedStatesOfSmash = {
+        Cooldown = 18, WhiffCooldown = 9, BumpCooldown = 6,
+        Crouch = 0.4, DashEnd = 0.75, WindEnd = 1.05, Impact = 1.18, PunchEnd = 1.35,
+        Hold = 0.35, Return = 0.3, SlowFactor = 0.7, SlowDuration = 0.8,
+        DashDistance = 22, ContactReach = 5, PathWidth = 3.6, StopDistance = 3.2,
+        Damage = 55, Knockback = 30, KnockLift = 6, KnockTime = 0.55, WallDamage = 8,
+        ShockRadius = 12, ShockDamage = 18, ShockKnock = 9, ShockLift = 14,
+        RCancelFrom = 0.12,           -- seconds after Impact: R may cancel the follow-through (E -> R)
+    },
+    -- R: the whole sequence. Phases after the dash are measured from the moment the dash connects (Contact),
+    -- so a close target does not wait for an empty dash; with a full-length dash Contact is 1.15 s.
+    PlusUltra = {
+        Cooldown = 85, FailCooldown = 30,
+        Windup = 0.65, DashTime = 0.5, DashDistance = 35, PathWidth = 4.2, ContactReach = 4.5, StopDistance = 3.4,
+        FailDistance = 0.6,           -- an empty dash stops at this fraction of DashDistance with a stumble
+        WindupSpeed = 0.15,
+        -- relative to Contact
+        Punch1 = 0.08, Lift = 0.4, ChaseEnd = 1.35, Punch2 = 1.15, WindEnd = 2.05, Uppercut = 2.12,
+        Launch = 2.12, Apex = 3.62, Settle = 3.85, End = 5.05,
+        Damage1 = 20, Damage2 = 15, Damage3 = 75, ShockRadius = 18, ShockDamage = 25, ShockHeight = 30,
+        LiftHeight = 9, ChaseHeight = 22, CasterChase = 17, ApexHeight = 140, FallMin = 0.9, KnockedDown = 0.6,
+        LandAt = 2.95,                -- relative to Contact: the caster is back on the ground
+    },
+}
+]]></ProtectedString>
+				<string name="ScriptGuid">{6CD42FA2-FD4D-45CF-02A5-21092EF2AFBC}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">AllMightConfig</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">b557b85e14b21b19edbdb60da671dbdd</UniqueId>
+			</Properties>
+		</Item>
+		<Item class="ModuleScript" referent="RBXE994785BD141BAF66BE44FD9DCC09680">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- All Might world effects, run on every client from the server's AllMight* events. Wind pressure, shockwaves,
+-- dust, cracks and debris only: nothing here is a beam. Nothing touches gameplay either: positions come from the
+-- server, every part is anchored and non-collidable, rocks and dust are pooled, and each effect has a hard lifetime.
+local RunService=game:GetService("RunService")
+local Debris=game:GetService("Debris")
+local RS=game:GetService("ReplicatedStorage")
+local A=require(RS:WaitForChild("AllMightConfig"))
+local COLORS=A.Colors
+
+local VFX={}
+-- Built-in placeholders. Replace with uploaded ids (heartbeat, roar, "SMASH!", "PLUS ULTRA!!!", wind, impact).
+VFX.Sounds={
+    Heartbeat={id="rbxasset://sounds/impact_generic.mp3",speed=.38},
+    Roar={id="rbxasset://sounds/action_falling.mp3",speed=.45},
+    Exhale={id="rbxasset://sounds/action_falling.mp3",speed=.7},
+    Rumble={id="rbxasset://sounds/action_falling.mp3",speed=.25},
+    Wind={id="rbxasset://sounds/swordslash.wav",speed=.42},
+    Whoosh={id="rbxasset://sounds/swordslash.wav",speed=.7},
+    Impact={id="rbxasset://sounds/impact_generic.mp3",speed=.5},
+    Boom={id="rbxasset://sounds/impact_generic.mp3",speed=.34},
+    Thud={id="rbxasset://sounds/impact_generic.mp3",speed=.8},
+    Bump={id="rbxasset://sounds/impact_generic.mp3",speed=1.1},
+    -- Voice lines: no voice assets ship with the place, so these are stand-ins; the words are shown on screen.
+    VoiceSmashLead={id="rbxasset://sounds/electronicpingshort.mp3",speed=.5},
+    VoiceSmash={id="rbxasset://sounds/impact_generic.mp3",speed=.62},
+    VoicePlus={id="rbxasset://sounds/electronicpingshort.mp3",speed=.45},
+    VoiceUltra={id="rbxasset://sounds/impact_generic.mp3",speed=.4},
+}
+local folder=Instance.new("Folder");folder.Name="AllMightFX";folder.Parent=workspace
+local active={}
+local function clock() return workspace:GetServerTimeNow() end
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+VFX.smoothstep=smoothstep
+VFX.folder=folder
+local function run(duration,update,cleanup,start)
+    local e={start=start or clock(),duration=duration,update=update,cleanup=cleanup}
+    table.insert(active,e);return e
+end
+VFX.run=run
+RunService.RenderStepped:Connect(function(dt)
+    local n=clock()
+    for i=#active,1,-1 do
+        local e=active[i];local age=n-e.start
+        if age>e.duration or e.dead then
+            table.remove(active,i)
+            if e.cleanup then local ok,err=pcall(e.cleanup);if not ok then warn("AllMightVFX cleanup",err) end end
+        elseif age>=0 then
+            local ok,err=pcall(e.update,age,dt);if not ok then warn("AllMightVFX",err);e.dead=true end
+        end
+    end
+end)
+local function part(name,size,color,cf,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
+    p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
+    p.Material=material or Enum.Material.Neon;p.Shape=shape or Enum.PartType.Block;p.Parent=folder
+    return p
+end
+VFX.part=part
+function VFX.sound(name,position,volume,duration,speedScale)
+    local cue=VFX.Sounds[name];if not cue then return end
+    local holder=part("AllMightSound",Vector3.one*.1,Color3.new(),CFrame.new(position));holder.Transparency=1
+    local s=Instance.new("Sound");s.SoundId=cue.id;s.Volume=volume or .6;s.PlaybackSpeed=cue.speed*(speedScale or 1)
+    s.RollOffMinDistance=14;s.RollOffMaxDistance=260;s.Parent=holder;s:Play()
+    Debris:AddItem(holder,duration or 3)
+    return s
+end
+
+---------------------------------------------------------------- pools
+local pools={Rock={},Dust={},Streak={}}
+local PARK=CFrame.new(0,-5000,0)
+local function acquire(kind)
+    local p=table.remove(pools[kind])
+    if not p then
+        if kind=="Rock" then p=part("AllMightRock",Vector3.one,COLORS.Rock,PARK,Enum.PartType.Block,Enum.Material.Slate)
+        elseif kind=="Dust" then p=part("AllMightDust",Vector3.one,COLORS.Dust,PARK,Enum.PartType.Ball,Enum.Material.SmoothPlastic)
+        else p=part("AllMightStreak",Vector3.one,COLORS.Wind,PARK,Enum.PartType.Block,Enum.Material.Neon) end
+    end
+    p.Transparency=0;return p
+end
+local function release(kind,p)
+    if not p or not p.Parent then return end
+    p.Transparency=1;p.CFrame=PARK
+    if #pools[kind]<240 then table.insert(pools[kind],p) else p:Destroy() end
+end
+local function groundAt(position)
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances={folder,workspace.CurrentCamera};params.RespectCanCollide=true
+    local hit=workspace:Raycast(position+Vector3.yAxis*3,Vector3.yAxis*-80,params)
+    return hit and hit.Position or position-Vector3.yAxis*3,hit and hit.Normal or Vector3.yAxis
+end
+VFX.groundAt=groundAt
+-- A soft dust puff that drifts, grows and fades.
+function VFX.dust(position,size,velocity,life,color,startAlpha)
+    local p=acquire("Dust");p.Size=Vector3.one*size*.5;p.CFrame=CFrame.new(position);p.Color=color or COLORS.Dust
+    local a0=startAlpha or .4;p.Transparency=a0
+    local grow=size*(1.5+math.random()*.7)
+    run(life,function(age)
+        local u=age/life
+        p.CFrame=CFrame.new(position+velocity*life*(1-(1-u)^2.5))
+        p.Size=Vector3.one*(size*.5+(grow-size*.5)*smoothstep(u))
+        p.Transparency=a0+(1-a0)*u
+    end,function() release("Dust",p) end)
+end
+-- Ballistic debris with spin, fading out before it is returned to the pool.
+function VFX.rock(position,velocity,size,life,gravity)
+    local p=acquire("Rock");p.Size=Vector3.new(size,size*(.5+math.random()*.5),size*(.7+math.random()*.4))
+    p.Color=COLORS.Rock:Lerp(Color3.fromRGB(70,64,58),math.random()*.7)
+    local spin=CFrame.Angles(math.random()*6,math.random()*6,math.random()*6)
+    local axis=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5).Unit
+    local g=gravity or 110;local floor=position.Y-1
+    run(life,function(age)
+        local at=position+velocity*age-Vector3.yAxis*.5*g*age*age
+        if at.Y<floor then at=Vector3.new(at.X,floor,at.Z) end
+        p.CFrame=CFrame.new(at)*CFrame.fromAxisAngle(axis,age*9)*spin
+        p.Transparency=smoothstep((age-life*.65)/(life*.35))
+    end,function() release("Rock",p) end)
+end
+-- A short white wind streak: a thin stretched neon bar sliding along `direction` and fading.
+function VFX.streak(position,direction,length,speed,life,color,width)
+    local p=acquire("Streak");p.Color=color or COLORS.Wind
+    local w=width or .08
+    run(life,function(age)
+        local u=age/life
+        local at=position+direction*speed*age
+        p.Size=Vector3.new(w,w,length*(1-.5*u))
+        p.CFrame=CFrame.lookAt(at,at+direction)
+        p.Transparency=.25+.75*u
+    end,function() release("Streak",p) end)
+end
+-- Thin ring made of segments; pose(frame, radius, transparency, thickness).
+local function ring(segments,thickness,color,material)
+    local list={}
+    for i=1,segments do list[i]=part("AllMightRing",Vector3.one*thickness,color,PARK,nil,material) end
+    local function pose(frame,radius,transparency,width)
+        local w=width or thickness
+        for i,p in list do
+            local a=(i-1)*math.pi*2/#list;local b=i*math.pi*2/#list
+            local from=(frame*CFrame.new(math.cos(a)*radius,0,math.sin(a)*radius)).Position
+            local to=(frame*CFrame.new(math.cos(b)*radius,0,math.sin(b)*radius)).Position
+            p.Size=Vector3.new(w,w*.5,(to-from).Magnitude+w*.5)
+            p.CFrame=CFrame.lookAt((from+to)/2,to);p.Transparency=transparency
+        end
+    end
+    local function destroy() for _,p in list do p:Destroy() end end
+    return pose,destroy
+end
+VFX.ring=ring
+-- An expanding ring around `axis` (Vector3 normal) through `center`.
+function VFX.shockRing(center,axis,radius,life,color,thickness,segments,delayTime)
+    local pose,destroy=ring(segments or 28,thickness or .5,color or COLORS.Wind)
+    local up=axis.Unit
+    local right=math.abs(up.Y)<.95 and up:Cross(Vector3.yAxis).Unit or Vector3.xAxis
+    local frame=CFrame.fromMatrix(center,right,up)
+    pose(frame,.1,1)
+    run(life,function(age)
+        local u=age/life
+        pose(frame,radius*(1-(1-u)^3),.1+.9*u*u,(thickness or .5)*(1-.6*u))
+    end,destroy,clock()+(delayTime or 0))
+end
+-- A translucent sphere that blows outward (the air pressure front).
+function VFX.pressure(center,radius,life,color,startAlpha)
+    local p=part("AllMightPressure",Vector3.one*.5,color or COLORS.Wind,CFrame.new(center),Enum.PartType.Ball,Enum.Material.ForceField)
+    local a0=startAlpha or .2
+    run(life,function(age)
+        local u=age/life
+        p.Size=Vector3.one*radius*2*(1-(1-u)^3);p.Transparency=a0+(1-a0)*u
+    end,function() p:Destroy() end)
+end
+-- Short-lived bright light, the "flash" others see.
+function VFX.flash(position,brightness,range,life,color)
+    local holder=part("AllMightFlash",Vector3.one*.1,Color3.new(),CFrame.new(position));holder.Transparency=1
+    local light=Instance.new("PointLight");light.Color=color or Color3.new(1,1,1);light.Range=range;light.Brightness=brightness;light.Parent=holder
+    run(life,function(age) light.Brightness=brightness*(1-age/life) end,function() holder:Destroy() end)
+end
+-- Radial cracks on the floor: dark thin slabs from the center, with a scorched disc that fades after `life`.
+function VFX.cracks(center,radius,count,life,direction,bias)
+    local floor,normal=groundAt(center)
+    local parts={}
+    local disc=part("AllMightCrater",Vector3.new(.06,radius*.55,radius*.55),Color3.fromRGB(58,52,46),CFrame.new(floor+normal*.03)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder,Enum.Material.Slate)
+    table.insert(parts,disc)
+    for i=1,count do
+        local a=i/count*math.pi*2+math.random()*.4
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        local length=radius*(.45+math.random()*.55)
+        if direction and bias then
+            local along=math.max(0,d:Dot(direction))
+            length*=1+along*bias
+        end
+        -- Two kinked segments per crack.
+        local mid=floor+d*length*.5+Vector3.new(-d.Z,0,d.X)*(math.random()-.5)*length*.15
+        local tip=floor+d*length
+        for j,seg in {{floor+d*radius*.12,mid},{mid,tip}} do
+            local from,to=seg[1],seg[2]
+            local p=part("AllMightCrack",Vector3.new(.22-j*.06,.06,(to-from).Magnitude),Color3.fromRGB(34,30,28),
+                CFrame.lookAt((from+to)/2+normal*.05,to+normal*.05),nil,Enum.Material.Slate)
+            p.Size=Vector3.new(0,.06,0);table.insert(parts,p)
+            local full=Vector3.new(.24-j*.07,.06,(to-from).Magnitude)
+            local growStart=(j-1)*.05
+            run(.12,function(age) local u=smoothstep(age/.12);p.Size=Vector3.new(full.X,.06,full.Z*u);p.CFrame=CFrame.lookAt(from:Lerp(to,u*.5)+normal*.05,to+normal*.05) end,nil,clock()+growStart)
+        end
+    end
+    run(life,function(age)
+        local fade=smoothstep((age-life*.75)/(life*.25))
+        for _,p in parts do p.Transparency=fade end
+    end,function() for _,p in parts do p:Destroy() end end)
+    return floor
+end
+-- Dust thrown into a ring along the floor (and a few chunks of debris).
+function VFX.dustRing(center,radius,count,life,rocks,direction)
+    local floor=groundAt(center)
+    for i=1,count do
+        local a=i/count*math.pi*2+math.random()*.3
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        local push=direction and (1+math.max(0,d:Dot(direction))*1.4) or 1
+        VFX.dust(floor+d*radius*.25+Vector3.yAxis*.6,2.2+math.random()*1.6,d*radius*push*.9+Vector3.yAxis*(1+math.random()*2),life*(.8+math.random()*.4))
+    end
+    for _=1,rocks or 0 do
+        local a=math.random()*math.pi*2
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        if direction and math.random()<.65 then d=(direction+d*.55).Unit end
+        VFX.rock(floor+d*1.5+Vector3.yAxis*.6,d*(18+math.random()*26)+Vector3.yAxis*(14+math.random()*20),.35+math.random()*.7,1.2+math.random()*.6)
+    end
+end
+-- Gold sparks: small neon bits shot from `center`.
+function VFX.sparks(center,count,speed,life,color)
+    for _=1,count do
+        local d=Vector3.new(math.random()-.5,math.random()-.2,math.random()-.5).Unit
+        VFX.streak(center,d,.35+math.random()*.4,speed*(.5+math.random()*.7),life*(.6+math.random()*.6),color or COLORS.Spark,.06)
+    end
+end
+-- Steam wisps rising from a point for `life`.
+function VFX.steam(getPosition,life,rate)
+    local nextAt=0
+    run(life,function(age)
+        if age<nextAt then return end
+        nextAt=age+(rate or .07)
+        local at=getPosition();if not at then return end
+        VFX.dust(at+Vector3.new(math.random()-.5,0,math.random()-.5)*.4,.7+math.random()*.4,Vector3.new(math.random()-.5,2.4,math.random()-.5),.8,COLORS.Steam,.55)
+    end)
+end
+
+---------------------------------------------------------------- character helpers
+local function rootOf(model) return model and model:FindFirstChild("HumanoidRootPart") end
+local function limb(model,names) for _,n in names do local p=model and model:FindFirstChild(n);if p then return p end end end
+-- Attaches an emitter to a part; returned so the caller can stop it.
+local function emitter(parent,color,rate,speed,size,life,lightEmission)
+    local e=Instance.new("ParticleEmitter");e.Color=ColorSequence.new(color);e.Rate=rate
+    e.Speed=NumberRange.new(speed*.5,speed);e.Lifetime=NumberRange.new(life*.6,life);e.SpreadAngle=Vector2.new(180,180)
+    e.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,size),NumberSequenceKeypoint.new(1,0)})
+    e.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.1),NumberSequenceKeypoint.new(1,1)})
+    e.LightEmission=lightEmission or 1;e.Parent=parent
+    return e
+end
+VFX.emitter=emitter
+
+---------------------------------------------------------------- Q: One For All: Full Power
+-- Prep: sparks and steam on the arms, then (at Open) the ring and dust from the feet.
+function VFX.powerCast(model,data)
+    local root=rootOf(model);if not root then return end
+    local arms={limb(model,{"RightLowerArm","Right Arm"}),limb(model,{"LeftLowerArm","Left Arm"})}
+    local emitters={}
+    for _,arm in arms do
+        if arm then
+            table.insert(emitters,emitter(arm,COLORS.Spark,14,4,.18,.35))
+            table.insert(emitters,emitter(arm,COLORS.Steam,10,2,.6,.8,0))
+        end
+    end
+    run(data.prep+.1,function(age)
+        for _,e in emitters do if e.LightEmission>0 then e.Rate=14+40*smoothstep((age-data.open)/.2) end end
+    end,function() for _,e in emitters do e.Enabled=false;Debris:AddItem(e,1) end end,data.start)
+    task.delay(math.max(0,data.start+data.open-clock()),function()
+        if not root.Parent then return end
+        local feet=groundAt(root.Position)
+        VFX.shockRing(feet+Vector3.yAxis*.3,Vector3.yAxis,16,.55,COLORS.Wind,.6,32)
+        VFX.shockRing(feet+Vector3.yAxis*.5,Vector3.yAxis,11,.45,COLORS.Gold,.35,28,.05)
+        VFX.dustRing(feet,14,16,.9,6)
+        VFX.sparks(root.Position+Vector3.yAxis,24,26,.5)
+        VFX.flash(root.Position,4,18,.35,COLORS.Gold)
+        VFX.sound("Roar",root.Position,.9,2.5)
+    end)
+end
+-- While buffed: gold sparks and wind on the arms; afterimages and dust while running.
+function VFX.powerAura(model,untilTime)
+    local root=rootOf(model);if not root then return end
+    local emitters={}
+    for _,names in {{"RightLowerArm","Right Arm"},{"LeftLowerArm","Left Arm"},{"RightHand"},{"LeftHand"}} do
+        local arm=limb(model,names)
+        if arm then table.insert(emitters,emitter(arm,COLORS.Gold,18,3,.14,.4)) end
+    end
+    local light=Instance.new("PointLight");light.Color=COLORS.Gold;light.Range=8;light.Brightness=.8;light.Parent=root
+    local nextGhost,nextDust=0,0
+    local handle=run(math.max(0,untilTime-clock())+.05,function(age)
+        if not root.Parent then return end
+        local speed=(root.AssemblyLinearVelocity*Vector3.new(1,0,1)).Magnitude
+        light.Brightness=.6+.3*math.sin(age*12)
+        if speed>8 and age>=nextGhost then
+            nextGhost=age+.09
+            -- Afterimage: a pale gold silhouette left behind and fading.
+            local ghost=part("AllMightAfterimage",Vector3.new(2.6,3.6,1.3),COLORS.Gold,root.CFrame*CFrame.new(0,.3,0),Enum.PartType.Block,Enum.Material.ForceField)
+            run(.3,function(a) ghost.Transparency=.55+.45*(a/.3) end,function() ghost:Destroy() end)
+        end
+        if speed>8 and age>=nextDust then
+            nextDust=age+.12
+            local feet=groundAt(root.Position)
+            local back=-(root.AssemblyLinearVelocity*Vector3.new(1,0,1)).Unit
+            VFX.dust(feet+Vector3.yAxis*.4,1.4,back*3+Vector3.yAxis,.5)
+        end
+    end,function()
+        for _,e in emitters do e.Enabled=false;Debris:AddItem(e,1) end
+        light:Destroy()
+    end)
+    return handle
+end
+function VFX.powerOff(model)
+    local root=rootOf(model);if not root then return end
+    VFX.steam(function() return root.Parent and root.Position+Vector3.yAxis*1.5 or nil end,1.1,.06)
+    VFX.sound("Exhale",root.Position,.6,2)
+end
+
+---------------------------------------------------------------- E: United States of Smash
+function VFX.smashCast(model,data)
+    local root=rootOf(model);if not root then return end
+    local hand=limb(model,{"RightHand","Right Arm"})
+    local gold=hand and emitter(hand,data.buffed and COLORS.Gold or COLORS.Spark,data.buffed and 40 or 22,2,.2,.3)
+    if gold then Debris:AddItem(gold,A.UnitedStatesOfSmash.Impact) end
+    VFX.sound("Rumble",root.Position,.5,1.5)
+end
+function VFX.smashDash(model,data)
+    local root=rootOf(model)
+    local from,dir=data.from,data.direction
+    VFX.sound("Wind",from,.8,1.5)
+    local floor=groundAt(from)
+    VFX.dustRing(floor,6,8,.6,2,-dir)
+    local side=dir:Cross(Vector3.yAxis)
+    -- White pressure streaks around the body along the dash, and dust kicked up behind.
+    local nextAt=0
+    run(.4,function(age)
+        if age<nextAt or not root or not root.Parent then return end
+        nextAt=age+.03
+        local at=root.Position
+        for _=1,3 do
+            local o=side*(math.random()-.5)*4+Vector3.yAxis*(math.random()-.3)*3.5
+            VFX.streak(at+o+dir*2,-dir,3+math.random()*3,40,.18)
+        end
+        VFX.dust(groundAt(at)+Vector3.yAxis*.4,1.2,-dir*4+Vector3.yAxis*1.5,.5)
+    end,nil,data.start)
+end
+function VFX.smashImpact(data)
+    local cfg=A.UnitedStatesOfSmash
+    local at,dir=data.position,data.direction
+    local scale=data.buffed and 1.25 or 1
+    local tint=data.buffed and COLORS.Gold or COLORS.Wind
+    VFX.flash(at,data.hit and 10 or 4,30*scale,.25)
+    VFX.pressure(at,(data.hit and 7 or 4)*scale,.35,COLORS.Wind,.1)
+    VFX.shockRing(at,dir,9*scale,.4,COLORS.Wind,.7,30)
+    VFX.shockRing(at+dir*2,dir,13*scale,.5,tint,.45,30,.04)
+    if data.hit then
+        VFX.shockRing(groundAt(at)+Vector3.yAxis*.3,Vector3.yAxis,cfg.ShockRadius*scale,.5,COLORS.Wind,.6,36)
+        VFX.cracks(at,8*scale,12,4,dir,1.3)
+        VFX.dustRing(at,10*scale,18,1.1,data.buffed and 16 or 12,dir)
+        VFX.sound("Impact",at,1,2)
+        VFX.sound("Boom",at,.9,2.5)
+    end
+    -- A cone of wind pressure that keeps going past the target.
+    for i=1,(data.hit and 22 or 12) do
+        local spread=Vector3.new(math.random()-.5,(math.random()-.5)*.6,math.random()-.5)*.7
+        local d=(dir+spread).Unit
+        VFX.streak(at+d*1.5,d,4+math.random()*5,70+math.random()*40,.32,i%3==0 and tint or COLORS.Wind,.12)
+    end
+    if data.buffed then VFX.sparks(at,28,34,.45,COLORS.Gold) end
+    VFX.sound("Wind",at,.7,1.5,1.2)
+end
+function VFX.bump(data)
+    VFX.flash(data.position,2,10,.15)
+    VFX.dustRing(data.position,4,8,.6,3)
+    VFX.sound("Bump",data.position,.7,1)
+end
+function VFX.wallHit(position,normal)
+    VFX.shockRing(position,normal,5,.3,COLORS.Wind,.35,20)
+    for _=1,10 do
+        local d=(normal+Vector3.new(math.random()-.5,math.random()-.2,math.random()-.5)).Unit
+        VFX.rock(position,d*(14+math.random()*16),.3+math.random()*.5,1)
+    end
+    VFX.dust(position,3,normal*4,.9)
+    VFX.sound("Thud",position,.8,1.5)
+end
+-- White air trail behind a body that was punched away; rings for heavy hits.
+function VFX.knockTrail(model,duration,heavy)
+    local root=rootOf(model);if not root then return end
+    local nextAt=0;local last=root.Position
+    run(duration+.1,function(age)
+        if not root.Parent or age<nextAt then return end
+        nextAt=age+.025
+        local at=root.Position;local v=at-last;last=at
+        if v.Magnitude>.05 then
+            VFX.streak(at,-v.Unit,v.Magnitude*3+1.5,4,.25,COLORS.Wind,heavy and .3 or .14)
+            if heavy and math.random()<.3 then VFX.dust(at,1,Vector3.zero,.35,COLORS.Wind,.6) end
+        end
+    end)
+end
+
+---------------------------------------------------------------- R: Plus Ultra
+-- Windup: gold sparks and white air drawn into the right fist, dust and pebbles pushed outward from the feet.
+function VFX.ultraCast(model,data)
+    local root=rootOf(model);if not root then return end
+    local cfg=A.PlusUltra
+    local hand=limb(model,{"RightHand","Right Arm"})
+    local nextAt=0
+    VFX.sound("Rumble",root.Position,.8,2,.8)
+    local feet=groundAt(root.Position)
+    VFX.dustRing(feet,7,14,cfg.Windup+.4,10)
+    run(cfg.Windup,function(age)
+        if age<nextAt or not root.Parent then return end
+        nextAt=age+.035
+        local fist=hand and hand.Position or root.Position+Vector3.yAxis
+        for _=1,2 do
+            local d=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5).Unit
+            local from=fist+d*(3+math.random()*2)
+            VFX.streak(from,-d,.6+math.random()*.6,10,.3,math.random()<.5 and COLORS.Gold or COLORS.Wind,.07)
+        end
+    end,nil,data.start)
+end
+function VFX.ultraDash(model,data)
+    local root=rootOf(model)
+    local from,dir=data.from,data.direction
+    VFX.cracks(from,6,10,5,-dir,.8)
+    VFX.dustRing(from,8,16,.9,8,-dir)
+    VFX.shockRing(groundAt(from)+Vector3.yAxis*.3,Vector3.yAxis,9,.4,COLORS.Wind,.5,28)
+    VFX.sound("Boom",from,.9,2,1.2);VFX.sound("Wind",from,.9,1.5)
+    local side=dir:Cross(Vector3.yAxis)
+    local nextAt=0
+    run(A.PlusUltra.DashTime,function(age)
+        if age<nextAt or not root or not root.Parent then return end
+        nextAt=age+.025
+        for _=1,4 do
+            local o=side*(math.random()-.5)*6+Vector3.yAxis*(math.random()-.3)*4
+            VFX.streak(root.Position+o+dir*3,-dir,5+math.random()*5,60,.2,math.random()<.4 and COLORS.Speed or COLORS.Wind,.1)
+        end
+        VFX.dust(groundAt(root.Position)+Vector3.yAxis*.4,1.6,-dir*6+Vector3.yAxis*2,.6)
+    end,nil,data.start)
+end
+function VFX.ultraFail(data)
+    VFX.dustRing(data.position,5,10,.8,4,data.direction)
+    VFX.sound("Thud",data.position,.6,1)
+end
+-- Wind around both bodies during the air chase.
+function VFX.ultraChase(owner,target,duration,start)
+    local a,b=rootOf(owner),rootOf(target)
+    local nextAt=0
+    run(duration,function(age)
+        if age<nextAt then return end
+        nextAt=age+.04
+        for _,r in {a,b} do
+            if r and r.Parent then
+                local o=Vector3.new(math.random()-.5,0,math.random()-.5)*4
+                VFX.streak(r.Position+o-Vector3.yAxis*2,Vector3.yAxis,4+math.random()*3,-30,.22,COLORS.Wind,.08)
+            end
+        end
+    end,nil,start)
+end
+function VFX.ultraPunch(data)
+    local at,dir=data.position,data.direction
+    if data.index==1 then
+        VFX.flash(at,12,40,.3)
+        VFX.pressure(at,9,.4,COLORS.Wind,.05)
+        VFX.shockRing(at,dir,12,.45,COLORS.Wind,.8,32)
+        VFX.shockRing(at,dir,7,.35,COLORS.Wind,.5,24,.05)
+        VFX.dustRing(at,9,16,1,10,dir)
+        VFX.cracks(at,7,10,6,dir,1)
+        VFX.sound("Impact",at,1,2);VFX.sound("Boom",at,.8,2,1.3)
+    else
+        VFX.flash(at,6,24,.2)
+        VFX.shockRing(at,(dir+Vector3.yAxis*1.2).Unit,6,.3,COLORS.Wind,.45,24)
+        VFX.sound("Impact",at,.8,1.5,1.3)
+    end
+    for i=1,(data.index==1 and 20 or 10) do
+        local d=(dir+Vector3.new(math.random()-.5,math.random()*.5,math.random()-.5)*.8).Unit
+        VFX.streak(at,d,4+math.random()*4,60,.3,COLORS.Wind,.12)
+    end
+end
+-- The uppercut: flash, circular shockwave, a white/gold wind column along the punch, the ground shockwave,
+-- and the launched body's trail with rings left behind it all the way to the apex.
+function VFX.ultraUppercut(data,targetModel)
+    local cfg=A.PlusUltra
+    local at,ground=data.position,data.ground
+    VFX.flash(at,16,70,.45,Color3.fromRGB(255,246,214))
+    VFX.pressure(at,14,.5,COLORS.Wind,0)
+    VFX.shockRing(at,Vector3.yAxis,16,.5,COLORS.Wind,1,36)
+    VFX.shockRing(at,Vector3.yAxis,10,.4,COLORS.Gold,.6,30,.04)
+    VFX.shockRing(at,(data.direction+Vector3.yAxis*2).Unit,12,.5,COLORS.Wind,.7,30,.08)
+    VFX.shockRing(ground+Vector3.yAxis*.3,Vector3.yAxis,data.radius,.6,COLORS.Wind,.7,40)
+    VFX.cracks(ground,12,16,7)
+    VFX.dustRing(ground,16,24,1.6,18)
+    VFX.sparks(at,40,40,.6,COLORS.Gold)
+    VFX.sound("Boom",at,1,3,.85);VFX.sound("Impact",at,1,2,.7);VFX.sound("Wind",at,1,2,.6)
+    -- Wind column: stacked translucent cylinders rising along the punch, white with a gold core.
+    local column={}
+    for i=1,6 do
+        local c=part("AllMightColumn",Vector3.new(1,5,5),i%2==0 and COLORS.Gold or COLORS.Wind,CFrame.new(at),Enum.PartType.Cylinder,Enum.Material.ForceField)
+        column[i]=c
+    end
+    run(.9,function(age)
+        local u=age/.9
+        for i,c in column do
+            local h=(i-1)*9+40*smoothstep(u*1.4)
+            local r=(i%2==0 and 2.4 or 4.2)*(1-u*.5)
+            c.Size=Vector3.new(9,r*2,r*2)
+            c.CFrame=CFrame.new(at+Vector3.yAxis*h)*CFrame.Angles(0,age*6,math.pi/2)
+            c.Transparency=.35+.65*u
+        end
+    end,function() for _,c in column do c:Destroy() end end)
+    -- Rings left behind the rising body, more and more spaced as it accelerates.
+    local root=rootOf(targetModel)
+    local nextRing=0;local last=root and root.Position or at
+    run(data.launch,function(age)
+        if not root or not root.Parent then return end
+        local pos=root.Position
+        local v=pos-last;last=pos
+        if v.Magnitude>.05 then VFX.streak(pos,-v.Unit,v.Magnitude*2.5+2,6,.35,COLORS.Wind,.45) end
+        if age>=nextRing then
+            nextRing=age+.11
+            VFX.shockRing(pos-Vector3.yAxis*2,Vector3.yAxis,5+age*4,.45,math.random()<.3 and COLORS.Gold or COLORS.Wind,.5,24)
+        end
+    end)
+end
+-- The final ring at the apex, and a small star of light.
+function VFX.ultraApex(position)
+    VFX.shockRing(position,Vector3.yAxis,26,.7,COLORS.Wind,1.2,40)
+    VFX.shockRing(position,Vector3.yAxis,18,.6,COLORS.Gold,.7,32,.06)
+    VFX.shockRing(position,Vector3.zAxis,14,.5,COLORS.Wind,.6,28,.1)
+    VFX.pressure(position,10,.5,COLORS.Wind,0)
+    VFX.flash(position,20,120,.6,Color3.fromRGB(255,250,230))
+    local star=part("AllMightStar",Vector3.one*3,Color3.new(1,1,1),CFrame.new(position),Enum.PartType.Ball)
+    run(.8,function(age) local u=age/.8;star.Size=Vector3.one*(3+6*u);star.Transparency=u end,function() star:Destroy() end)
+    VFX.sound("Boom",position,.8,3,1.4)
+end
+function VFX.ultraLand(position)
+    VFX.cracks(position,10,14,6)
+    VFX.dustRing(position,12,20,1.8,10)
+    VFX.shockRing(position+Vector3.yAxis*.3,Vector3.yAxis,12,.5,COLORS.Wind,.6,32)
+    VFX.sound("Thud",position,1,2,.6)
+end
+return VFX
+]]></ProtectedString>
+				<string name="ScriptGuid">{2AA2A6D1-F12D-0FE1-B12D-ED5AA5AE7DCA}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">AllMightVFX</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">b6fc8d551771f1dc8e06102ae46f79ec</UniqueId>
 			</Properties>
 		</Item>
 		<Item class="ModuleScript" referent="RBXFAAF6B71733A789194C8BB46EA4F2A71">
@@ -3899,6 +5185,642 @@ return VFX
 			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 			<UniqueId name="UniqueId">50bb54df9c47e24a0ae11321000003c6</UniqueId>
 		</Properties>
+		<Item class="ModuleScript" referent="RBX089796F3EAF30DC183A1AA6C7A3C9100">
+			<Properties>
+				<Content name="LinkedSource"><null></null></Content>
+				<ProtectedString name="Source"><![CDATA[-- All Might: server-side judgement for One For All: Full Power (Q), United States of Smash (E) and Plus Ultra (R).
+-- Required by Combat.server.luau, which owns the shared player state (cooldowns, busy time, generation) and
+-- passes its helpers in through AllMight.init. Clients only send the key and their camera ray; targets, damage,
+-- dashes, captures, launches, cooldowns and the buff are all decided here, from server positions.
+-- Every character this module moves (the caster during a dash or the Plus Ultra jump, every victim) is moved by a
+-- server-created constraint or, for anchored training targets, kinematically; every step is blockcast first.
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local RS=game:GetService("ReplicatedStorage")
+local A=require(RS:WaitForChild("AllMightConfig"))
+
+local AllMight={}
+local ctx
+local KIT={};for _,skill in A.Kit do KIT[skill]=true end
+local movers={}       -- [victim model] = forced movement in progress
+local drives={}       -- [caster player] = constraint moving the caster
+local buffs={}        -- [caster player] = token of the current One For All
+local smashes={}      -- [caster player] = United States of Smash in progress
+local ultras={}       -- [caster player] = Plus Ultra in progress
+
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function easeOut(x,power) x=math.clamp(x,0,1);return 1-(1-x)^(power or 2) end
+local function flat(v,fallback)
+    local f=Vector3.new(v.X,0,v.Z)
+    return f.Magnitude>.05 and f.Unit or fallback or Vector3.new(0,0,-1)
+end
+local function alive(t) return t and t.m.Parent and t.r.Parent and t.h.Parent and t.h.Health>0 end
+-- World geometry only: every character is excluded and non-collidable parts are ignored.
+local function worldParams(extra)
+    local list={}
+    for _,t in ctx.targets(nil) do table.insert(list,t.m) end
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    if extra then for _,v in extra do table.insert(list,v) end end
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances=list;params.RespectCanCollide=true
+    return params
+end
+local function groundBelow(position,params)
+    local hit=workspace:Raycast(position+Vector3.yAxis*4,Vector3.yAxis*-200,params)
+    return hit and hit.Position or nil
+end
+local function hipOf(t,params)
+    local floor=groundBelow(t.r.Position,params)
+    return floor and math.clamp(t.r.Position.Y-floor.Y,1.5,6) or 3
+end
+local function stillCaster(p,s,m)
+    return ctx.states[p]==s and ctx.character(p)==m and s.amGeneration==s.generation and ctx.kitOf(p)=="AllMight"
+end
+local function buffed(m) return m~=nil and (m:GetAttribute("AllMightBuffUntil") or 0)>ctx.clock() end
+-- Caster speed factor for a while; Combat.updateSpeed reads it every Heartbeat.
+local function slowSelf(m,h,factor,duration)
+    m:SetAttribute("AllMightSpeedFactor",factor);m:SetAttribute("AllMightSpeedUntil",ctx.clock()+duration);ctx.updateSpeed(m,h)
+    task.delay(duration+.05,function() if m.Parent and h.Parent then ctx.updateSpeed(m,h) end end)
+end
+-- Line of sight from the caster's chest to a body, ignoring every character.
+local function visible(from,t,params)
+    local hit=workspace:Raycast(from,t.r.Position-from,params)
+    return not hit
+end
+-- First valid body in a corridor ahead of `origin`: in front, within `reach`, `width` to the side, in sight.
+local function firstAhead(m,origin,direction,reach,width,params,skip)
+    local best,bestAlong=nil,math.huge
+    for _,t in ctx.targets(m) do
+        if not (skip and skip[t.m]) then
+            local rel=t.r.Position-origin
+            local along=rel:Dot(direction)
+            local side=Vector3.new(rel.X,0,rel.Z)-direction*along
+            if along>-1 and along<=reach and side.Magnitude<=width and math.abs(rel.Y)<8 and along<bestAlong and visible(origin,t,params) then
+                best=t;bestAlong=along
+            end
+        end
+    end
+    return best,bestAlong
+end
+
+---------------------------------------------------------------- moving the caster
+-- A server-created AlignPosition that the caster's own client simulates; released as soon as the move ends.
+local function driveCaster(p,r)
+    local d=drives[p]
+    if d and d.align.Parent and d.root==r then return d end
+    if d then d.align:Destroy();d.attachment:Destroy() end
+    local attachment=Instance.new("Attachment");attachment.Name="AllMightDriveAttachment";attachment.Parent=r
+    local align=Instance.new("AlignPosition");align.Name="AllMightDrive";align.Mode=Enum.PositionAlignmentMode.OneAttachment
+    align.Attachment0=attachment;align.Position=r.Position;align.ApplyAtCenterOfMass=true;align.RigidityEnabled=false
+    align.MaxForce=math.max(30000,r.AssemblyMass*workspace.Gravity*30);align.MaxVelocity=320;align.Responsiveness=90
+    align.Parent=r
+    d={align=align,attachment=attachment,root=r,last=r.Position}
+    drives[p]=d
+    return d
+end
+local function releaseCaster(p)
+    local d=drives[p];if not d then return end
+    drives[p]=nil
+    d.align:Destroy();d.attachment:Destroy()
+    -- Hand the momentum back gently: never leave the caster flying sideways after a dash.
+    if d.root.Parent then
+        local v=d.root.AssemblyLinearVelocity
+        d.root.AssemblyLinearVelocity=Vector3.new(v.X*.15,math.min(v.Y,0),v.Z*.15)
+    end
+end
+-- Moves the caster toward `desired`, stopping short of walls; returns the reached point and the wall hit.
+local function moveCaster(p,r,desired,params)
+    local d=driveCaster(p,r)
+    local from=d.last
+    local step=desired-from
+    local hit=nil
+    if step.Magnitude>.001 then
+        hit=workspace:Blockcast(CFrame.new(from),Vector3.new(2.6,4.2,2.6),step,params)
+        if hit then desired=from+step.Unit*math.max(0,hit.Distance-.15) end
+    end
+    d.align.Position=desired;d.last=desired
+    return desired,hit
+end
+
+---------------------------------------------------------------- moving victims
+local function releaseMover(model,keepHeld)
+    local mv=movers[model];if not mv then return end
+    movers[model]=nil
+    if mv.align then mv.align:Destroy() end
+    if mv.attachment then mv.attachment:Destroy() end
+    if model.Parent and not keepHeld then model:SetAttribute("AllMightHeldUntil",0) end
+    if mv.t.r.Parent and mv.t.r.Anchored and mv.rotation then mv.t.r.CFrame=CFrame.new(mv.t.r.Position)*mv.rotation end
+end
+local function guarded(model)
+    local n=ctx.clock()
+    return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n
+end
+local function startMover(t,owner,spec)
+    if not alive(t) or guarded(t.m) then return end
+    -- One For All shrugs off light pushes (the E shockwave on bystanders).
+    if spec.light and buffed(t.m) then return end
+    local old=movers[t.m]
+    local rotation=old and old.rotation or t.r.CFrame.Rotation
+    if old then releaseMover(t.m,true) end
+    ctx.flights[t.m]=nil;ctx.doraKnockbacks[t.m]=nil
+    local mv={t=t,owner=owner,start=ctx.clock(),last=t.r.Position,rotation=rotation,params=worldParams({owner and owner.Character})}
+    for k,v in spec do mv[k]=v end
+    if not t.r.Anchored then
+        local attachment=Instance.new("Attachment");attachment.Name="AllMightForceAttachment";attachment.Parent=t.r
+        local align=Instance.new("AlignPosition");align.Name="AllMightForce";align.Mode=Enum.PositionAlignmentMode.OneAttachment
+        align.Attachment0=attachment;align.Position=t.r.Position;align.ApplyAtCenterOfMass=true;align.RigidityEnabled=false
+        align.MaxForce=math.max(25000,t.r.AssemblyMass*workspace.Gravity*25);align.MaxVelocity=420;align.Responsiveness=70
+        align.Parent=t.r
+        mv.attachment=attachment;mv.align=align
+        pcall(function() if not Players:GetPlayerFromCharacter(t.m) then t.r:SetNetworkOwner(nil) end end)
+    end
+    movers[t.m]=mv
+    return mv
+end
+-- Moves a body toward `desired`; `lean` bends anchored targets (direction faced, pitch of the torso).
+local function drive(mv,desired,lean)
+    local t=mv.t
+    local from=t.r.Anchored and mv.last or t.r.Position
+    local step=desired-from
+    local hit=nil
+    if step.Magnitude>.001 and not mv.free then
+        hit=workspace:Blockcast(CFrame.new(from),Vector3.new(1.8,2.6,1.8),step,mv.params)
+        if hit then desired=from+step.Unit*math.max(0,hit.Distance-.1) end
+    end
+    if t.r.Anchored then
+        local rotation=mv.rotation
+        if lean then rotation=CFrame.lookAt(Vector3.zero,lean.direction).Rotation*CFrame.Angles(lean.pitch,0,lean.roll or 0) end
+        t.m:PivotTo(CFrame.new(desired)*rotation)
+    elseif mv.align then
+        mv.align.Position=desired
+    end
+    mv.last=desired
+    return desired,hit
+end
+local function hold(t,untilTime) if t.m.Parent then t.m:SetAttribute("AllMightHeldUntil",untilTime) end end
+-- A knock arc that never ends past the arena edge, shortened until there is floor under the landing point.
+local function knock(owner,t,direction,distance,lift,duration,wallDamage,light)
+    local params=worldParams({owner and owner.Character})
+    local from=t.r.Position
+    while distance>2 and not groundBelow(from+direction*distance,params) do distance-=2 end
+    local mv=startMover(t,owner,{kind="Knock",from=from,direction=direction,distance=distance,lift=lift,duration=duration,hip=hipOf(t,params),wallDamage=wallDamage,light=light})
+    if not mv then return end
+    hold(t,ctx.clock()+duration+.1)
+    ctx.fx:FireAllClients("AllMightKnock",{model=t.m,from=from,direction=direction,distance=distance,duration=duration,heavy=not light})
+    return mv
+end
+-- Drops a body straight onto the floor below it (or below `fallback`), then keeps it down for a moment.
+local function dropToFloor(t,owner,fallback,down)
+    local params=worldParams({owner and owner.Character})
+    local floor=groundBelow(t.r.Position,params) or (fallback and groundBelow(fallback,params)) or fallback
+    if not floor then releaseMover(t.m);return end
+    local hip=movers[t.m] and movers[t.m].hip or hipOf(t,params)
+    local height=math.max(1,t.r.Position.Y-floor.Y)
+    local duration=math.max(A.PlusUltra.FallMin,math.sqrt(2*height/workspace.Gravity)+.1)
+    local mv=startMover(t,nil,{kind="Fall",from=t.r.Position,to=floor+Vector3.yAxis*hip,duration=duration,hip=hip,free=true})
+    if mv then hold(t,ctx.clock()+duration+(down or 0)) else releaseMover(t.m) end
+    return duration
+end
+
+---------------------------------------------------------------- Q: One For All: Full Power
+local function powerOff(p,m,h,reason,fatigue)
+    buffs[p]=nil
+    if m and m.Parent then
+        m:SetAttribute("AllMightBuffUntil",0)
+        if fatigue and h and h.Parent and h.Health>0 then slowSelf(m,h,A.OneForAll.FatigueFactor,A.OneForAll.FatigueDuration) end
+        if h and h.Parent then ctx.updateSpeed(m,h) end
+    end
+    ctx.fx:FireAllClients("AllMightPowerOff",{owner=p.UserId,reason=reason,fatigue=fatigue and A.OneForAll.FatigueDuration or 0})
+end
+local function oneForAll(p,s,m,h,r)
+    local cfg=A.OneForAll;local n=ctx.clock()
+    s.cooldowns.OneForAll=n+cfg.Cooldown
+    s.busyUntil=n+cfg.Prep
+    m:SetAttribute("AllMightNoJumpUntil",n+cfg.Prep)
+    slowSelf(m,h,cfg.PrepSpeed,cfg.Prep)
+    local token={}
+    buffs[p]=token
+    ctx.fx:FireAllClients("AllMightPowerCast",{owner=p.UserId,start=n,prep=cfg.Prep,open=cfg.Open,position=r.Position})
+    task.delay(cfg.Prep,function()
+        if buffs[p]~=token then return end
+        if not stillCaster(p,s,m) then buffs[p]=nil;return end
+        local on=ctx.clock()
+        m:SetAttribute("AllMightBuffUntil",on+cfg.Duration);ctx.updateSpeed(m,h)
+        ctx.fx:FireAllClients("AllMightPowerOn",{owner=p.UserId,start=on,untilTime=on+cfg.Duration,position=r.Position})
+        task.delay(cfg.Duration,function()
+            if buffs[p]~=token then return end
+            if stillCaster(p,s,m) then powerOff(p,m,h,"expired",true) else buffs[p]=nil end
+        end)
+    end)
+end
+
+---------------------------------------------------------------- E: United States of Smash
+local function endSmash(p,reason)
+    local e=smashes[p];if not e then return end
+    smashes[p]=nil
+    releaseCaster(p)
+    if e.target and movers[e.target.m] and movers[e.target.m].kind=="Hold" then releaseMover(e.target.m) end
+    if reason~="finished" then ctx.fx:FireAllClients("AllMightSmashEnd",{owner=p.UserId,reason=reason}) end
+end
+local function smash(p,s,m,h,r,aim)
+    local cfg=A.UnitedStatesOfSmash;local n=ctx.clock()
+    local direction=flat(aim,flat(r.CFrame.LookVector))
+    s.cooldowns.UnitedStatesOfSmash=n+cfg.Cooldown
+    s.busyUntil=n+cfg.PunchEnd+cfg.Hold+cfg.Return
+    m:SetAttribute("AllMightNoJumpUntil",n+cfg.PunchEnd+cfg.Hold)
+    slowSelf(m,h,0,cfg.Crouch)
+    local e={owner=p,state=s,model=m,humanoid=h,root=r,start=n,direction=direction,params=worldParams({m}),hit={}}
+    smashes[p]=e
+    ctx.fx:FireAllClients("AllMightSmashCast",{owner=p.UserId,start=n,direction=direction,position=r.Position,buffed=buffed(m)})
+end
+local function smashImpact(p,e,n)
+    local cfg=A.UnitedStatesOfSmash
+    local m,r=e.model,e.root
+    e.impactAt=n
+    releaseCaster(p)
+    local t=e.target
+    local factor=buffed(m) and A.OneForAll.SmashDamage or 1
+    if t and alive(t) and (t.r.Position-r.Position).Magnitude<=cfg.ContactReach+cfg.StopDistance+3 then
+        local point=t.r.Position
+        if movers[t.m] and movers[t.m].kind=="Hold" then releaseMover(t.m,true) end
+        e.hit[t.m]=true
+        ctx.damage(p,t,cfg.Damage*factor)
+        local direction=flat(t.r.Position-r.Position,e.direction)
+        if alive(t) then knock(p,t,direction,cfg.Knockback,cfg.KnockLift,cfg.KnockTime,cfg.WallDamage) end
+        -- The shockwave: everyone else near the point of impact, once each, pushed away from it.
+        for _,other in ctx.targets(m) do
+            if not e.hit[other.m] and (other.r.Position-point).Magnitude<=cfg.ShockRadius then
+                e.hit[other.m]=true
+                ctx.damage(p,other,cfg.ShockDamage*factor)
+                if alive(other) then knock(p,other,flat(other.r.Position-point,direction),cfg.ShockKnock,2.5,.35,nil,true) end
+            end
+        end
+        ctx.fx:FireAllClients("AllMightSmashImpact",{owner=p.UserId,start=n,hit=true,target=t.m,position=point,direction=direction,
+            buffed=factor>1,radius=cfg.ShockRadius})
+    else
+        e.target=nil
+        ctx.fx:FireAllClients("AllMightSmashImpact",{owner=p.UserId,start=n,hit=false,position=r.Position+e.direction*4,direction=e.direction,
+            buffed=factor>1,radius=cfg.ShockRadius*.6})
+    end
+end
+local function stepSmash(p,e,n)
+    local cfg=A.UnitedStatesOfSmash
+    local s,m,r=e.state,e.model,e.root
+    if not stillCaster(p,s,m) then endSmash(p,"interrupted");return end
+    local age=n-e.start
+    if age<cfg.Crouch then return end
+    if age<cfg.DashEnd and not e.contact and not e.whiff then
+        if not e.from then
+            e.from=r.Position;driveCaster(p,r).last=r.Position
+            ctx.fx:FireAllClients("AllMightSmashDash",{owner=p.UserId,start=n,from=e.from,direction=e.direction,distance=cfg.DashDistance})
+        end
+        local u=(age-cfg.Crouch)/(cfg.DashEnd-cfg.Crouch)
+        local desired=e.from+e.direction*cfg.DashDistance*easeOut(u,1.7)
+        local reached,wall=moveCaster(p,r,desired,e.params)
+        local t=firstAhead(m,reached+Vector3.yAxis*.5,e.direction,cfg.ContactReach,cfg.PathWidth,e.params)
+        if t then
+            e.contact=n;e.target=t
+            local stop=Vector3.new(t.r.Position.X,reached.Y,t.r.Position.Z)-e.direction*cfg.StopDistance
+            local blocked=workspace:Blockcast(CFrame.new(reached),Vector3.new(2.6,4.2,2.6),stop-reached,e.params)
+            e.stop=blocked and reached or stop
+            moveCaster(p,r,e.stop,e.params)
+            local mv=startMover(t,p,{kind="Hold"})
+            if mv then hold(t,e.start+cfg.Impact+.15) end
+            ctx.fx:FireAllClients("AllMightSmashContact",{owner=p.UserId,start=n,target=t.m,position=t.r.Position})
+        elseif wall and (reached-e.from).Magnitude<cfg.DashDistance-1 then
+            -- A wall cuts the dash short: a heavy bump, no punch, a shorter cooldown.
+            releaseCaster(p)
+            s.cooldowns.UnitedStatesOfSmash=n+cfg.BumpCooldown
+            s.busyUntil=n+.45;m:SetAttribute("AllMightNoJumpUntil",n+.45)
+            slowSelf(m,e.humanoid,.6,.5)
+            smashes[p]=nil
+            ctx.fx:FireAllClients("AllMightSmashBump",{owner=p.UserId,start=n,position=reached+e.direction*1.3,normal=wall.Normal})
+            ctx.sendState(p,s)
+        end
+        return
+    end
+    if not e.contact and not e.whiff then
+        -- Nobody on the path: the punch still lands on empty air, and the cooldown is halved.
+        e.whiff=true;releaseCaster(p)
+        s.cooldowns.UnitedStatesOfSmash=e.start+cfg.WhiffCooldown;ctx.sendState(p,s)
+    end
+    if e.contact and not e.impactAt then
+        if e.stop then moveCaster(p,r,e.stop,e.params) end
+        if e.target and not alive(e.target) then e.target=nil end
+    end
+    if age>=cfg.Impact and not e.impactAt then smashImpact(p,e,n) end
+    if age>=cfg.PunchEnd+cfg.Hold+cfg.Return and not e.slowed then
+        e.slowed=true
+        slowSelf(m,e.humanoid,cfg.SlowFactor,cfg.SlowDuration)
+        smashes[p]=nil
+    end
+end
+
+---------------------------------------------------------------- R: Plus Ultra
+local function endUltra(p,reason)
+    local u=ultras[p];if not u then return end
+    ultras[p]=nil
+    releaseCaster(p)
+    local t=u.target
+    if t and movers[t.m] and movers[t.m].kind=="Ultra" then
+        -- Never leave the target hanging: it falls to the floor below (or back where the fight started).
+        if alive(t) then dropToFloor(t,nil,u.base,A.PlusUltra.KnockedDown) else releaseMover(t.m) end
+    end
+    if u.model.Parent then u.model:SetAttribute("AllMightGuardUntil",0);u.model:SetAttribute("AllMightNoJumpUntil",0) end
+    if u.humanoid.Parent then ctx.updateSpeed(u.model,u.humanoid) end
+    ctx.fx:FireAllClients("AllMightUltraEnd",{owner=p.UserId,reason=reason})
+end
+local function plusUltra(p,s,m,h,r,aim)
+    local cfg=A.PlusUltra;local n=ctx.clock()
+    local direction=flat(aim,flat(r.CFrame.LookVector))
+    local total=cfg.Windup+cfg.DashTime+cfg.End+.2
+    s.cooldowns.PlusUltra=n+cfg.Cooldown
+    s.busyUntil=n+total
+    m:SetAttribute("AllMightGuardUntil",n+total)
+    m:SetAttribute("AllMightNoJumpUntil",n+total)
+    slowSelf(m,h,cfg.WindupSpeed,cfg.Windup)
+    local u={owner=p,state=s,model=m,humanoid=h,root=r,start=n,direction=direction,params=worldParams({m}),hit={},damaged={}}
+    if ultras[p] then endUltra(p,"replaced") end
+    ultras[p]=u
+    ctx.fx:FireAllClients("AllMightUltraCast",{owner=p.UserId,start=n,direction=direction,position=r.Position,buffed=buffed(m)})
+end
+local function ultraFail(p,u,n,position)
+    local s=u.state
+    ultras[p]=nil
+    releaseCaster(p)
+    s.cooldowns.PlusUltra=u.start+A.PlusUltra.FailCooldown
+    s.busyUntil=n+.6
+    if u.model.Parent then u.model:SetAttribute("AllMightGuardUntil",0);u.model:SetAttribute("AllMightNoJumpUntil",n+.6) end
+    slowSelf(u.model,u.humanoid,.5,.6)
+    ctx.fx:FireAllClients("AllMightUltraFail",{owner=p.UserId,start=n,position=position,direction=u.direction})
+    ctx.sendState(p,s)
+end
+-- Where the caster and the target should be `c` seconds after contact.
+local function ultraPose(u,c)
+    local cfg=A.PlusUltra
+    local d=u.direction
+    local base=u.base                 -- caster's floor point at contact
+    local hip=u.casterHip
+    local caster,target
+    local lift=easeOut((c-cfg.Punch1)/(cfg.Lift-cfg.Punch1),2)
+    local chase=easeOut((c-cfg.Lift)/(cfg.ChaseEnd-cfg.Lift),2.2)
+    local hang=math.clamp((c-cfg.ChaseEnd)/(cfg.Uppercut-cfg.ChaseEnd),0,1)
+    -- Caster: planted, then a jump that follows the target up, a hang while winding up, the uppercut's own lift,
+    -- and a fall back onto the floor.
+    local up=cfg.CasterChase*chase+.8*hang
+    if c>=cfg.Uppercut then
+        local rise=easeOut((c-cfg.Uppercut)/.18,2)*2.2
+        local fall=math.clamp((c-cfg.Uppercut-.22)/(cfg.LandAt-cfg.Uppercut-.22),0,1)
+        up=(cfg.CasterChase+.8+rise)*(1-fall*fall)
+    end
+    caster=base+d*(2.2*chase)+Vector3.yAxis*(hip+up)
+    -- Target: lifted by the first punch, carried ahead of and above the caster, then launched.
+    local tUp=cfg.LiftHeight*lift+(cfg.ChaseHeight-cfg.LiftHeight)*chase+1.2*hang
+    target=u.contactPoint+d*(2.6*lift+1.6*chase)+Vector3.yAxis*tUp
+    if c>=cfg.Launch then
+        local k=math.clamp((c-cfg.Launch)/(cfg.Apex-cfg.Launch),0,1)
+        local from=u.launchFrom or target
+        target=from+d*7*k+Vector3.yAxis*(u.apexRise or 100)*k*k
+    end
+    return caster,target
+end
+local function ultraShock(p,u,center,n)
+    local cfg=A.PlusUltra
+    for _,t in ctx.targets(u.model) do
+        if t.m~=(u.target and u.target.m) and not u.hit[t.m] then
+            local d=t.r.Position-center
+            if Vector3.new(d.X,0,d.Z).Magnitude<=cfg.ShockRadius and math.abs(d.Y)<=cfg.ShockHeight then
+                u.hit[t.m]=true
+                ctx.damage(p,t,cfg.ShockDamage)
+                if alive(t) then ctx.launch(t,flat(d,u.direction)*42+Vector3.yAxis*26) end
+            end
+        end
+    end
+end
+local function stepUltra(p,u,n)
+    local cfg=A.PlusUltra
+    local s,m,r=u.state,u.model,u.root
+    if not stillCaster(p,s,m) then endUltra(p,"interrupted");return end
+    local age=n-u.start
+    if age<cfg.Windup then return end
+    -- Dash: the first body on the path becomes the target. An empty path is known at launch and stops short.
+    if not u.contact then
+        if not u.from then
+            u.from=r.Position;driveCaster(p,r).last=r.Position
+            local floor=groundBelow(r.Position,u.params)
+            u.casterHip=floor and math.clamp(r.Position.Y-floor.Y,1.5,6) or 3
+            local any=firstAhead(m,r.Position+Vector3.yAxis*.5,u.direction,cfg.DashDistance+cfg.ContactReach,cfg.PathWidth,u.params)
+            u.empty=any==nil
+            u.limit=u.empty and cfg.DashDistance*cfg.FailDistance or cfg.DashDistance
+            ctx.fx:FireAllClients("AllMightUltraDash",{owner=p.UserId,start=n,from=u.from,direction=u.direction,distance=u.limit,empty=u.empty})
+        end
+        local k=math.clamp((age-cfg.Windup)/cfg.DashTime,0,1)
+        local along=u.empty and u.limit*easeOut(k,2.4) or u.limit*easeOut(k,1.5)
+        local reached,wall=moveCaster(p,r,u.from+u.direction*along,u.params)
+        local t=not u.empty and firstAhead(m,reached+Vector3.yAxis*.5,u.direction,cfg.ContactReach,cfg.PathWidth,u.params) or nil
+        if t then
+            u.contact=n;u.target=t
+            local stop=Vector3.new(t.r.Position.X,reached.Y,t.r.Position.Z)-u.direction*cfg.StopDistance
+            local blocked=workspace:Blockcast(CFrame.new(reached),Vector3.new(2.6,4.2,2.6),stop-reached,u.params)
+            stop=blocked and reached or stop
+            local floor=groundBelow(stop,u.params)
+            u.base=floor or stop-Vector3.yAxis*u.casterHip
+            u.contactPoint=t.r.Position
+            u.targetHip=hipOf(t,u.params)
+            -- Leave room for the launch under any roof: the apex never pokes through the ceiling.
+            local roof=workspace:Raycast(t.r.Position+Vector3.yAxis*3,Vector3.yAxis*(cfg.ChaseHeight+cfg.ApexHeight),u.params)
+            u.roof=roof and roof.Position.Y or nil
+            local mv=startMover(t,p,{kind="Ultra",free=false})
+            if not mv then ultraFail(p,u,n,reached);return end
+            hold(t,n+.3)
+            s.busyUntil=n+cfg.End+.05
+            m:SetAttribute("AllMightGuardUntil",n+cfg.End);m:SetAttribute("AllMightNoJumpUntil",n+cfg.End)
+            ctx.fx:FireAllClients("AllMightUltraContact",{owner=p.UserId,start=n,target=t.m,position=t.r.Position,direction=u.direction})
+            ctx.sendState(p,s)
+        elseif k>=1 or (wall and (reached-u.from).Magnitude<u.limit-1) then
+            ultraFail(p,u,n,reached)
+        end
+        return
+    end
+    local c=n-u.contact
+    local t=u.target
+    if not alive(t) then
+        -- The target died (or left): drop safely back to the floor and finish early.
+        u.target=nil
+        ctx.fx:FireAllClients("AllMightUltraLost",{owner=p.UserId,start=n})
+        -- Let go of the caster too: an airborne caster simply falls under gravity.
+        endUltra(p,"lost")
+        return
+    end
+    -- Hits, once each.
+    if c>=cfg.Punch1 and not u.damaged[1] then
+        u.damaged[1]=true;ctx.damage(p,t,cfg.Damage1)
+        ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=1,target=t.m,position=t.r.Position,direction=u.direction})
+    end
+    if c>=cfg.Punch2 and not u.damaged[2] then
+        u.damaged[2]=true;ctx.damage(p,t,cfg.Damage2)
+        ctx.fx:FireAllClients("AllMightUltraPunch",{owner=p.UserId,start=n,index=2,target=t.m,position=t.r.Position,direction=u.direction})
+    end
+    if c>=cfg.Uppercut and not u.damaged[3] then
+        u.damaged[3]=true
+        u.launchFrom=t.r.Anchored and (movers[t.m] and movers[t.m].last) or t.r.Position
+        local ceiling=u.roof and (u.roof-6-u.launchFrom.Y) or cfg.ApexHeight
+        u.apexRise=math.clamp(math.min(cfg.ApexHeight,ceiling),8,cfg.ApexHeight)
+        ctx.damage(p,t,cfg.Damage3)
+        ultraShock(p,u,Vector3.new(r.Position.X,u.base.Y,r.Position.Z),n)
+        ctx.fx:FireAllClients("AllMightUltraUppercut",{owner=p.UserId,start=n,target=t.m,position=u.launchFrom,ground=u.base,
+            direction=u.direction,apex=u.launchFrom+u.direction*7+Vector3.yAxis*u.apexRise,launch=cfg.Apex-cfg.Launch,radius=cfg.ShockRadius})
+        if not alive(t) then return end
+    end
+    local casterAt,targetAt=ultraPose(u,c)
+    if c<cfg.LandAt then moveCaster(p,r,casterAt,u.params)
+    elseif not u.landed then
+        u.landed=true;releaseCaster(p)
+        ctx.fx:FireAllClients("AllMightUltraLand",{owner=p.UserId,start=n,position=u.base})
+    end
+    local mv=movers[t.m]
+    if c<cfg.Apex then
+        if not mv or mv.kind~="Ultra" then endUltra(p,"resisted");return end
+        hold(t,n+.3)
+        -- The body bends: arched back after the first punch, folded up around the uppercut.
+        local pitch=c<cfg.Uppercut and -.9*smoothstep((c-cfg.Punch1)/.2) or .9-1.6*smoothstep((c-cfg.Uppercut)/.3)
+        mv.free=c>=cfg.Launch
+        drive(mv,targetAt,{direction=-u.direction,pitch=pitch,roll=c>=cfg.Launch and math.sin(c*14)*.5 or 0})
+    elseif not u.released then
+        -- The last ring bursts at the apex; from there the body falls back onto safe ground under its own weight.
+        u.released=true
+        ctx.fx:FireAllClients("AllMightUltraApex",{owner=p.UserId,start=n,position=mv and mv.last or t.r.Position})
+        releaseMover(t.m,true)
+        dropToFloor(t,nil,u.base,cfg.KnockedDown)
+    end
+    if c>=cfg.End then
+        ultras[p]=nil
+        if m.Parent then m:SetAttribute("AllMightGuardUntil",0);m:SetAttribute("AllMightNoJumpUntil",0) end
+        ctx.updateSpeed(m,u.humanoid)
+        ctx.fx:FireAllClients("AllMightUltraEnd",{owner=p.UserId,reason="finished"})
+    end
+end
+
+---------------------------------------------------------------- per-frame movement
+local function stepMover(model,mv,n)
+    local t=mv.t
+    if not alive(t) then releaseMover(model);return end
+    local age=n-mv.start
+    if mv.kind=="Knock" then
+        local u=math.clamp(age/mv.duration,0,1)
+        local along=1-(1-u)^2.4
+        local height=mv.lift*4*u*(1-u)
+        local desired=mv.from+mv.direction*mv.distance*along+Vector3.yAxis*height
+        local _,hit=drive(mv,desired,{direction=-mv.direction,pitch=(mv.light and -.3 or -.75)*math.sin(u*math.pi)})
+        if hit and not mv.walled then
+            mv.walled=true
+            if mv.wallDamage and mv.owner then ctx.damage(mv.owner,t,mv.wallDamage) end
+            ctx.fx:FireAllClients("AllMightWallHit",{position=mv.last,normal=hit.Normal})
+            local floor=groundBelow(mv.last,mv.params)
+            mv.kind="Fall";mv.start=n;mv.from=mv.last;mv.to=floor and floor+Vector3.yAxis*mv.hip or mv.last;mv.duration=.25
+            hold(t,n+.45)
+            return
+        end
+        if u>=1 then releaseMover(model,true) end
+    elseif mv.kind=="Fall" then
+        local u=math.clamp(age/mv.duration,0,1)
+        drive(mv,mv.from:Lerp(mv.to,u*u),{direction=mv.rotation.LookVector,pitch=-.6*(1-u)})
+        if u>=1 then releaseMover(model,true) end
+    elseif mv.kind=="Hold" then
+        drive(mv,mv.last)
+        if age>3 then releaseMover(model) end
+    elseif mv.kind=="Ultra" then
+        -- Driven by stepUltra; this only guards against an orphaned capture.
+        local owner=mv.owner
+        if not owner or not ultras[owner] or ultras[owner].target~=t then
+            dropToFloor(t,nil,mv.last,0)
+        end
+    end
+end
+RunService.Heartbeat:Connect(function()
+    if not ctx then return end
+    local n=ctx.clock()
+    for p,e in smashes do stepSmash(p,e,n) end
+    for p,u in ultras do stepUltra(p,u,n) end
+    for model,mv in movers do stepMover(model,mv,n) end
+end)
+Players.PlayerRemoving:Connect(function(p)
+    endSmash(p,"left");endUltra(p,"left");buffs[p]=nil
+    for model,mv in movers do if mv.owner==p and mv.kind~="Fall" then releaseMover(model) end end
+end)
+
+---------------------------------------------------------------- hooks used by Combat
+function AllMight.init(context) ctx=context end
+function AllMight.handles(skill) return KIT[skill]==true end
+-- Walk speed factor from the buff, the prep/recovery slows and fatigue.
+function AllMight.speedFactor(m,n)
+    local factor=1
+    if (m:GetAttribute("AllMightBuffUntil") or 0)>n then factor*=A.OneForAll.MoveSpeed end
+    if (m:GetAttribute("AllMightSpeedUntil") or 0)>n then factor*=m:GetAttribute("AllMightSpeedFactor") or 1 end
+    return factor
+end
+function AllMight.held(m,n) return (m:GetAttribute("AllMightHeldUntil") or 0)>n end
+function AllMight.noJump(m,n) return (m:GetAttribute("AllMightNoJumpUntil") or 0)>n end
+-- Outgoing basic attacks hit harder while buffed; incoming damage is reduced while buffed.
+function AllMight.damageFactor(attacker,victim,kind)
+    local factor=1
+    if kind=="Basic" and buffed(attacker) then factor*=A.OneForAll.BasicDamage end
+    if buffed(victim) then factor*=A.OneForAll.DamageTaken end
+    return factor
+end
+function AllMight.knockbackFactor(attacker) return buffed(attacker) and A.OneForAll.BasicKnockback or 1 end
+-- Combat.launch asks first: Plus Ultra casters are not staggered, buffed ones ignore light pushes.
+function AllMight.filterKnockback(victim,velocity)
+    if (victim:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return nil end
+    if buffed(victim) then
+        if velocity.Magnitude<A.OneForAll.LightKnockback then return nil end
+        return velocity*A.OneForAll.HeavyKeep
+    end
+    return velocity
+end
+-- Called by Combat after the request passed its own checks (kit, rate limit, domain lock, alive, not held).
+function AllMight.request(p,s,m,h,r,skill,aim)
+    local n=ctx.clock()
+    -- E -> R: once the smash has landed, Plus Ultra may cancel its follow-through (once per smash).
+    local e=smashes[p]
+    local cancel=skill=="PlusUltra" and e and e.impactAt and n-e.impactAt>=A.UnitedStatesOfSmash.RCancelFrom
+    if (s.busyUntil>n and not cancel) or s.slide or (m:GetAttribute("RootedUntil") or 0)>n then return end
+    if (s.cooldowns[skill] or 0)>n then return end
+    if cancel then
+        smashes[p]=nil;releaseCaster(p)
+        m:SetAttribute("AllMightSpeedUntil",0)
+    end
+    s.amGeneration=s.generation
+    s.basicUntil=0
+    if skill=="OneForAll" then oneForAll(p,s,m,h,r)
+    elseif skill=="UnitedStatesOfSmash" then smash(p,s,m,h,r,aim)
+    elseif skill=="PlusUltra" then plusUltra(p,s,m,h,r,aim) end
+    ctx.sendState(p,s)
+end
+-- Character change, respawn or death: the buff ends at once and everything this player held is released.
+function AllMight.reset(p)
+    endSmash(p,"reset");endUltra(p,"reset")
+    local m=p.Character
+    if buffs[p] then powerOff(p,m,nil,"reset",false) end
+    if m then
+        for _,attribute in {"AllMightBuffUntil","AllMightSpeedUntil","AllMightNoJumpUntil","AllMightGuardUntil"} do m:SetAttribute(attribute,0) end
+    end
+    for model,mv in movers do if mv.owner==p and mv.kind~="Fall" then releaseMover(model) end end
+end
+return AllMight
+]]></ProtectedString>
+				<string name="ScriptGuid">{312AD05A-CCB0-B97D-EE3E-7CCD642AA85D}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">00000000000000000000000000000000</UniqueId>
+				<string name="Name">AllMightServer</string>
+				<BinaryString name="SerializedOverrides"></BinaryString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				<UniqueId name="UniqueId">15b285ebeb9288716f820b08d0a37b31</UniqueId>
+			</Properties>
+		</Item>
 		<Item class="ModuleScript" referent="RBX2A8E70CAC1CD6A5F8717CED990061E38">
 			<Properties>
 				<Content name="LinkedSource"><null></null></Content>
@@ -3969,6 +5891,7 @@ end
 local function startMover(t,owner,spec)
     if not alive(t) then return end
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
+    if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end
@@ -4625,6 +6548,47 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"PainNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(10,10,14)) end
         end
+    elseif kind=="AllMight" then
+        -- Third-person symbols only: the swept-back blond hair with its two upright tufts, and a hugely built
+        -- upper body in the red/white/blue suit (chest plate, deltoids, upper-arm bulk) with yellow gloves.
+        local gold,goldDeep=Color3.fromRGB(255,220,70),Color3.fromRGB(236,178,40)
+        local blue,red,white,glove=Color3.fromRGB(46,84,196),Color3.fromRGB(206,34,44),Color3.fromRGB(246,246,242),Color3.fromRGB(250,204,40)
+        local hy=head.Size.Y/2
+        attach(head,"AllMightHair",Vector3.new(head.Size.X*1.08,.42,head.Size.Z*1.1),CFrame.new(0,hy-.08,.04),gold,nil,Enum.PartType.Ball)
+        attach(head,"AllMightHairBack",Vector3.new(head.Size.X*1.02,.6,.36),CFrame.new(0,hy-.4,head.Size.Z/2-.02),goldDeep)
+        for _,x in {-1,1} do
+            -- Each tuft: a thick base leaning out and a long thin blade standing almost straight up.
+            local base=CFrame.new(x*.16,hy+.05,-.18)*CFrame.Angles(.12,0,-x*.32)
+            attach(head,"AllMightTuft",Vector3.new(.2,.62,.12),base*CFrame.new(0,.28,0),gold,Enum.Material.SmoothPlastic)
+            attach(head,"AllMightTuft",Vector3.new(.12,.95,.08),base*CFrame.new(0,.62,0)*CFrame.Angles(0,0,x*.12)*CFrame.new(0,.3,0),gold,Enum.Material.SmoothPlastic)
+            attach(head,"AllMightTuftTip",Vector3.new(.06,.3,.05),base*CFrame.new(0,.62,0)*CFrame.Angles(0,0,x*.12)*CFrame.new(0,.85,0),Color3.fromRGB(255,240,150),Enum.Material.SmoothPlastic)
+        end
+        local upper=character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or root
+        local us=upper.Size
+        attach(upper,"AllMightChest",Vector3.new(us.X*1.32,us.Y*1.02,us.Z*1.45),CFrame.new(0,us.Y*.06,-us.Z*.08),blue)
+        for _,x in {-1,1} do
+            attach(upper,"AllMightPec",Vector3.new(us.X*.6,us.Y*.42,.32),CFrame.new(x*us.X*.3,us.Y*.2,-us.Z*.82),blue,nil,Enum.PartType.Ball)
+        end
+        attach(upper,"AllMightCollar",Vector3.new(us.X*.7,.16,.12),CFrame.new(0,us.Y*.47,-us.Z*.74),red)
+        attach(upper,"AllMightBelt",Vector3.new(us.X*1.2,.2,us.Z*1.4),CFrame.new(0,-us.Y*.44,-us.Z*.06),white)
+        for _,side in {"Left","Right"} do
+            local x=side=="Left" and -1 or 1
+            local upperArm=character:FindFirstChild(side.."UpperArm") or character:FindFirstChild(side.." Arm")
+            if upperArm then
+                local a=upperArm.Size
+                attach(upperArm,"AllMightDeltoid",Vector3.new(a.X*2,a.X*1.9,a.Z*2),CFrame.new(x*.08,a.Y*.32,0),blue,nil,Enum.PartType.Ball)
+                attach(upperArm,"AllMightBicep",Vector3.new(a.X*1.6,a.Y*.8,a.Z*1.6),CFrame.new(0,-a.Y*.06,-.04),blue,nil,Enum.PartType.Ball)
+                attach(upperArm,"AllMightStripe",Vector3.new(a.X*1.66,.16,a.Z*1.66),CFrame.new(0,-a.Y*.32,0),red)
+            end
+            local lowerArm=character:FindFirstChild(side.."LowerArm")
+            if lowerArm then
+                local a=lowerArm.Size
+                attach(lowerArm,"AllMightForearm",Vector3.new(a.X*1.45,a.Y*.85,a.Z*1.45),CFrame.new(0,a.Y*.08,0),blue,nil,Enum.PartType.Ball)
+                attach(lowerArm,"AllMightCuff",Vector3.new(a.X*1.5,.18,a.Z*1.5),CFrame.new(0,-a.Y*.4,0),white)
+            end
+            local hand=character:FindFirstChild(side.."Hand")
+            if hand then attach(hand,"AllMightGlove",hand.Size*Vector3.new(1.35,1.2,1.35),CFrame.new(0,-.02,0),glove) end
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end
@@ -4674,6 +6638,7 @@ local RS=game:GetService("ReplicatedStorage")
 local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
+local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
@@ -4736,7 +6701,7 @@ end
 local function rayParams(m)
     local p=RaycastParams.new();p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={m};return p
 end
-local function damage(owner,t,amount)
+local function damage(owner,t,amount,kind)
     if not t.m.Parent or t.h.Health<=0 then return end
     local victim=Players:GetPlayerFromCharacter(t.m)
     local victimState=victim and states[victim]
@@ -4749,6 +6714,8 @@ local function damage(owner,t,amount)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then dealt*=.7 end
     local attacker=owner.Character
     if attacker and (attacker:GetAttribute("DoraDamageUntil") or 0)>clock() then dealt*=.7 end
+    -- One For All: buffed basic attacks hit harder, a buffed All Might takes less.
+    dealt*=AllMight.damageFactor(attacker,t.m,kind)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -4766,14 +6733,15 @@ local function updateSpeed(m,h)
         speed*=1-(1-C.Detonation.SlowAtEnd)*progress
     end
     if (m:GetAttribute("PainSpeedUntil") or 0)>n then speed*=m:GetAttribute("PainSpeedFactor") or 1 end
+    speed*=AllMight.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
-    local held=(m:GetAttribute("PainHeldUntil") or 0)>n
+    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=held or (m:GetAttribute("PainNoJumpUntil") or 0)>n
+    local noJump=held or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -4832,6 +6800,7 @@ end
 -- follow a server-simulated arc in the Heartbeat loop; any other unanchored rig takes the velocity directly.
 local function launch(t,velocity)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then return end -- Chibaku Tensei: strong stagger resistance
+    velocity=AllMight.filterKnockback(t.m,velocity);if not velocity then return end -- Plus Ultra guard / One For All
     local victim=Players:GetPlayerFromCharacter(t.m)
     if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
     elseif t.r.Anchored then
@@ -4906,11 +6875,11 @@ local function basicAttack(p,s,m,h,r,direction)
             end
         end
         if nearest then
-            damage(p,nearest,cfg.Damages[combo])
+            damage(p,nearest,cfg.Damages[combo],"Basic")
             if combo==#cfg.Windups then
                 local flat=Vector3.new(direction.X,0,direction.Z)
                 flat=flat.Magnitude>.05 and flat.Unit or Vector3.new(0,0,-1)
-                launch(nearest,flat*cfg.Knockback+Vector3.yAxis*cfg.Lift)
+                launch(nearest,flat*cfg.Knockback*AllMight.knockbackFactor(m)+Vector3.yAxis*cfg.Lift)
             end
             fx:FireAllClients("MeleeHit",{owner=p.UserId,position=nearest.r.Position,combo=combo,kit=kit})
         end
@@ -5269,7 +7238,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
         if skill=="ThunderclapRelease" then releaseThunder(p,s,aim);return end
         local n=clock()
         local m,h,r=character(p);if not m or s.thunderHold or s.busyUntil>n or s.hold or s.slide then return end
-        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n then return end
+        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
         local enhanced=s.charges>0 and s.chargesUntil>n
         if (s.cooldowns.Thunderclap or 0)>n or (not enhanced and s.energy<C.Thunderclap.Cost) then return end
         local hold={start=n,model=m,generation=s.generation,direction=aim.Unit}
@@ -5291,11 +7260,15 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
-    -- Held by Pain (pulled, thrown, sealed): no attacks, dashes or skills until released.
-    if (m:GetAttribute("PainHeldUntil") or 0)>n then return end
+    -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
+    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
     if skill=="Thunderclap" then return end
     if Pain.handles(skill) then
         if kitOf(p)=="Pain" then Pain.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
+        return
+    end
+    if AllMight.handles(skill) then
+        if kitOf(p)=="AllMight" then AllMight.request(p,s,m,h,r,skill,aim.Unit) end
         return
     end
     if skill=="BasicAttack" or skill=="Slide" then
@@ -5406,7 +7379,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p)
     stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -5542,6 +7515,8 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 Pain.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,setTimed=setTimed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,projectiles=projectiles,kitOf=kitOf})
+AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
@@ -5549,7 +7524,7 @@ local function joined(p)
         clearPurpleHover(s);clearDoraFlight(s)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

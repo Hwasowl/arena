@@ -228,6 +228,47 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"PainNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(10,10,14)) end
         end
+    elseif kind=="AllMight" then
+        -- Third-person symbols only: the swept-back blond hair with its two upright tufts, and a hugely built
+        -- upper body in the red/white/blue suit (chest plate, deltoids, upper-arm bulk) with yellow gloves.
+        local gold,goldDeep=Color3.fromRGB(255,220,70),Color3.fromRGB(236,178,40)
+        local blue,red,white,glove=Color3.fromRGB(46,84,196),Color3.fromRGB(206,34,44),Color3.fromRGB(246,246,242),Color3.fromRGB(250,204,40)
+        local hy=head.Size.Y/2
+        attach(head,"AllMightHair",Vector3.new(head.Size.X*1.08,.42,head.Size.Z*1.1),CFrame.new(0,hy-.08,.04),gold,nil,Enum.PartType.Ball)
+        attach(head,"AllMightHairBack",Vector3.new(head.Size.X*1.02,.6,.36),CFrame.new(0,hy-.4,head.Size.Z/2-.02),goldDeep)
+        for _,x in {-1,1} do
+            -- Each tuft: a thick base leaning out and a long thin blade standing almost straight up.
+            local base=CFrame.new(x*.16,hy+.05,-.18)*CFrame.Angles(.12,0,-x*.32)
+            attach(head,"AllMightTuft",Vector3.new(.2,.62,.12),base*CFrame.new(0,.28,0),gold,Enum.Material.SmoothPlastic)
+            attach(head,"AllMightTuft",Vector3.new(.12,.95,.08),base*CFrame.new(0,.62,0)*CFrame.Angles(0,0,x*.12)*CFrame.new(0,.3,0),gold,Enum.Material.SmoothPlastic)
+            attach(head,"AllMightTuftTip",Vector3.new(.06,.3,.05),base*CFrame.new(0,.62,0)*CFrame.Angles(0,0,x*.12)*CFrame.new(0,.85,0),Color3.fromRGB(255,240,150),Enum.Material.SmoothPlastic)
+        end
+        local upper=character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or root
+        local us=upper.Size
+        attach(upper,"AllMightChest",Vector3.new(us.X*1.32,us.Y*1.02,us.Z*1.45),CFrame.new(0,us.Y*.06,-us.Z*.08),blue)
+        for _,x in {-1,1} do
+            attach(upper,"AllMightPec",Vector3.new(us.X*.6,us.Y*.42,.32),CFrame.new(x*us.X*.3,us.Y*.2,-us.Z*.82),blue,nil,Enum.PartType.Ball)
+        end
+        attach(upper,"AllMightCollar",Vector3.new(us.X*.7,.16,.12),CFrame.new(0,us.Y*.47,-us.Z*.74),red)
+        attach(upper,"AllMightBelt",Vector3.new(us.X*1.2,.2,us.Z*1.4),CFrame.new(0,-us.Y*.44,-us.Z*.06),white)
+        for _,side in {"Left","Right"} do
+            local x=side=="Left" and -1 or 1
+            local upperArm=character:FindFirstChild(side.."UpperArm") or character:FindFirstChild(side.." Arm")
+            if upperArm then
+                local a=upperArm.Size
+                attach(upperArm,"AllMightDeltoid",Vector3.new(a.X*2,a.X*1.9,a.Z*2),CFrame.new(x*.08,a.Y*.32,0),blue,nil,Enum.PartType.Ball)
+                attach(upperArm,"AllMightBicep",Vector3.new(a.X*1.6,a.Y*.8,a.Z*1.6),CFrame.new(0,-a.Y*.06,-.04),blue,nil,Enum.PartType.Ball)
+                attach(upperArm,"AllMightStripe",Vector3.new(a.X*1.66,.16,a.Z*1.66),CFrame.new(0,-a.Y*.32,0),red)
+            end
+            local lowerArm=character:FindFirstChild(side.."LowerArm")
+            if lowerArm then
+                local a=lowerArm.Size
+                attach(lowerArm,"AllMightForearm",Vector3.new(a.X*1.45,a.Y*.85,a.Z*1.45),CFrame.new(0,a.Y*.08,0),blue,nil,Enum.PartType.Ball)
+                attach(lowerArm,"AllMightCuff",Vector3.new(a.X*1.5,.18,a.Z*1.5),CFrame.new(0,-a.Y*.4,0),white)
+            end
+            local hand=character:FindFirstChild(side.."Hand")
+            if hand then attach(hand,"AllMightGlove",hand.Size*Vector3.new(1.35,1.2,1.35),CFrame.new(0,-.02,0),glove) end
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end

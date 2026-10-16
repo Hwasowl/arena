@@ -14,6 +14,10 @@ const scripts = {
   PainVFX: 'roblox/src/ReplicatedStorage/PainVFX.luau',
   PainServer: 'roblox/src/ServerScriptService/PainServer.luau',
   PainClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/PainClient.luau',
+  AllMightConfig: 'roblox/src/ReplicatedStorage/AllMightConfig.luau',
+  AllMightVFX: 'roblox/src/ReplicatedStorage/AllMightVFX.luau',
+  AllMightServer: 'roblox/src/ServerScriptService/AllMightServer.luau',
+  AllMightClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/AllMightClient.luau',
 };
 // Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
 // Locate each script's own Properties first so property order cannot mix sources between scripts.
