@@ -1,6 +1,6 @@
 # INFINITY — 프로젝트 가이드
 
-Roblox 1인칭 능력 아레나 프로토타입(고죠 · 젠이츠 · 레제)과 Three.js 브라우저 프리뷰. 캐릭터를 계속 추가할 예정이므로, 아래 **요구 방식과 디테일 기준**을 새 캐릭터에도 그대로 적용한다.
+Roblox 1인칭 능력 아레나 프로토타입(고죠 · 젠이츠 · 레제 · 샹크스 · 도라에몽 · 페인)과 Three.js 브라우저 프리뷰. 캐릭터를 계속 추가할 예정이므로, 아래 **요구 방식과 디테일 기준**을 새 캐릭터에도 그대로 적용한다.
 
 ## 가장 중요한 원칙: 화면에서 어떻게 보이고 느껴지는가
 
@@ -37,7 +37,8 @@ Roblox 1인칭 능력 아레나 프로토타입(고죠 · 젠이츠 · 레제)�
 - `roblox/src/ServerScriptService/Combat.server.luau` — 서버 판정(에너지·쿨타임·피해·넉백·상태). 모든 전투 판정은 서버에서 한다.
 - `roblox/src/ServerScriptService/Arena.server.luau` — 경기장, 훈련 표적, 캐릭터별 상징 부위(`outfit`).
 - `roblox/src/StarterPlayer/StarterPlayerScripts/Gojo.client.luau` — 모든 캐릭터 공용 1인칭 뷰모델·HUD·카메라·VFX. 캐릭터는 플레이어 속성 `Character`로 구분.
-- `preview/` — 브라우저 프리뷰 소스(`app.js`가 거의 전부). `Gojo-preview.html`은 이를 단일 파일로 번들한 결과물.
+- 천도 페인은 모듈로 분리했다: `PainAbilityConfig`(수치), `PainServer`(Combat이 require하는 판정 모듈, 상태는 Combat의 `states`를 공유), `PainVFX`·`PainClient`(Gojo.client가 require). 피해자 제어는 캐릭터 속성 `PainHeldUntil`·`PainSpeedUntil`·`PainSealedUntil` 등으로 한다.
+- `preview/` — 브라우저 프리뷰 소스(`app.js`가 거의 전부). `Gojo-preview.html`은 이를 단일 파일로 번들한 결과물. 페인은 `preview/pain.js`(`window.PainPreview(api)`)로 분리했고 `build-preview.cjs`가 함께 인라인한다. 프리뷰 거리는 Roblox 스터드의 0.6배.
 - `InfinityArena-Gojo.rbxlx` — Studio용. 스크립트 소스를 CDATA로 포함한다.
 
 ## 작업 절차
@@ -51,7 +52,7 @@ node tools/build-preview.cjs . Gojo-preview.html                               #
 node tools/serve-test.cjs                                                      # 127.0.0.1:4599 에서 번들 서빙 + 캡처 저장
 ```
 
-- 프리뷰는 `?char=gojo|zenitsu|reze#debug`로 열면 `window.__lab`(pause/step/shot/setYaw/startSkill 등)이 노출된다. 탭이 숨겨지면 requestAnimationFrame이 멈추므로 `pause(true)` + `step(n)` + `shot()`(캔버스 캡처를 `POST /shot?name=`으로 저장)으로 프레임을 확인한다.
+- 프리뷰는 `?char=gojo|zenitsu|reze|shanks|doraemon|pain#debug`로 열면 `window.__lab`(pause/step/shot/setYaw/startSkill 등)이 노출된다. 탭이 숨겨지면 requestAnimationFrame이 멈추므로 `pause(true)` + `step(n)` + `shot()`(캔버스 캡처를 `POST /shot?name=`으로 저장)으로 프레임을 확인한다.
 - 연출은 **프레임 캡처를 직접 보고** 판단한다. 숫자만 맞추지 않는다.
 - 프로젝트 파일은 CRLF다. 스크립트로 수정할 때 개행을 유지한다.
 - 아티팩트용 번들은 `data:` URL과 모듈 import 없이 단일 HTML이어야 한다(`build-preview.cjs`가 처리).

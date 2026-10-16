@@ -18,6 +18,9 @@ const link = '<link rel="stylesheet" href="style.css">', tag = '<script type="mo
 const assetTag = '<script src="skill-assets.js"></script>';
 if (!html.includes(assetTag)) throw new Error('skill asset marker missing');
 html = html.replace(assetTag, () => '<script>\n' + esc(p('skill-assets.js')) + '\n</script>');
+const painTag = '<script src="pain.js"></script>';
+if (!html.includes(painTag)) throw new Error('pain.js marker missing');
+html = html.replace(painTag, () => '<script>\n' + esc(p('pain.js')) + '\n</script>');
 if (!html.includes(link) || !html.includes(tag)) throw new Error('index.html markers missing');
 html = html.replace(link, () => '<style>' + p('style.css') + '</style>').replace(tag, () => script).replace('<head>', () => '<head>\n' + license);
 for (const out of outs) fs.writeFileSync(out, html.replace(/\r?\n/g, '\r\n'));

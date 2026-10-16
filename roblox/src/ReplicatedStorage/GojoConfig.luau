@@ -14,6 +14,8 @@ return {
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
         Shanks = { "Haki", "EnGarde", "DivineDeparture", "Dash" },
         Doraemon = { "Pocket", "BambooCopter", "AnywhereDoor", "Dash" },
+        -- Tendo Pain: tuning and judgement live in PainAbilityConfig / PainServer.
+        Pain = { "ShinraTensei", "BanshoTenin", "ChibakuTensei", "Dash" },
     },
     Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
