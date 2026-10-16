@@ -98,6 +98,8 @@ local cast=nil
 local melee=nil
 local sliding=nil
 local attackQueued=false
+local thunderCharging=false
+local thunderChargeStart=0
 local enGardeUntil=0
 local bodyMoves={}
 local commonViewOffset=CFrame.identity
@@ -110,8 +112,12 @@ local CHIN_DIP=math.rad(7)
 local holdState=nil
 local slideUntil=0
 local drawnUntil,fovKickUntil=0,0
+local zenBasicUntil,zenGuardSign,zenSheathPlayed=0,1,true
 local rezeLookUntil,rezeAirUntil=0,0
 local blueOrbs,shots,activeEffects={},{},{}
+local domainViews={}
+-- Replace these built-in fallbacks with the uploaded gojo_domain_inside/end/break AssetIds.
+local DOMAIN_SOUND_IDS={Inside="rbxasset://sounds/action_falling.mp3",End="rbxasset://sounds/electronicpingshort.mp3",Break="rbxasset://sounds/impact_generic.mp3"}
 local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
 local clock=workspace.GetServerTimeNow
 local function time() return clock(workspace) end
@@ -119,7 +125,7 @@ local KITS={
     Gojo={title="五条 悟  ·  고죠 사토루",energy="CURSED ENERGY",hint="Q / E 3초 대기 · 그 안에 다른 쪽 = 무라사키 · 같은 키 = 즉시 발사   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
         handScale=1,
         slots={{"Blue","Q","아오"},{"Red","E","아카"},{"Domain","R","영역전개"},{"Dash","SHIFT","대시"}}},
-    Zenitsu={title="我妻 善逸  ·  아가츠마 젠이츠",energy="BREATH",hint="Q → E  전집중 후 벽력일섬 즉시 ×3   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
+    Zenitsu={title="我妻 善逸  ·  아가츠마 젠이츠",energy="BREATH",hint="E 누르기 10~40칸 · Q 후 E를 각각 충전해 연속 3회   /   SHIFT 대시",
         handScale=1,
         slots={{"Breath","Q","전집중 호흡"},{"Thunderclap","E","벽력일섬"},{"FlameGod","R","화뢰신"},{"Dash","SHIFT","대시"}}},
     Reze={title="レゼ  ·  레제",energy="GUNPOWDER",hint="Q 0.4초 웅크려 상승 → 공중 Q 재입력 내려찍기 · E 오른손 폭발 · R 퓨즈 대폭발   /   SHIFT 대시   /   1 · 2 · 3 캐릭터",
@@ -152,7 +158,9 @@ local function sound(id,position,volume,speed,duration)
     Debris:AddItem(holder,duration or 3)
 end
 local function temporary(seconds,update,cleanup)
-    table.insert(activeEffects,{start=time(),duration=seconds,update=update,cleanup=cleanup})
+    local effect={start=time(),duration=seconds,update=update,cleanup=cleanup}
+    table.insert(activeEffects,effect)
+    return effect
 end
 -- Pose the visible avatar on every client as well as the local first-person arms.
 local function bodyMotion(data,isSlide)
@@ -188,7 +196,7 @@ local function bodyMotion(data,isSlide)
             local offset=CFrame.identity
             if j.limb=="Torso" or j.limb=="LowerTorso" then
                 offset=isSlide and CFrame.new(0,-.45*power,0)*CFrame.Angles(-.3*power,0,.08*power)
-                    or CFrame.Angles(0,(data.combo==2 and -1 or 1)*.18*power,0)
+                    or CFrame.Angles(0,(data.combo%2==0 and -1 or 1)*.18*power,0)
             elseif string.find(j.limb,"Leg") then
                 if isSlide then offset=CFrame.Angles((string.find(j.limb,"Left") and -.7 or .9)*power,0,0) end
             else
@@ -196,8 +204,9 @@ local function bodyMotion(data,isSlide)
                 if isSlide then offset=CFrame.Angles(-.35*power,0,(leftArm and -.2 or .2)*power)
                 elseif data.kit=="Zenitsu" then
                     if not leftArm then
-                        local sign=data.combo==2 and -1 or 1
-                        offset=CFrame.Angles(-.9*wind*(1-recovery),sign*(.65*wind-1.3*strike)*(1-recovery),-sign*.5*strike*(1-recovery))
+                        local sign=data.combo%2==0 and -1 or 1
+                        local draw=data.draw and smoothstep(age/.34) or 1
+                        offset=CFrame.Angles(-(.45*draw+.45*wind)*(1-recovery),sign*(.55*wind-1.1*strike)*(1-recovery),-sign*.42*strike*(1-recovery))
                     end
                 elseif leftArm==(data.combo==2) then offset=CFrame.Angles((-1.2*strike+.25*wind)*(1-recovery),0,(leftArm and -.3 or .3)*power) end
             end
@@ -616,7 +625,15 @@ for i=1,4 do
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,10);corner.Parent=b
     local stroke=Instance.new("UIStroke");stroke.Thickness=1;stroke.Parent=b
     local entry={b=b,stroke=stroke};buttons[i]=entry
-    b.Activated:Connect(function() if entry.skill then if current()=="Shanks" and entry.skill=="EnGarde" then enGardeUntil=time()+C.EnGarde.Window end;action:FireServer(entry.skill,camera.CFrame.LookVector,camera.CFrame.Position) end end)
+    b.Activated:Connect(function() if entry.skill then
+        if current()=="Zenitsu" and entry.skill=="Thunderclap" then
+            action:FireServer("ThunderclapStart",camera.CFrame.LookVector,camera.CFrame.Position)
+            task.delay(.1,function() action:FireServer("ThunderclapRelease",camera.CFrame.LookVector,camera.CFrame.Position) end)
+            return
+        end
+        if current()=="Shanks" and entry.skill=="EnGarde" then enGardeUntil=time()+C.EnGarde.Window end
+        action:FireServer(entry.skill,camera.CFrame.LookVector,camera.CFrame.Position)
+    end end)
 end
 local comboLabel=label(gui,"",26,UDim2.fromScale(.5,.62),UDim2.fromOffset(420,40),Color3.fromRGB(255,224,176));comboLabel.AnchorPoint=Vector2.new(.5,.5)
 comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;comboLabel.TextStrokeColor3=Color3.fromRGB(255,122,46)
@@ -654,7 +671,7 @@ local function applyKit()
         h.scale=kit.handScale
     end
     clearCastVFX();finishFlameTurn()
-    cast=nil;holdState=nil;melee=nil;sliding=nil;attackQueued=false;drawnUntil=0;blackout.BackgroundTransparency=1;enGardeUntil=0
+    cast=nil;holdState=nil;melee=nil;sliding=nil;attackQueued=false;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1;enGardeUntil=0
 end
 applyKit()
 player:GetAttributeChangedSignal("Character"):Connect(applyKit)
@@ -690,7 +707,24 @@ UIS.InputBegan:Connect(function(input,processed)
     local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
-    if slot then if current()=="Shanks" and slot==2 then enGardeUntil=time()+C.EnGarde.Window end;action:FireServer(buttons[slot].skill,camera.CFrame.LookVector,camera.CFrame.Position) end
+    if slot then
+        if current()=="Zenitsu" and slot==2 then
+            local ready=(state.charges or 0)>0 and (state.chargesUntil or 0)>time()
+            if not thunderCharging and not cast and not melee and not sliding and (state.cooldowns.Thunderclap or 0)<=time() and (ready or state.energy>=C.Thunderclap.Cost) then
+                thunderCharging=true;thunderChargeStart=time()
+                action:FireServer("ThunderclapStart",camera.CFrame.LookVector,camera.CFrame.Position)
+            end
+            return
+        end
+        if current()=="Shanks" and slot==2 then enGardeUntil=time()+C.EnGarde.Window end
+        action:FireServer(buttons[slot].skill,camera.CFrame.LookVector,camera.CFrame.Position)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.KeyCode==Enum.KeyCode.E and thunderCharging then
+        thunderCharging=false
+        action:FireServer("ThunderclapRelease",camera.CFrame.LookVector,camera.CFrame.Position)
+    end
 end)
 action.OnClientEvent:Connect(function(s) state=s end)
 UIS.JumpRequest:Connect(function()
@@ -700,7 +734,15 @@ end)
 event.OnClientEvent:Connect(function(kind,data)
     if kind=="BasicAttack" then
         bodyMotion(data,false)
-        if data.owner==player.UserId then melee=data;attackQueued=false end
+        if data.owner==player.UserId then
+            melee=data;attackQueued=false
+            if data.kit=="Zenitsu" then
+                zenBasicUntil=data.start+data.duration+C.ZenBasicAttack.ComboReset
+                zenGuardSign=data.combo%2==1 and -1 or 1
+                zenSheathPlayed=false
+            end
+        end
+        if data.kit=="Zenitsu" and data.draw then sound("rbxasset://sounds/swordunsheath.wav",data.position,.4,.8,.8) end
         task.delay(math.max(0,data.start+data.windup-time()),function()
             local owner=Players:GetPlayerByUserId(data.owner);local root=owner and owner.Character and owner.Character:FindFirstChild("HumanoidRootPart")
             if not root then return end
@@ -714,7 +756,7 @@ event.OnClientEvent:Connect(function(kind,data)
         end)
     elseif kind=="MeleeHit" then
         burst(data.position,Color3.fromRGB(235,243,250),1.4)
-        sound("rbxasset://sounds/swordlunge.wav",data.position,.5,data.combo==3 and .6 or .85,.8)
+        sound("rbxasset://sounds/swordlunge.wav",data.position,.5,((data.kit=="Zenitsu" and data.combo==4) or (data.kit~="Zenitsu" and data.combo==3)) and .6 or .85,.8)
         if data.owner==player.UserId then
             if melee then melee.hitUntil=time()+.065;melee.hitAge=melee.windup+melee.swing*.6 end
             cross.Text="×";task.delay(.15,function() cross.Text="+" end)
@@ -789,7 +831,7 @@ event.OnClientEvent:Connect(function(kind,data)
         if data.owner==player.UserId then
             holdState=nil;clearCastVFX()
             local length=data.windup or C[data.kind].Windup or .2
-            cast={kind=data.kind,start=(data.kind=="Purple" or DORA_KINDS[data.kind]) and data.start or time(),direction=data.direction,length=length,phase=data.phase,orbs={},hold=data.kind=="Purple" and C.Purple.Recovery or data.kind=="Kick" and .32 or DORA_KINDS[data.kind] and (C[data.kind].Recovery or .35) or .15}
+            cast={kind=data.kind,start=(data.kind=="Purple" or DORA_KINDS[data.kind]) and data.start or time(),direction=data.direction,length=length,phase=data.phase,orbs={},hold=data.kind=="Purple" and C.Purple.Recovery or data.kind=="Thunderclap" and .45 or data.kind=="Kick" and .32 or DORA_KINDS[data.kind] and (C[data.kind].Recovery or .35) or .15}
             if data.kind=="Purple" then
                 local cfg=C.Purple
                 cast.orbs={orb((camera.CFrame*CFrame.new(-2.2,.1,-cfg.OrbDistance)).Position,C.Colors.Blue,cfg.ChargeRadius),orb((camera.CFrame*CFrame.new(2.2,.1,-cfg.OrbDistance)).Position,C.Colors.Red,cfg.ChargeRadius)}
@@ -799,8 +841,8 @@ event.OnClientEvent:Connect(function(kind,data)
             elseif data.kind=="Domain" then announce("領域展開","무량공처 · UNLIMITED VOID")
             elseif data.kind=="Blue" then announce("術式順転 • 蒼","아오 · 인력")
             elseif data.kind=="Red" then announce("術式反転 • 赫","아카 · 척력")
-            elseif data.kind=="Thunderclap" then announce("雷の呼吸 • 壱ノ型",length>.1 and "벽력일섬 · 자세를 낮춘다" or "벽력일섬 · 즉시 발동")
-            elseif data.kind=="Breath" then announce("全集中の呼吸","전집중 호흡 · 이후 벽력일섬 즉시 ×"..C.Breath.Charges)
+            elseif data.kind=="Thunderclap" then thunderCharging=false;announce("雷の呼吸 • 壱ノ型",string.format("벽력일섬 · %.0f칸 · 각 발도마다 충전",C.Thunderclap.MinDistance+(C.Thunderclap.Distance-C.Thunderclap.MinDistance)*(data.charge or 0)/C.Thunderclap.MaxCharge))
+            elseif data.kind=="Breath" then announce("全集中の呼吸","전집중 호흡 · 벽력일섬 연속 3회 · E를 매번 충전")
             elseif data.kind=="FlameGod" then announce("雷の呼吸 • 漆ノ型","화뢰신 · 火雷神 · 벽력일섬을 초월한 발도")
             elseif data.kind=="BombDevil" then announce("レゼ","쵸커의 핀을 당긴다")
             elseif data.kind=="Kick" then announce("爆弾の悪魔","오른손을 뻗고 0.8초 뒤 전방 폭발")
@@ -811,11 +853,37 @@ event.OnClientEvent:Connect(function(kind,data)
         else
             if data.kind=="Purple" then showPurpleCharge(data) else burst(data.position,colorOf(data.kind),3) end
         end
+    elseif kind=="ThunderCharge" then
+        if data.owner==player.UserId then
+            thunderChargeStart=data.start
+            announce("雷の呼吸 • 壱ノ型","E를 놓으면 발도 · 길게 누를수록 10 → 40칸")
+        end
     elseif kind=="Thunderclap" then
         local below=Vector3.new(0,-2.4,0)
         bolt(data.from+below,data.to+below,C.Colors.Thunder,.5,.6)
         bolt(data.from+below*.4,data.to+below*1.1,Color3.fromRGB(255,244,196),.22,.45)
         burst(data.from,C.Colors.Thunder,5);burst(data.to,C.Colors.Thunder,4)
+        local travel=data.to-data.from
+        local heading=travel.Magnitude>.05 and travel.Unit or Vector3.new(0,0,-1)
+        for _,fraction in {.22,.75} do
+            local at=data.from:Lerp(data.to,fraction)
+            skyStrike(at+below,false)
+            local center=at+Vector3.new(0,-1.25,0)
+            local frame=CFrame.lookAt(center,center+heading)
+            for _,piece in {
+                {Vector3.new(1.15,1.25,.45),Vector3.new(0,0,0),Enum.PartType.Block},
+                {Vector3.one*.58,Vector3.new(0,1,0),Enum.PartType.Ball},
+                {Vector3.new(.25,1.05,.3),Vector3.new(-.78,.03,0),Enum.PartType.Block},
+                {Vector3.new(.25,1.05,.3),Vector3.new(.78,.03,0),Enum.PartType.Block},
+                {Vector3.new(.32,1.05,.34),Vector3.new(-.32,-1.1,0),Enum.PartType.Block},
+                {Vector3.new(.32,1.05,.34),Vector3.new(.32,-1.1,0),Enum.PartType.Block},
+            } do
+                local ghost=part(effects,"ThunderAfterimage",piece[1],Color3.fromRGB(255,237,130),frame*CFrame.new(piece[2]),piece[3])
+                ghost.Material=Enum.Material.Neon;ghost.Transparency=.68;ghost.CanCollide=false
+                tween(ghost,.72,{Transparency=1});Debris:AddItem(ghost,.75)
+            end
+        end
+        sound("rbxasset://sounds/electronicpingshort.mp3",data.from,.52,1.5,.65)
         if data.owner==player.UserId then drawnUntil=time()+.4;fovKickUntil=time()+.25;blur.Size=18 end
     elseif kind=="Strike" then
         skyStrike(data.position,data.big)
@@ -991,16 +1059,39 @@ event.OnClientEvent:Connect(function(kind,data)
             table.insert(stars,p)
         end
         burst(center,Color3.fromRGB(187,219,255),r)
-        temporary(data.duration,function(age)
+        local ambience=Instance.new("Sound")
+        ambience.Name="UnlimitedVoidInside";ambience.SoundId=DOMAIN_SOUND_IDS.Inside
+        ambience.Looped=true;ambience.Volume=.12;ambience.PlaybackSpeed=.62;ambience.Parent=camera
+        local cleaned=false
+        local effect=temporary(data.duration,function(age)
             local inside=(camera.CFrame.Position-center).Magnitude<r
+            if inside and not ambience.IsPlaying then ambience:Play() elseif not inside and ambience.IsPlaying then ambience:Stop() end
             for _,wall in backdrop do wall.Transparency=inside and 0 or 1 end
             dome.CFrame=CFrame.new(center)*CFrame.Angles(0,age*.035,0)
             for i,p in stars do p.Transparency=.25+math.sin(age*2+i)*.23 end
         end,function()
+            if cleaned then return end
+            cleaned=true
+            ambience:Stop();ambience:Destroy()
             for _,wall in backdrop do wall:Destroy() end
             tween(dome,.6,{Transparency=1});Debris:AddItem(dome,.7)
             for _,p in stars do tween(p,.5,{Transparency=1});Debris:AddItem(p,.6) end
+            domainViews[data.id]=nil
         end)
+        domainViews[data.id]={effect=effect}
+    elseif kind=="DomainEnd" then
+        local view=domainViews[data.id]
+        if view then
+            view.effect.cleanup()
+            view.effect.cleanup=function() end
+            view.effect.duration=-1
+            domainViews[data.id]=nil
+        end
+        local broken=data.reason=="shattered"
+        sound(broken and DOMAIN_SOUND_IDS.Break or DOMAIN_SOUND_IDS.End,data.position,broken and .8 or .55,broken and .85 or .55,1.2)
+        if broken and data.owner==player.UserId then announce("領域崩壊","영역이 깨졌다 · 더 늦게 펼친 영역이 승리") end
+    elseif kind=="DomainClashLost" then
+        sound(DOMAIN_SOUND_IDS.Break,data.position,.6,.8,1)
     end
 end)
 
@@ -1031,9 +1122,23 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local doraFrame=neckFrame
     local l=CFrame.new(-.64,-.78,-1.15)*CFrame.Angles(.12,.08,-.08)
     local r=CFrame.new(.64,-.78,-1.15)*CFrame.Angles(.12,-.08,.08)
-    local swordPos,swordDir=Vector3.new(-.05,-.5+bob,-1.12),Vector3.new(.8,.25,-.55).Unit
+    local swordPos,swordDir=Vector3.new(-.55,-.67+bob,-.96),Vector3.new(.88,.2,-.43).Unit
     local push,lean=0,0
     local desiredFov=72;blur.Size=math.max(0,blur.Size-dt*24)
+    if zen and thunderCharging and not cast then
+        local charge=math.clamp((n-thunderChargeStart)/C.Thunderclap.MaxCharge,0,1)
+        lean=.65+.35*charge
+        swordPos+=Vector3.new(0,-.08,.12)*lean
+        desiredFov=72-8*charge
+        blur.Size=math.max(blur.Size,2+charge*4)
+        if math.random()<dt*(12+charge*20) then
+            local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local foot=root.Position+root.CFrame.LookVector*2+Vector3.new((math.random()-.5)*2,-2.8,(math.random()-.5)*2)
+                bolt(foot,foot+Vector3.new(0,.8+math.random(),0),C.Colors.Thunder,.055,.13)
+            end
+        end
+    end
     local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
     dora.show(dora.pocket,isDora and h and h.Health>0)
     local transformed=reze and m and (m:GetAttribute("BombDevilUntil") or 0)>n
@@ -1263,19 +1368,25 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         local a=(melee.hitUntil and n<melee.hitUntil) and melee.hitAge or n-melee.start
         local wind=smoothstep(a/melee.windup);local strike=smoothstep((a-melee.windup)/melee.swing)
         local recovery=smoothstep((a-melee.windup-melee.swing)/(melee.duration-melee.windup-melee.swing))
-        local sign=melee.combo==2 and -1 or 1
+        local sign=melee.combo%2==0 and -1 or 1
         local guard=CFrame.new(sign*.5,-.38,-.8)*CFrame.Angles(.1,-sign*.2,sign*.12)
         local prep=CFrame.new(sign*.7,melee.combo==3 and -.75 or -.34,-.48)*CFrame.Angles(.3,-sign*.5,sign*.25)
         local contact=CFrame.new(sign*.06,melee.combo==3 and -.06 or -.24,-1.52)*CFrame.Angles(-.2,0,-sign*.12)
         local fist=guard:Lerp(prep,wind):Lerp(contact,strike):Lerp(guard,recovery)
-        if melee.combo==2 then l=fist;r=CFrame.new(.48,-.4,-.8) else r=fist;l=CFrame.new(-.48,-.4,-.8) end
+        if not zen then
+            if melee.combo==2 then l=fist;r=CFrame.new(.48,-.4,-.8) else r=fist;l=CFrame.new(-.48,-.4,-.8) end
+        end
         commonLook(CFrame.Angles(-.03*strike*(1-recovery),sign*(-.04*wind+.09*strike)*(1-recovery),-sign*.045*strike*(1-recovery)))
         desiredFov=72-2*wind+6*strike*(1-recovery)
         if zen then
-            local from=Vector3.new(sign*.6,-.2,-.7);local to=Vector3.new(-sign*.7,-.32,-1.05)
-            swordPos=Vector3.new(-.4,-.64,-.92)
-            melee.hiltAt=from:Lerp(to,strike):Lerp(Vector3.new(-.05,-.5,-1.12),recovery)
-            melee.bladeDir=Vector3.new(-sign*.75,.12,-.65):Lerp(Vector3.new(sign*.75,-.25,-.6),strike):Lerp(-swordDir,recovery).Unit
+            local draw=melee.draw and smoothstep(a/.38) or 1
+            local from=Vector3.new(sign*.62,-.27,-.76)
+            local to=Vector3.new(-sign*.68,-.31,-1.02)
+            melee.hiltAt=(melee.draw and swordPos:Lerp(from,draw) or from):Lerp(to,strike)
+            melee.bladeDir=(melee.draw and (-swordDir):Lerp(Vector3.new(-sign*.96,.16,-.26),draw) or Vector3.new(-sign*.96,.16,-.26)):Lerp(Vector3.new(sign*.96,-.22,-.26),strike).Unit
+            melee.drawProgress=draw
+            r=armFrame(melee.hiltAt,RIGHT_UP)
+            l=armFrame(swordPos+Vector3.new(0,0,-.22),LEFT_UP)
         end
         if n-melee.start>=melee.duration then
             melee=nil
@@ -1299,7 +1410,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     camera.FieldOfView+=(desiredFov-camera.FieldOfView)*math.min(1,dt*8)
     local width=camera.ViewportSize.X;scale.Scale=math.min(1,(width-28)/480)
     local handScale=math.min(1,camera.ViewportSize.X/camera.ViewportSize.Y)
-    local drawn=n<drawnUntil or (zen and melee~=nil)
+    local zenIdleDraw=zen and not melee and not cast and not thunderCharging and not sliding and zenBasicUntil>0 and n<zenBasicUntil+C.ZenBasicAttack.Sheath
+    local drawn=n<drawnUntil or (zen and (melee~=nil or zenIdleDraw))
+    local bladeFraction=shanks and 1 or (zen and melee and melee.drawProgress) or (zenIdleDraw and (n<zenBasicUntil and 1 or 1-smoothstep((n-zenBasicUntil)/C.ZenBasicAttack.Sheath))) or (drawn and 1 or 0)
     local alive=h and h.Health>0
     local posed=zen or shanks or cast~=nil or melee~=nil or sliding~=nil or holdHand~=nil
     local leftFrame,rightFrame=l,r
@@ -1311,8 +1424,29 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if drawn or shanks then
             local at=Vector3.new(.32*handScale,-.38,-.92);hilt=CFrame.lookAt(at,at-Vector3.new(-.75,.06,-.66))
         end
+        if zenIdleDraw then
+            local guardAt=Vector3.new(zenGuardSign*.62,-.31,-.94)
+            local guardDir=Vector3.new(-zenGuardSign*.96,-.22,-.26).Unit
+            local sheathe=n<zenBasicUntil and 0 or smoothstep((n-zenBasicUntil)/C.ZenBasicAttack.Sheath)
+            local at=guardAt:Lerp(swordPos,sheathe)
+            local dir=guardDir:Lerp(-swordDir,sheathe).Unit
+            hilt=CFrame.lookAt(at,at-dir)
+            if sheathe>0 and not zenSheathPlayed then
+                zenSheathPlayed=true
+                local root=m and m:FindFirstChild("HumanoidRootPart")
+                if root then sound("rbxasset://sounds/swordunsheath.wav",root.Position,.32,.65,.7) end
+            end
+        end
         if melee and melee.hiltAt then hilt=CFrame.lookAt(melee.hiltAt,melee.hiltAt-melee.bladeDir) end
         place(katana.saya,sword);place(katana.hilt,hilt)
+        if zen and not shanks then
+            for _,entry in katana.hilt do
+                if entry.drawnOnly then
+                    entry.p.Size=Vector3.new(entry.size.X,entry.size.Y,math.max(.01,entry.size.Z*bladeFraction))
+                    entry.p.CFrame=camera.CFrame*hilt*CFrame.new(0,entry.offset.Position.Y,.04+entry.size.Z*bladeFraction*.5)
+                end
+            end
+        end
         for _,entry in katana.hilt do entry.p.Transparency=(shanks and entry.p.Name~="Blade" and entry.p.Name~="Edge") and 1 or 0 end
         for _,entry in katana.saya do entry.p.Transparency=shanks and 1 or 0 end
         if shanks then for _,entry in katana.hilt do if entry.p.Name=="Edge" then entry.p.Color=C.Colors.Haki end end end
@@ -1373,9 +1507,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     local slideCooldown=math.max(0,(state.cooldowns.Slide or 0)-n)
     slideButton.Text=sliding and "슬라이딩 중" or slideCooldown>0 and string.format("CTRL  %.1f",slideCooldown) or "CTRL  슬라이딩"
     slideButton.BackgroundTransparency=slideCooldown>0 and .5 or .12
-    attackButton.Text=melee and string.format("%d / 3  %s",melee.combo,attackQueued and "연계 대기" or "기본공격") or "M1  기본공격"
+    attackButton.Text=melee and string.format("%d / %d  %s",melee.combo,zen and 4 or 3,attackQueued and "연계 대기" or "기본공격") or "M1  기본공격"
     for _,entry in buttons do
-        local cooldown=(entry.skill=="Thunderclap" and charged) and 0 or math.max(0,(state.cooldowns[entry.skill] or 0)-n)
+        local cooldown=math.max(0,(state.cooldowns[entry.skill] or 0)-n)
         if entry.skill=="Dash" and slowed>0 then cooldown=math.max(cooldown,slowed) end
         local text=entry.name
         local held=state.holdKind or ""
@@ -1383,7 +1517,9 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if held~="" and (entry.skill=="Blue" or entry.skill=="Red") then
             if entry.skill==held then text=entry.name.." 발사";cooldown=0 else text="무라사키" end
         end
-        if entry.skill=="Thunderclap" and charged then text=string.format("벽력일섬 ×%d",state.charges) end
+        if entry.skill=="Thunderclap" then
+            text=thunderCharging and string.format("발도 대기  %.0f칸",C.Thunderclap.MinDistance+(C.Thunderclap.Distance-C.Thunderclap.MinDistance)*math.clamp((n-thunderChargeStart)/C.Thunderclap.MaxCharge,0,1)) or charged and string.format("벽력일섬  %d회 남음",state.charges) or "벽력일섬 · 길게 누르기"
+        end
         if entry.skill=="Rampage" and transformed then
             local ready=rezeAirUntil-n
             text=ready>0 and string.format("Q  내려찍기  %.1f",ready) or "Q  상승 폭발"
@@ -1414,10 +1550,10 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         or string.format("%s   %d%%",KITS[current()].energy,state.energy)
     local alive=h and h.Health>0
     for _,entry in katana.saya do entry.p.Transparency=(alive and zen) and 0 or 1 end
-    for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and (drawn or shanks or not entry.drawnOnly)) and 0 or 1 end
+    for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
     clearCastVFX()
     finishFlameTurn()
-    dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;blackout.BackgroundTransparency=1
+    dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)

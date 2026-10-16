@@ -8,6 +8,7 @@ local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
 local aimRemote=Instance.new("RemoteEvent");aimRemote.Name="GojoAim";aimRemote.Parent=RS
 local states, blues, projectiles, domains, flights={},{},{},{},{}
+local domainCastOrder=0
 local doraScales,doraKnockbacks={},{}
 local kits={}
 for name,list in C.Kits do kits[name]={};for _,skill in list do kits[name][skill]=true end end
@@ -162,12 +163,30 @@ local function outward(from,t,fallback)
     return delta.Magnitude>.1 and delta.Unit or fallback
 end
 local function devil(m) return (m:GetAttribute("BombDevilUntil") or 0)>clock() end
-local function delayed(p,s,m,delaySeconds,callback)
+local function delayed(p,s,m,delaySeconds,callback,allowDomainClash)
     local generation=s.generation
     task.delay(delaySeconds,function()
         local current=character(p)
-        if states[p]==s and generation==s.generation and current==m and (m:GetAttribute("DomainLockedUntil") or 0)<=clock() then callback() end
+        if states[p]==s and generation==s.generation and current==m and (allowDomainClash or (m:GetAttribute("DomainLockedUntil") or 0)<=clock()) then callback() end
     end)
+end
+local function endDomain(d,reason)
+    for i=#domains,1,-1 do if domains[i]==d then table.remove(domains,i);break end end
+    for _,t in d.captured do
+        if t.m.Parent and t.m:GetAttribute("DomainLockId")==d.id then
+            t.m:SetAttribute("DomainLockId",nil)
+            t.m:SetAttribute("DomainLockedUntil",0)
+        end
+    end
+    fx:FireAllClients("DomainEnd",{id=d.id,owner=d.owner.UserId,position=d.center,radius=C.Domain.Radius,reason=reason})
+end
+local function canCounterDomain(m,n)
+    for _,d in domains do
+        if n-d.activatedAt<=C.Domain.ClashWindow then
+            for _,t in d.captured do if t.m==m then return true end end
+        end
+    end
+    return false
 end
 -- Starts a technique whose cost and cooldown are already paid: windup, busy time, the Cast broadcast, then the effect.
 local function stopSlide(p,s)
@@ -187,11 +206,13 @@ local function stopSlide(p,s)
     fx:FireAllClients("SlideEnd",{owner=p.UserId})
 end
 local function basicAttack(p,s,m,h,r,direction)
-    local cfg=C.BasicAttack;local n=clock()
-    local combo=(s.basicUntil or 0)>n and (s.basicCombo or 0)%3+1 or 1
+    local kit=kitOf(p)
+    local cfg=kit=="Zenitsu" and C.ZenBasicAttack or C.BasicAttack;local n=clock()
+    local chained=(s.basicUntil or 0)>n
+    local combo=chained and (s.basicCombo or 0)%#cfg.Windups+1 or 1
     local windup=cfg.Windups[combo];local duration=windup+cfg.Swing+cfg.Recoveries[combo]
     s.basicCombo=combo;s.basicUntil=n+duration+cfg.ComboReset;s.busyUntil=n+duration
-    fx:FireAllClients("BasicAttack",{owner=p.UserId,kit=kitOf(p),combo=combo,start=n,windup=windup,swing=cfg.Swing,duration=duration,position=r.Position,direction=direction})
+    fx:FireAllClients("BasicAttack",{owner=p.UserId,kit=kit,combo=combo,draw=kit=="Zenitsu" and not chained,start=n,windup=windup,swing=cfg.Swing,duration=duration,position=r.Position,direction=direction})
     delayed(p,s,m,windup+cfg.Swing*.5,function()
         if (m:GetAttribute("RootedUntil") or 0)>clock() then return end
         local origin=r.Position+Vector3.yAxis*.5
@@ -205,12 +226,12 @@ local function basicAttack(p,s,m,h,r,direction)
         end
         if nearest then
             damage(p,nearest,cfg.Damages[combo])
-            if combo==3 then
+            if combo==#cfg.Windups then
                 local flat=Vector3.new(direction.X,0,direction.Z)
                 flat=flat.Magnitude>.05 and flat.Unit or Vector3.new(0,0,-1)
                 launch(nearest,flat*cfg.Knockback+Vector3.yAxis*cfg.Lift)
             end
-            fx:FireAllClients("MeleeHit",{owner=p.UserId,position=nearest.r.Position,combo=combo,kit=kitOf(p)})
+            fx:FireAllClients("MeleeHit",{owner=p.UserId,position=nearest.r.Position,combo=combo,kit=kit})
         end
     end)
 end
@@ -234,14 +255,14 @@ local function beginSlide(p,s,m,h,r)
     fx:FireAllClients("Slide",{owner=p.UserId,start=n,duration=cfg.Duration,position=r.Position,direction=direction})
     sendState(p,s)
 end
-local function perform(p,s,m,h,r,kind,direction,instant)
+local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnhanced)
     local n=clock()
     local rezeDive=kind=="Rampage" and (s.rezeAirUntil or 0)>n
-    local windup=kind=="Rampage" and rezeDive and .05 or instant and C.Thunderclap.InstantWindup or C[kind].Windup or .2
+    local windup=kind=="Rampage" and rezeDive and .05 or C[kind].Windup or .2
     if kind=="Kick" then windup+=C.Kick.Fuse end
     s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
     if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
-    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup,phase=rezeDive and "Dive" or "Rise"})
+    fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup,charge=thunderCharge,enhanced=thunderEnhanced,phase=rezeDive and "Dive" or "Rise"})
     if kind=="Haki" then
         local cfg=C.Haki
         s.busyUntil=n+cfg.Windup+cfg.Tick*cfg.Pulses
@@ -296,20 +317,36 @@ local function perform(p,s,m,h,r,kind,direction,instant)
             fx:FireAllClients("Projectile",{id=id,owner=p.UserId,position=origin,direction=direction,kind=kind,speed=cfgShot.Speed,range=cfgShot.Range})
         end)
     elseif kind=="Domain" then
+        domainCastOrder+=1
+        local castOrder=domainCastOrder
         delayed(p,s,m,C.Domain.Windup,function()
             local flat=Vector3.new(direction.X,0,direction.Z)
             if flat.Magnitude<.05 then flat=Vector3.new(0,0,-1) end
             local center=r.Position+flat.Unit*14
-            local d={owner=p,model=m,center=center,expires=clock()+C.Domain.Duration,nextTick=clock(),captured={}}
+            -- Compare cast order, not callback order: a delayed older callback cannot reclaim a newer domain.
+            for i=#domains,1,-1 do
+                local other=domains[i]
+                if (other.center-center).Magnitude<C.Domain.Radius*2 then
+                    if other.castOrder>castOrder then
+                        fx:FireAllClients("DomainClashLost",{owner=p.UserId,position=center})
+                        return
+                    end
+                    endDomain(other,"shattered")
+                end
+            end
+            local activatedAt=clock()
+            local d={id=tostring(p.UserId)..":"..tostring(castOrder),owner=p,model=m,center=center,
+                castOrder=castOrder,activatedAt=activatedAt,expires=activatedAt+C.Domain.Duration,nextTick=activatedAt,captured={}}
             for _,t in targets(m) do
                 if (t.r.Position-center).Magnitude<C.Domain.Radius then
                     table.insert(d.captured,t)
-                    t.m:SetAttribute("DomainLockedUntil",math.max(t.m:GetAttribute("DomainLockedUntil") or 0,d.expires))
+                    t.m:SetAttribute("DomainLockId",d.id)
+                    t.m:SetAttribute("DomainLockedUntil",d.expires)
                 end
             end
             table.insert(domains,d)
-            fx:FireAllClients("Domain",{owner=p.UserId,position=center,radius=C.Domain.Radius,duration=C.Domain.Duration})
-        end)
+            fx:FireAllClients("Domain",{id=d.id,owner=p.UserId,position=center,radius=C.Domain.Radius,duration=C.Domain.Duration})
+        end,true)
     elseif kind=="Dash" then
         local flat=Vector3.new(direction.X,0,direction.Z)
         if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
@@ -322,12 +359,12 @@ local function perform(p,s,m,h,r,kind,direction,instant)
         local flat=Vector3.new(direction.X,0,direction.Z)
         if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
         flat=flat.Unit
-        -- Crouched stance: rooted in place during the long windup.
-        if windup>.1 then setTimed(m,h,"RootedUntil",windup) end
+        local charged=math.clamp(thunderCharge or 0,0,cfg.MaxCharge)
+        local distance=cfg.MinDistance+(cfg.Distance-cfg.MinDistance)*charged/cfg.MaxCharge
         delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
+            local start,finish,victims=dashStrike(m,r,flat,distance,cfg.Width)
             for _,t in victims do damage(p,t,cfg.Damage) end
-            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish})
+            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish,charged=charged,distance=distance})
         end)
     elseif kind=="Breath" then
         delayed(p,s,m,C.Breath.Windup,function()
@@ -515,8 +552,54 @@ local function perform(p,s,m,h,r,kind,direction,instant)
         end)
     end
 end
+local function releaseThunder(p,s,aim)
+    local hold=s.thunderHold
+    if not hold then return end
+    s.thunderHold=nil
+    local m,h,r=character(p)
+    if m~=hold.model or hold.generation~=s.generation then return end
+    m:SetAttribute("RootedUntil",0);updateSpeed(m,h)
+    local n=clock()
+    if (m:GetAttribute("DomainLockedUntil") or 0)>n then s.busyUntil=0;sendState(p,s);return end
+    local charged=math.clamp(n-hold.start,0,C.Thunderclap.MaxCharge)
+    local enhanced=s.charges>0 and s.chargesUntil>n
+    if enhanced then
+        s.charges-=1
+        if s.charges<=0 then
+            s.chargesUntil=0
+            s.cooldowns.Thunderclap=n+C.Thunderclap.Cooldown
+        else
+            s.cooldowns.Thunderclap=n+C.Thunderclap.ChainCooldown
+        end
+    else
+        if s.energy<C.Thunderclap.Cost then s.busyUntil=0;sendState(p,s);return end
+        s.energy-=C.Thunderclap.Cost;s.cooldowns.Thunderclap=n+C.Thunderclap.Cooldown
+    end
+    s.busyUntil=0
+    local direction=validVector(aim) and aim.Unit or hold.direction
+    perform(p,s,m,h,r,"Thunderclap",direction,false,charged,enhanced)
+    s.busyUntil=n+C.Thunderclap.Windup+.45
+    sendState(p,s)
+end
 remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     local s=states[p];if not s then return end
+    if skill=="ThunderclapStart" or skill=="ThunderclapRelease" then
+        if kitOf(p)~="Zenitsu" or not validVector(aim) then return end
+        if skill=="ThunderclapRelease" then releaseThunder(p,s,aim);return end
+        local n=clock()
+        local m,h,r=character(p);if not m or s.thunderHold or s.busyUntil>n or s.hold or s.slide then return end
+        if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
+        local enhanced=s.charges>0 and s.chargesUntil>n
+        if (s.cooldowns.Thunderclap or 0)>n or (not enhanced and s.energy<C.Thunderclap.Cost) then return end
+        local hold={start=n,model=m,generation=s.generation,direction=aim.Unit}
+        s.thunderHold=hold;s.busyUntil=n+C.Thunderclap.MaxCharge+.4
+        setTimed(m,h,"RootedUntil",C.Thunderclap.MaxCharge+.05)
+        fx:FireAllClients("ThunderCharge",{owner=p.UserId,position=r.Position,start=n,duration=C.Thunderclap.MaxCharge,enhanced=enhanced})
+        task.delay(C.Thunderclap.MaxCharge,function()
+            if s.thunderHold==hold then releaseThunder(p,s,hold.direction) end
+        end)
+        return
+    end
     if skill=="SlideCancel" then
         if s.slide then stopSlide(p,s);s.busyUntil=clock() end
         return
@@ -526,7 +609,8 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     local shanksAction=kitOf(p)=="Shanks" and (skill=="ShanksSlash" or skill=="ShanksParry")
     if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
-    if (m:GetAttribute("DomainLockedUntil") or 0)>n then return end
+    if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
+    if skill=="Thunderclap" then return end
     if skill=="BasicAttack" or skill=="Slide" then
         if s.busyUntil>n or s.hold or (m:GetAttribute("RootedUntil") or 0)>n then return end
         if skill=="BasicAttack" then basicAttack(p,s,m,h,r,aim.Unit) else beginSlide(p,s,m,h,r) end
@@ -602,7 +686,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
     local cfg=C[skill]
-    local instant=skill=="Thunderclap" and s.charges>0 and s.chargesUntil>n
+    local instant=false
     if instant then
         s.charges-=1
     else
@@ -637,7 +721,7 @@ selectRemote.OnServerEvent:Connect(function(p,name)
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
     clearPurpleHover(s);clearDoraFlight(s)
     stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
-    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
+    s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
 end)
@@ -756,10 +840,7 @@ RunService.Heartbeat:Connect(function(dt)
     for i=#domains,1,-1 do
         local d=domains[i]
         if n>=d.expires or not d.model.Parent then
-            for _,t in d.captured do
-                if t.m.Parent and (t.m:GetAttribute("DomainLockedUntil") or 0)<=d.expires then t.m:SetAttribute("DomainLockedUntil",0) end
-            end
-            table.remove(domains,i)
+            endDomain(d,n>=d.expires and "expired" or "owner_lost")
         else
             for _,t in d.captured do
                 if t.m.Parent and t.h.Health>0 then
@@ -777,7 +858,7 @@ local function joined(p)
     local function reset()
         stopSlide(p,s);s.basicUntil=0;s.basicCombo=0
         clearPurpleHover(s);clearDoraFlight(s)
-        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
+        s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
         if h then h.Died:Connect(function() stopSlide(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end

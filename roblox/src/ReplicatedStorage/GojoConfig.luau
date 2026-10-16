@@ -3,6 +3,8 @@ return {
     MaxEnergy = 100, EnergyRegen = 5, MaxHealth = 200,
     -- Shared mouse attack: wind back, contact, then recover. One target per hit; third hit pushes it away.
     BasicAttack = { Windups = { 0.16, 0.18, 0.24 }, Swing = 0.1, Recoveries = { 0.22, 0.24, 0.32 }, Damages = { 12, 14, 20 }, Reach = 6, Width = 2.4, ComboReset = 0.95, Knockback = 24, Lift = 8 },
+    -- First cut draws from the saya; four slower cuts alternate right/left before an idle resheath.
+    ZenBasicAttack = { Windups = { 0.52, 0.32, 0.32, 0.32 }, Swing = 0.24, Recoveries = { 0.30, 0.28, 0.28, 0.34 }, Damages = { 12, 14, 16, 20 }, Reach = 6, Width = 2.4, ComboReset = 0.70, Knockback = 24, Lift = 8, Sheath = 0.42 },
     -- Ctrl while moving on the ground. Horizontal force only, so gravity and jumping still work.
     Slide = { Cost = 6, Cooldown = 1.4, Duration = 0.7, StartSpeed = 38, EndSpeed = 12, MinSpeed = 3, CameraDip = 1.1 },
     -- Skills each character may request; the server rejects anything outside the player's kit.
@@ -22,10 +24,10 @@ return {
         RiseHeight = 12, RiseDuration = 2.4, MergeAt = 2.85, Recovery = 0.45,
         OrbDistance = 5, ChargeRadius = 0.6, MergedRadius = 1.4, VisualRadius = 3, PierceWorld = true,
     },
-    Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8 },
+    Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8, ClashWindow = 0.75 },
     Dash = { Cost = 5, Cooldown = 2.5, Distance = 16 },
-    -- Zenitsu: Breath grants Charges instant Thunderclaps (no windup, cost or cooldown) for ChargeWindow seconds.
-    Thunderclap = { Cost = 18, Cooldown = 6, Windup = 2, InstantWindup = 0.05, Distance = 36, Width = 5, Damage = 70 },
+    -- Every E keeps the same hold time and 10–40 stud range. Breath grants three separately charged consecutive uses.
+    Thunderclap = { Cost = 18, Cooldown = 6, ChainCooldown = 0.5, Windup = 0.05, MaxCharge = 1.6, MinDistance = 10, Distance = 40, Width = 5, Damage = 70 },
     Breath = { Cost = 20, Cooldown = 14, Windup = 2, Charges = 3, ChargeWindow = 12 },
     -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
     -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.

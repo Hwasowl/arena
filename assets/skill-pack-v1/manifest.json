@@ -240,8 +240,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.17,
-      "rmsDbFS": -22.27
+      "peakDbFS": -2.09,
+      "rmsDbFS": -22.39
     },
     {
       "id": "gojo_blue_charge",
@@ -258,8 +258,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.05,
-      "rmsDbFS": -14.9
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.1
     },
     {
       "id": "gojo_blue_pull",
@@ -276,7 +276,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.32,
+      "peakDbFS": -1.63,
       "rmsDbFS": -14.89
     },
     {
@@ -294,8 +294,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.8,
-      "rmsDbFS": -14.92
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.84
     },
     {
       "id": "gojo_purple_charge",
@@ -312,8 +312,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.67,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.16
     },
     {
       "id": "gojo_purple_release",
@@ -330,8 +330,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.32,
-      "rmsDbFS": -14.91
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.32
     },
     {
       "id": "gojo_domain_open",
@@ -348,8 +348,62 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.26,
-      "rmsDbFS": -14.9
+      "peakDbFS": -3.2,
+      "rmsDbFS": -17.5
+    },
+    {
+      "id": "gojo_domain_inside",
+      "character": "gojo",
+      "label": "무량공처 내부 지속음",
+      "file": "sounds/gojo/gojo_domain_inside.wav",
+      "duration": 2.0,
+      "cue": "영역 안에 있는 동안만 반복; 밖으로 나가거나 영역이 끝나면 정지",
+      "skills": [
+        "Domain"
+      ],
+      "loop": true,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -9.37,
+      "rmsDbFS": -22.95
+    },
+    {
+      "id": "gojo_domain_end",
+      "character": "gojo",
+      "label": "무량공처 닫힘",
+      "file": "sounds/gojo/gojo_domain_end.wav",
+      "duration": 1.05,
+      "cue": "7.5초가 끝나 공간이 접힐 때",
+      "skills": [
+        "Domain"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -3.09,
+      "rmsDbFS": -16.07
+    },
+    {
+      "id": "gojo_domain_break",
+      "character": "gojo",
+      "label": "영역 충돌 · 기존 영역 파괴",
+      "file": "sounds/gojo/gojo_domain_break.wav",
+      "duration": 0.85,
+      "cue": "늦게 전개한 영역이 겹쳐 기존 영역을 깰 때",
+      "skills": [
+        "Domain"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -2.34,
+      "rmsDbFS": -21.15
     },
     {
       "id": "zenitsu_breath",
@@ -366,7 +420,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.71,
+      "peakDbFS": -2.44,
       "rmsDbFS": -14.89
     },
     {
@@ -384,8 +438,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.28,
-      "rmsDbFS": -14.9
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.02
     },
     {
       "id": "zenitsu_sheath",
@@ -404,7 +458,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.77
+      "rmsDbFS": -22.44
     },
     {
       "id": "zenitsu_flamegod",
@@ -421,8 +475,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.05,
-      "rmsDbFS": -14.9
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.93
     },
     {
       "id": "zenitsu_delayed_hit",
@@ -439,8 +493,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.31,
-      "rmsDbFS": -14.92
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.96
     },
     {
       "id": "reze_pin",
@@ -457,8 +511,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.87,
-      "rmsDbFS": -14.9
+      "peakDbFS": -1.41,
+      "rmsDbFS": -22.6
     },
     {
       "id": "reze_fuse_loop",
@@ -477,7 +531,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -6.02,
-      "rmsDbFS": -18.76
+      "rmsDbFS": -19.49
     },
     {
       "id": "reze_transform",
@@ -495,7 +549,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -16.22
+      "rmsDbFS": -20.03
     },
     {
       "id": "reze_launch",
@@ -512,7 +566,7 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.19,
+      "peakDbFS": -1.56,
       "rmsDbFS": -14.91
     },
     {
@@ -530,8 +584,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.67,
-      "rmsDbFS": -14.9
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.49
     },
     {
       "id": "reze_slam",
@@ -548,8 +602,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.49,
-      "rmsDbFS": -14.94
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.38
     },
     {
       "id": "reze_hand_blast",
@@ -566,8 +620,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.08,
-      "rmsDbFS": -14.95
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.86
     },
     {
       "id": "reze_detonation_charge",
@@ -584,8 +638,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -1.95,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.21
     },
     {
       "id": "reze_detonation_blast",
@@ -602,8 +656,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.33,
-      "rmsDbFS": -14.91
+      "peakDbFS": -1.41,
+      "rmsDbFS": -18.9
     },
     {
       "id": "shanks_haki_charge",
@@ -620,8 +674,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -2.57,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.03
     },
     {
       "id": "shanks_haki_pulse",
@@ -638,8 +692,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -3.92,
-      "rmsDbFS": -14.93
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.21
     },
     {
       "id": "shanks_draw",
@@ -657,7 +711,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.39
+      "rmsDbFS": -17.44
     },
     {
       "id": "shanks_slash",
@@ -674,8 +728,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -4.76,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.58
     },
     {
       "id": "shanks_parry",
@@ -693,7 +747,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.31
+      "rmsDbFS": -21.3
     },
     {
       "id": "shanks_counter",
@@ -710,8 +764,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.65,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.22
     },
     {
       "id": "shanks_departure_charge",
@@ -729,7 +783,7 @@
       "channels": 1,
       "bits": 16,
       "peakDbFS": -1.41,
-      "rmsDbFS": -15.1
+      "rmsDbFS": -17.29
     },
     {
       "id": "shanks_departure_release",
@@ -746,8 +800,8 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.38,
-      "rmsDbFS": -14.89
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.14
     },
     {
       "id": "shared_dash",
@@ -764,8 +818,440 @@
       "sampleRate": 48000,
       "channels": 1,
       "bits": 16,
-      "peakDbFS": -5.56,
+      "peakDbFS": -3.74,
+      "rmsDbFS": -17.46
+    },
+    {
+      "id": "shared_jump",
+      "character": "shared",
+      "label": "점프 발구름",
+      "file": "sounds/shared/shared_jump.wav",
+      "duration": 0.32,
+      "cue": "지상 Space로 점프가 시작될 때",
+      "skills": [
+        "Jump"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -2.8,
+      "rmsDbFS": -16.87
+    },
+    {
+      "id": "shared_land",
+      "character": "shared",
+      "label": "착지",
+      "file": "sounds/shared/shared_land.wav",
+      "duration": 0.42,
+      "cue": "일반 점프 후 지면에 닿을 때",
+      "skills": [
+        "Jump"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -5.22,
+      "rmsDbFS": -20.92
+    },
+    {
+      "id": "shared_slide_start",
+      "character": "shared",
+      "label": "슬라이딩 발동",
+      "file": "sounds/shared/shared_slide_start.wav",
+      "duration": 0.34,
+      "cue": "몸이 낮아지고 발이 바닥을 밀기 시작할 때",
+      "skills": [
+        "Slide"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.21
+    },
+    {
+      "id": "shared_slide_scrape",
+      "character": "shared",
+      "label": "슬라이딩 마찰",
+      "file": "sounds/shared/shared_slide_scrape.wav",
+      "duration": 0.7,
+      "cue": "0.7초 슬라이딩 중 바닥 마찰",
+      "skills": [
+        "Slide"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -19.85
+    },
+    {
+      "id": "shared_slide_end",
+      "character": "shared",
+      "label": "슬라이딩 멈춤",
+      "file": "sounds/shared/shared_slide_end.wav",
+      "duration": 0.29,
+      "cue": "슬라이딩 종료·벽 충돌·점프 취소",
+      "skills": [
+        "Slide"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -5.79,
+      "rmsDbFS": -24.31
+    },
+    {
+      "id": "shared_punch_swing_1",
+      "character": "shared",
+      "label": "평타 1타 공기 가르기",
+      "file": "sounds/shared/shared_punch_swing_1.wav",
+      "duration": 0.3,
+      "cue": "평타 1타 준비가 끝나고 주먹이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.67,
       "rmsDbFS": -14.9
+    },
+    {
+      "id": "shared_punch_swing_2",
+      "character": "shared",
+      "label": "평타 2타 공기 가르기",
+      "file": "sounds/shared/shared_punch_swing_2.wav",
+      "duration": 0.3,
+      "cue": "평타 2타 준비가 끝나고 주먹이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.42,
+      "rmsDbFS": -14.89
+    },
+    {
+      "id": "shared_punch_swing_3",
+      "character": "shared",
+      "label": "평타 3타 공기 가르기",
+      "file": "sounds/shared/shared_punch_swing_3.wav",
+      "duration": 0.3,
+      "cue": "평타 3타 준비가 끝나고 주먹이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.74,
+      "rmsDbFS": -14.89
+    },
+    {
+      "id": "shared_punch_hit_1",
+      "character": "shared",
+      "label": "평타 1타 적중",
+      "file": "sounds/shared/shared_punch_hit_1.wav",
+      "duration": 0.52,
+      "cue": "평타 1타 실제 적중 프레임",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -18.21
+    },
+    {
+      "id": "shared_punch_hit_2",
+      "character": "shared",
+      "label": "평타 2타 적중",
+      "file": "sounds/shared/shared_punch_hit_2.wav",
+      "duration": 0.52,
+      "cue": "평타 2타 실제 적중 프레임",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.63
+    },
+    {
+      "id": "shared_punch_hit_3",
+      "character": "shared",
+      "label": "평타 3타 적중",
+      "file": "sounds/shared/shared_punch_hit_3.wav",
+      "duration": 0.52,
+      "cue": "평타 3타 실제 적중 프레임",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -16.12
+    },
+    {
+      "id": "shared_sword_swing_1",
+      "character": "shared",
+      "label": "검 평타 1타 베기",
+      "file": "sounds/shared/shared_sword_swing_1.wav",
+      "duration": 0.45,
+      "cue": "젠이츠·샹크스 평타 1타 칼이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.95
+    },
+    {
+      "id": "shared_sword_swing_2",
+      "character": "shared",
+      "label": "검 평타 2타 베기",
+      "file": "sounds/shared/shared_sword_swing_2.wav",
+      "duration": 0.45,
+      "cue": "젠이츠·샹크스 평타 2타 칼이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.06
+    },
+    {
+      "id": "shared_sword_swing_3",
+      "character": "shared",
+      "label": "검 평타 3타 베기",
+      "file": "sounds/shared/shared_sword_swing_3.wav",
+      "duration": 0.45,
+      "cue": "젠이츠·샹크스 평타 3타 칼이 나가는 순간",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -17.19
+    },
+    {
+      "id": "shared_sword_hit",
+      "character": "shared",
+      "label": "검 평타 적중",
+      "file": "sounds/shared/shared_sword_hit.wav",
+      "duration": 0.48,
+      "cue": "검 평타 실제 적중 프레임",
+      "skills": [
+        "BasicAttack"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -19.06
+    },
+    {
+      "id": "shared_crack",
+      "character": "shared",
+      "label": "번개·충격 잔타",
+      "file": "sounds/shared/shared_crack.wav",
+      "duration": 0.25,
+      "cue": "짧은 번개나 접촉 충격 프레임",
+      "skills": [
+        "Impact"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -4.02,
+      "rmsDbFS": -20.86
+    },
+    {
+      "id": "shared_boom",
+      "character": "shared",
+      "label": "작은 폭발",
+      "file": "sounds/shared/shared_boom.wav",
+      "duration": 0.9,
+      "cue": "기본공격 폭발·파편 폭발 프레임",
+      "skills": [
+        "Impact"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -18.01
+    },
+    {
+      "id": "shared_rustle",
+      "character": "shared",
+      "label": "옷·주머니 마찰",
+      "file": "sounds/shared/shared_rustle.wav",
+      "duration": 0.28,
+      "cue": "손이 옷·주머니를 뒤적이는 프레임",
+      "skills": [
+        "Foley"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -21.4
+    },
+    {
+      "id": "dora_gadget",
+      "character": "doraemon",
+      "label": "도구 꺼내기",
+      "file": "sounds/doraemon/dora_gadget.wav",
+      "duration": 0.5,
+      "cue": "주머니에서 도구가 나올 때",
+      "skills": [
+        "Pocket"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -25.49
+    },
+    {
+      "id": "dora_light",
+      "character": "doraemon",
+      "label": "스몰라이트",
+      "file": "sounds/doraemon/dora_light.wav",
+      "duration": 0.4,
+      "cue": "빛이 발사될 때",
+      "skills": [
+        "Pocket"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -3.63,
+      "rmsDbFS": -18.82
+    },
+    {
+      "id": "dora_air",
+      "character": "doraemon",
+      "label": "공기포",
+      "file": "sounds/doraemon/dora_air.wav",
+      "duration": 0.47,
+      "cue": "공기포가 발사·벽에 닿을 때",
+      "skills": [
+        "Pocket"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -4.15,
+      "rmsDbFS": -14.92
+    },
+    {
+      "id": "dora_bite",
+      "character": "doraemon",
+      "label": "단팥빵 한입",
+      "file": "sounds/doraemon/dora_bite.wav",
+      "duration": 0.36,
+      "cue": "단팥빵을 먹을 때",
+      "skills": [
+        "Pocket"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -2.34,
+      "rmsDbFS": -18.92
+    },
+    {
+      "id": "dora_rotor",
+      "character": "doraemon",
+      "label": "대나무 헬리콥터 회전",
+      "file": "sounds/doraemon/dora_rotor.wav",
+      "duration": 0.25,
+      "cue": "헬리콥터 날개 반복 회전 박자",
+      "skills": [
+        "Copter"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -15.96
+    },
+    {
+      "id": "dora_door",
+      "character": "doraemon",
+      "label": "어디로든 문 개방",
+      "file": "sounds/doraemon/dora_door.wav",
+      "duration": 0.55,
+      "cue": "문이 열릴 때",
+      "skills": [
+        "Door"
+      ],
+      "loop": false,
+      "uploadAssetId": "",
+      "sampleRate": 48000,
+      "channels": 1,
+      "bits": 16,
+      "peakDbFS": -1.41,
+      "rmsDbFS": -20.09
     }
   ],
   "generation": {

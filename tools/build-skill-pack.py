@@ -73,8 +73,8 @@ def build():
     page = '''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>INFINITY · 스킬 에셋 V1</title><style>
 :root{color-scheme:dark;font-family:system-ui,'Malgun Gothic',sans-serif;background:#0b101a;color:#ecf3ff}*{box-sizing:border-box}body{max-width:1440px;margin:auto;padding:32px}h1{font-size:32px;letter-spacing:-1px;margin:8px 0}header p{color:#9baec4;margin:10px 0;line-height:1.6}.tools{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:22px 0 28px}button,select{font:inherit;color:inherit;background:#18263b;border:1px solid #3d5069;border-radius:8px;padding:10px 14px;cursor:pointer}button:hover{background:#253c59}input{accent-color:#64c5ff}section{margin:32px 0}h2{font-size:23px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.card{min-width:0;border:1px solid #293a51;border-radius:16px;background:#131e2f;padding:18px}.art{height:188px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#080e18}.light .art{background:#e7edf5}.art img{height:184px;width:184px;object-fit:contain}.sample{display:flex;align-items:center;gap:10px;color:#8fa5bf;font-size:12px;margin:12px 0}.sample img{width:48px;height:48px;background:#080e18;border:1px solid #3d5069;border-radius:8px}.card h3{font-size:18px;margin:8px 0}.skill{color:#849ab6;font-size:12px;margin:6px 0 14px}.sound{border-top:1px solid #293a51;padding-top:12px;margin-top:12px}.sound button{width:100%;display:flex;justify-content:space-between;gap:8px;text-align:left;font-size:13px}.sound p{color:#96abc4;font-size:12px;line-height:1.6;margin:7px 0}.sequence{background:#193729;border-color:#3e7357}.badge{font-size:12px;color:#a9bfd6}.footer{border-top:1px solid #293a51;padding-top:20px;color:#91a8c2;font-size:13px;line-height:1.8}a{color:#80d2ff}#now{color:#afdbf3;min-height:22px;font-size:13px}body.compact .art{height:90px}body.compact .art img{height:64px;width:64px}@media(max-width:620px){body{padding:18px}.grid{grid-template-columns:1fr}}
-</style><header><div class="badge">INFINITY / ORIGINAL ASSET PACK / V1</div><h1>스킬 아이콘과 효과음</h1><p>고죠 · 젠이츠 · 레제 · 샹크스. 아이콘 18개 / 직접 합성한 효과음 30개.<br>큰 그림과 실제 HUD 크기를 함께 확인하고, 각 효과음을 눌러 들어보세요.</p></header>
-<div class="tools"><button id="theme">밝은 배경으로 보기</button><button id="compact">64px로 보기</button><button id="stop">모든 소리 정지</button><label>볼륨 <input id="volume" type="range" min="0" max="1" step="0.05" value="0.65"></label></div><div id="now" role="status" aria-live="polite"></div><main id="main"></main><div class="footer">PNG: 512 × 512, 투명 배경. WAV: 48,000Hz · 16bit · 모노.<br>게임 업로드 전 시안입니다. Roblox 에셋 ID는 업로드 후 <a href="RobloxAssets.luau">RobloxAssets.luau</a>에 채웁니다. 합성음에는 애니메이션 원본 음성·음원을 사용하지 않았습니다.<br><a href="README.md">에셋 설명</a> · <a href="manifest.json">파일·타이밍 목록</a> · <a href="icon-contact-sheet.jpg">아이콘 한눈에 보기</a></div>
+</style><header><div class="badge">INFINITY / ORIGINAL ASSET PACK / V1</div><h1>스킬 아이콘과 효과음</h1><p>고죠 · 젠이츠 · 레제 · 샹크스. 아이콘 18개 / 녹음과 합성음을 겹친 효과음 __SOUND_COUNT__개.<br>큰 그림과 실제 HUD 크기를 함께 확인하고, 각 효과음을 눌러 들어보세요.</p></header>
+<div class="tools"><button id="theme">밝은 배경으로 보기</button><button id="compact">64px로 보기</button><button id="stop">모든 소리 정지</button><label>볼륨 <input id="volume" type="range" min="0" max="1" step="0.05" value="0.65"></label></div><div id="now" role="status" aria-live="polite"></div><main id="main"></main><div class="footer">PNG: 512 × 512, 투명 배경. WAV: 48,000Hz · 16bit · 모노.<br>게임 업로드 전 시안입니다. 실제 녹음층은 Kenney CC0. Roblox 에셋 ID는 업로드 후 <a href="RobloxAssets.luau">RobloxAssets.luau</a>에 채웁니다. 합성음에는 애니메이션 원본 음성·음원을 사용하지 않았습니다.<br><a href="README.md">에셋 설명</a> · <a href="manifest.json">파일·타이밍 목록</a> · <a href="icon-contact-sheet.jpg">아이콘 한눈에 보기</a></div>
 <script>const pack=__PACK__;let active=[],timers=[];const volume=document.getElementById('volume'),now=document.getElementById('now');
 function stop(){active.forEach(a=>{a.pause();a.currentTime=0});active=[];timers.forEach(clearTimeout);timers=[];now.textContent=''}
 function playSound(sound,at=0){const a=new Audio(sound.file);a.volume=Number(volume.value);active.push(a);if(at>0)timers.push(setTimeout(()=>a.play().catch(()=>now.textContent='재생을 시작하려면 효과음 버튼을 눌러 주세요.'),at*1000));else a.play().catch(()=>now.textContent='오디오 파일을 열지 못했습니다.');return a}
@@ -83,8 +83,9 @@ const sequences={Purple:[[0,'gojo_purple_charge'],[3.6,'gojo_purple_release']],F
 function sequence(skill){stop();sequences[skill].forEach(([at,id])=>playSound(pack.sounds.find(s=>s.id===id),at));now.textContent='연속 재생 · '+skill}
 const groups=[['gojo','고죠','#58bfff'],['zenitsu','젠이츠','#ffda65'],['reze','레제','#ff9c62'],['shanks','샹크스','#ff687a'],['shared','공통','#a7d9eb']];
 for(const [group,label,color] of groups){const section=document.createElement('section');const heading=document.createElement('h2');heading.textContent=label;heading.style.color=color;section.append(heading);const grid=document.createElement('div');grid.className='grid';for(const icon of pack.icons.filter(i=>i.character===group)){const card=document.createElement('article');card.className='card';const art=document.createElement('div');art.className='art';const image=document.createElement('img');image.src=icon.file;image.alt=icon.label;art.append(image);card.append(art);const sample=document.createElement('div');sample.className='sample';const tiny=image.cloneNode();sample.append(tiny,document.createTextNode('실제 HUD 48px'));card.append(sample);const name=document.createElement('h3');name.textContent=icon.label;card.append(name);const skill=document.createElement('div');skill.className='skill';skill.textContent=icon.skill+' · 512px PNG';card.append(skill);if(sequences[icon.skill]){const button=document.createElement('button');button.className='sequence';button.textContent='▶ 준비 → 발동 연속 듣기';button.onclick=()=>sequence(icon.skill);card.append(button)}for(const sound of pack.sounds.filter(s=>s.skills.includes(icon.skill))){const row=document.createElement('div');row.className='sound';const button=document.createElement('button');const text=document.createElement('span');text.textContent='▶ '+sound.label;const duration=document.createElement('span');duration.textContent=sound.duration.toFixed(2)+'s';button.append(text,duration);button.onclick=()=>play(sound.id);const cue=document.createElement('p');cue.textContent=sound.cue;row.append(button,cue);card.append(row)}grid.append(card)}section.append(grid);document.getElementById('main').append(section)}
+const library=document.createElement('section');library.innerHTML='<h2>전체 효과음 목록</h2><p>스킬·이동·점프·슬라이딩·평타·도구 소리를 개별로 들어볼 수 있습니다.</p>';const soundGrid=document.createElement('div');soundGrid.className='grid';for(const [group,label] of [...groups,['doraemon','도라에몽']]){const sounds=pack.sounds.filter(s=>s.character===group);if(!sounds.length)continue;const card=document.createElement('article');card.className='card';const title=document.createElement('h3');title.textContent=label+' · '+sounds.length+'개';card.append(title);for(const item of sounds){const row=document.createElement('div');row.className='sound';const button=document.createElement('button');button.textContent='▶ '+item.label+' · '+item.duration.toFixed(2)+'초';button.onclick=()=>play(item.id);const cue=document.createElement('p');cue.textContent=item.cue;row.append(button,cue);card.append(row)}soundGrid.append(card)}library.append(soundGrid);document.getElementById('main').append(library);
 document.getElementById('stop').onclick=stop;document.getElementById('theme').onclick=e=>{document.body.classList.toggle('light');e.target.textContent=document.body.classList.contains('light')?'어두운 배경으로 보기':'밝은 배경으로 보기'};document.getElementById('compact').onclick=e=>{document.body.classList.toggle('compact');e.target.textContent=document.body.classList.contains('compact')?'큰 그림으로 보기':'64px로 보기'};volume.oninput=()=>active.forEach(a=>a.volume=Number(volume.value));window.addEventListener('pagehide',stop);
-</script></html>'''.replace('__PACK__',payload)
+</script></html>'''.replace('__PACK__',payload).replace('__SOUND_COUNT__',str(len(manifest['sounds'])))
     textwrite(PACK / 'index.html', page)
 
     lines = ['-- INFINITY original asset pack V1. Fill AssetId after uploading to your Roblox account/group.',
@@ -99,7 +100,7 @@ document.getElementById('stop').onclick=stop;document.getElementById('theme').on
     textwrite(PACK / 'RobloxAssets.luau', '\n'.join(lines))
     readme = '''# INFINITY 스킬 에셋 V1
 
-고죠·젠이츠·레제·샹크스용 **아이콘 18개 / 효과음 30개**. 도라에몽은 이번 팩에 포함하지 않습니다.
+고죠·젠이츠·레제·샹크스용 **아이콘 18개 / 효과음 __SOUND_COUNT__개**. 효과음에는 도라에몽 도구와 공통 점프·슬라이딩·평타도 포함합니다. 도라에몽 아이콘은 포함하지 않습니다.
 
 ## 열기
 
@@ -107,6 +108,8 @@ document.getElementById('stop').onclick=stop;document.getElementById('theme').on
 
 - `icons/`: 업로드용 512×512 RGBA PNG. 투명 배경, 최소 40px 여백.
 - `sounds/`: 48kHz / 16bit PCM / 모노 WAV. 각 파일은 별도로 재생하는 짧은 큐입니다.
+- `sounds/shared/`: 발구름·착지, 슬라이딩 시작·마찰·종료, 평타 1·2·3타 휘두름·적중 소리입니다.
+- `sounds/doraemon/`: 주머니 도구·공기포·문·헬리콥터 소리입니다.
 - `sources/`: 프로젝트 폴더에 보관한 imagegen 생성 원본(ZIP에서는 제외). 업로드용 PNG는 원본의 투명 여백만 정리하고 비율을 유지하여 축소했습니다.
 - `manifest.json`: 한국어 이름, 스킬 매핑, 재생 시점, 길이, 반복 여부, 이미지 생성 프롬프트.
 - `RobloxAssets.luau`: 업로드 후 ID를 입력할 카탈로그.
@@ -131,6 +134,7 @@ document.getElementById('stop').onclick=stop;document.getElementById('theme').on
 - 레제 `reze_pin`: 고리가 빠지는 정확한 순간의 금속성 “팅”. 변신 폭발은 별도 `reze_transform`입니다. 갤러리의 변신 연속 재생은 핀 직후 폭발 예시입니다.
 - `reze_fuse_loop`: 1초 반복용. 도화선이 타는 동안만 재생하고 폭발·취소·사망·캐릭터 교체 시 정지합니다.
 - 무라사키: 준비 3.6초, 융합 강조 2.85초, 발사음 3.6초에 별도 재생.
+- 무량공처: 전개음 후 플레이어가 영역 안에 있는 동안 `gojo_domain_inside`를 반복합니다. 밖으로 나오면 멈춥니다. 7.5초 만료 시 `gojo_domain_end`, 충돌로 깨질 때 `gojo_domain_break`를 재생합니다.
 - 화뢰신: 질주음, 통과 0.9초 후 적중음, 납도음을 나눴습니다. 납도 시점은 뷰모델에 맞춥니다.
 - 패왕색: 0.5초 준비 뒤 파동, 1초 후 파동 한 번 더.
 - 카무사리: 2.5초 준비 뒤 참격.
@@ -142,9 +146,9 @@ Roblox 공식 가져오기 안내: [오디오](https://create.roblox.com/docs/au
 
 ## 제작과 한계
 
-아이콘: OpenAI 내장 imagegen을 아이콘마다 별도 호출하여 생성. 전체 프롬프트는 manifest에 보관했습니다. 음원: `tools/make-skill-audio.py`로 직접 합성한 노이즈·발진음·금속 공명·딜레이 조합입니다. 원작 대사, 성우 음성, 애니메이션 음원 샘플을 사용하지 않았습니다.
+아이콘: OpenAI 내장 imagegen을 아이콘마다 별도 호출하여 생성. 전체 프롬프트는 manifest에 보관했습니다. 음원: Kenney의 CC0 실녹음 충격·칼·옷·발소리를 주된 타격층으로 쓰고, `tools/make-skill-audio.py`의 합성음은 에너지감과 저역 잔향에 섞었습니다. 전체 스킬 30개와 공통 이동·평타·도라에몽 큐에 적용했습니다. 녹음 원본과 출처는 `../foley/kenney/`에 보관했습니다. 원작 대사, 성우 음성, 애니메이션 음원 샘플을 사용하지 않았습니다.
 
-효과음은 처음 비교할 수 있는 합성 시안입니다. 실제 Roblox 공간음, 동시 발동 시 믹싱, 기기 스피커에서의 청감은 아직 확인하지 않았습니다. 기본 미리듣기 볼륨은 65%입니다.
+효과음은 녹음과 합성을 섞은 시안입니다. 실제 Roblox 공간음, 동시 발동 시 믹싱, 기기 스피커에서의 청감은 아직 확인하지 않았습니다. 기본 미리듣기 볼륨은 65%입니다.
 
 ## 재생성
 
@@ -157,7 +161,7 @@ python tools/build-skill-pack.py
 
 필요 패키지는 NumPy와 Pillow입니다. 오디오는 고정 난수 시드로 재생성합니다. 아이콘 생성 원본 경로는 `generated-sources.json`에 기록되어 있고, `sources/`에도 원본을 보관했습니다. 생성 원본 경로가 없으면 `sources/`의 파일을 가리키도록 수정할 수 있습니다.
 '''
-    textwrite(PACK / 'README.md', readme)
+    textwrite(PACK / 'README.md', readme.replace('__SOUND_COUNT__',str(len(manifest['sounds']))))
     for path in [ROOT/'tools'/'make-skill-audio.py', ROOT/'tools'/'build-skill-pack.py']:
         if path.exists():
             textwrite(path, path.read_text(encoding='utf-8-sig'))
