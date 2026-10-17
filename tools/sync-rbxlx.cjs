@@ -5,6 +5,8 @@ const f = path.join(root, 'InfinityArena-Gojo.rbxlx');
 let x = fs.readFileSync(f, 'utf8');
 const newline = x.includes('\r\n') ? '\r\n' : '\n';
 const scripts = {
+  GojoHands: 'roblox/src/StarterPlayer/StarterPlayerScripts/GojoHands.luau',
+  RushServer: 'roblox/src/ServerScriptService/RushServer.luau',
   KizaruServer: 'roblox/src/ServerScriptService/KizaruServer.luau',
   KizaruClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/KizaruClient.luau',
   OkkotsuConfig: 'roblox/src/ReplicatedStorage/OkkotsuConfig.luau',
@@ -27,7 +29,7 @@ const scripts = {
 };
 // Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
 // New Okkotsu modules are inserted beside an existing module in the same service.
-const siblings={KizaruServer:'PainServer',KizaruClient:'PainClient',OkkotsuConfig:'PainAbilityConfig',OkkotsuVFX:'OkkotsuConfig',OkkotsuServer:'PainServer',OkkotsuClient:'PainClient'};
+const siblings={GojoHands:'PainClient',RushServer:'PainServer',KizaruServer:'PainServer',KizaruClient:'PainClient',OkkotsuConfig:'PainAbilityConfig',OkkotsuVFX:'OkkotsuConfig',OkkotsuServer:'PainServer',OkkotsuClient:'PainClient'};
 for(const [name,sibling] of Object.entries(siblings)){
   if(x.includes('<string name="Name">'+name+'</string>'))continue;
   const re=/<Item class="ModuleScript"[^>]*>\s*<Properties>[\s\S]*?<\/Properties>/g;

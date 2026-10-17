@@ -3,6 +3,7 @@ local RunService=game:GetService("RunService")
 local RS=game:GetService("ReplicatedStorage")
 local Debris=game:GetService("Debris")
 local C=require(RS:WaitForChild("GojoConfig"))
+local Rush=require(script.Parent:WaitForChild("RushServer"))
 local Kizaru=require(script.Parent:WaitForChild("KizaruServer"))
 local Okkotsu=require(script.Parent:WaitForChild("OkkotsuServer"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
@@ -37,7 +38,7 @@ local function targets(exclude)
     return out
 end
 local function sendState(p,s)
-    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
+    if p.Parent then remote:FireClient(p,{energy=s.energy,cooldowns=s.cooldowns,blueUntil=s.blueUntil or 0,charges=s.charges,chargesUntil=s.chargesUntil,comboUntil=s.comboUntil or 0,godspeedUsed=p.Character and p.Character:GetAttribute("GodspeedUsed")==true,holdKind=s.hold and s.hold.kind or "",holdUntil=s.hold and s.hold.untilTime or 0}) end
 end
 local function validVector(v)
     return typeof(v)=="Vector3" and v.X==v.X and v.Y==v.Y and v.Z==v.Z and v.Magnitude>.9 and v.Magnitude<1.1
@@ -69,6 +70,12 @@ end
 local function rayParams(m)
     local p=RaycastParams.new();p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={m};return p
 end
+local function grounded(m,h,r)
+    if h.FloorMaterial~=Enum.Material.Air then return true end
+    if r.AssemblyLinearVelocity.Y>2 then return false end
+    local depth=h.HipHeight+r.Size.Y*.5+.8
+    return workspace:Raycast(r.Position,-Vector3.yAxis*depth,rayParams(m))~=nil
+end
 local function damage(owner,t,amount,kind)
     if not t.m.Parent or t.h.Health<=0 then return end
     local victim=Players:GetPlayerFromCharacter(t.m)
@@ -93,7 +100,7 @@ end
 -- WalkSpeed is derived from timed attributes so overlapping roots and slows never leave a stale speed behind.
 local function updateSpeed(m,h)
     local n=clock();local speed=BASE_SPEED
-    if (m:GetAttribute("SlowedUntil") or 0)>n then speed*=C.FlameGod.SlowFactor end
+    if m:GetAttribute("GodspeedUsed") then speed*=C.Godspeed.SpeedFactor end
     local fuseStart=m:GetAttribute("DetonationSlowStart") or 0
     local fuseEnd=m:GetAttribute("DetonationSlowUntil") or 0
     if fuseEnd>n and fuseStart>0 then
@@ -105,7 +112,7 @@ local function updateSpeed(m,h)
     if (m:GetAttribute("OkkotsuCastUntil") or 0)>n then speed*=m:GetAttribute("OkkotsuSpeed") or 1 end
     speed*=AllMight.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
-    if (m:GetAttribute("SlidingUntil") or 0)>n then speed=0 end
+    if (m:GetAttribute("SlidingUntil") or 0)>n or (m:GetAttribute("RushingUntil") or 0)>n then speed=0 end
     local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
     if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
@@ -154,19 +161,36 @@ local function beginPurpleHover(s,m,h,r)
     Debris:AddItem(alignment,duration+.1);Debris:AddItem(attachment,duration+.1)
     task.delay(duration,function() if s.purpleHover==hover then clearPurpleHover(s) end end)
 end
--- Shared by Thunderclap and FlameGod: dash along `flat`, stopping short of walls, and return who stood on the path.
-local function dashStrike(m,r,flat,distance,width)
-    local start=r.Position
-    local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*distance,rayParams(m))
-    local travelled=result and math.max(0,result.Distance-.5) or distance
-    local finish=start+flat*travelled
-    r.CFrame=CFrame.lookAt(finish,finish+flat)
-    local victims={}
-    for _,t in targets(m) do
-        local along=math.clamp((t.r.Position-start):Dot(flat),0,travelled)
-        if (start+flat*along-t.r.Position).Magnitude<=width then table.insert(victims,t) end
-    end
-    return start,finish,victims
+-- Sweep the path actually travelled; a target is hit once even across several physics frames.
+local function dashStrike(p,s,m,h,r,flat,distance,width,duration,completed,locomotion)
+    local victims,seen={},{}
+    local generation=s.generation
+    local rush
+    rush=Rush.start(p,m,h,r,flat,distance,duration,{
+        walkSpeed=BASE_SPEED*(m:GetAttribute("GodspeedUsed") and C.Godspeed.SpeedFactor or 1),
+        ended=function()
+            if locomotion and s.moveRush==rush then s.moveRush=nil;s.busyUntil=math.min(s.busyUntil,clock()) end
+        end,
+        valid=function()
+            local n=clock()
+            return states[p]==s and s.generation==generation and (m:GetAttribute("PainHeldUntil") or 0)<=n
+                and (m:GetAttribute("DomainLockedUntil") or 0)<=n and not AllMight.held(m,n)
+        end,
+        step=function(from,to)
+            if not width or width<=0 then return end
+            local path=to-from;local length=path.Magnitude
+            for _,t in targets(m) do
+                local along=length>.001 and math.clamp((t.r.Position-from):Dot(path/length),0,length) or 0
+                local nearest=length>.001 and from+path/length*along or from
+                if not seen[t.m] and (nearest-t.r.Position).Magnitude<=width then seen[t.m]=true;table.insert(victims,t) end
+            end
+        end,
+        complete=function(from,to) if completed then completed(from,to,victims) end end,
+    })
+    if locomotion then s.moveRush=rush end
+    s.busyUntil=math.max(s.busyUntil,clock()+duration+.15);updateSpeed(m,h)
+    fx:FireAllClients("Rush",{owner=p.UserId,from=rush.from,to=rush.to,direction=flat,start=rush.start,duration=duration,locomotion=locomotion==true})
+    return rush
 end
 -- Knockback. Players own their own physics, so their client applies the impulse; anchored training targets
 -- follow a server-simulated arc in the Heartbeat loop; any other unanchored rig takes the velocity directly.
@@ -211,7 +235,7 @@ local function canCounterDomain(m,n)
     return false
 end
 -- Starts a technique whose cost and cooldown are already paid: windup, busy time, the Cast broadcast, then the effect.
-local function stopSlide(p,s)
+local function stopSlide(p,s,carry)
     local slide=s.slide
     if not slide then return end
     s.slide=nil
@@ -222,7 +246,8 @@ local function stopSlide(p,s)
         updateSpeed(slide.model,slide.humanoid)
         if slide.root.Parent then
             local v=slide.root.AssemblyLinearVelocity;local horizontal=v*Vector3.new(1,0,1)
-            if horizontal.Magnitude>BASE_SPEED then slide.root.AssemblyLinearVelocity=horizontal.Unit*BASE_SPEED+Vector3.yAxis*v.Y end
+            local cap=carry and C.Slide.StartSpeed or BASE_SPEED*(slide.model:GetAttribute("GodspeedUsed") and C.Godspeed.SpeedFactor or 1)
+            if horizontal.Magnitude>cap then slide.root.AssemblyLinearVelocity=horizontal.Unit*cap+Vector3.yAxis*v.Y end
         end
     end
     fx:FireAllClients("SlideEnd",{owner=p.UserId})
@@ -283,12 +308,14 @@ local function updateBombRecoil(p,s,n,dt)
 end
 local function basicAttack(p,s,m,h,r,direction)
     local kit=kitOf(p)
-    local cfg=kit=="Zenitsu" and C.ZenBasicAttack or C.BasicAttack;local n=clock()
+    local cfg=kit=="Zenitsu" and C.ZenBasicAttack or kit=="Shanks" and C.ShanksBasicAttack or C.BasicAttack;local n=clock()
     local chained=(s.basicUntil or 0)>n
     local combo=chained and (s.basicCombo or 0)%#cfg.Windups+1 or 1
-    local windup=cfg.Windups[combo];local duration=windup+cfg.Swing+cfg.Recoveries[combo]
+    local alreadyDrawn=kit=="Zenitsu" and (s.zenDrawUntil or 0)+cfg.Sheath>n
+    local windup=alreadyDrawn and cfg.DrawnWindup or cfg.Windups[combo];local duration=windup+cfg.Swing+cfg.Recoveries[combo]
     s.basicCombo=combo;s.basicUntil=n+duration+cfg.ComboReset;s.busyUntil=n+duration
-    fx:FireAllClients("BasicAttack",{owner=p.UserId,kit=kit,combo=combo,draw=kit=="Zenitsu" and not chained,start=n,windup=windup,swing=cfg.Swing,duration=duration,position=r.Position,direction=direction})
+    if kit=="Zenitsu" then s.zenDrawUntil=s.basicUntil end
+    fx:FireAllClients("BasicAttack",{owner=p.UserId,kit=kit,combo=combo,draw=kit=="Zenitsu" and not chained and not alreadyDrawn,start=n,windup=windup,swing=cfg.Swing,duration=duration,position=r.Position,direction=direction})
     delayed(p,s,m,windup+cfg.Swing*.5,function()
         if (m:GetAttribute("RootedUntil") or 0)>clock() then return end
         local origin=r.Position+Vector3.yAxis*.5
@@ -314,7 +341,9 @@ end
 local function beginSlide(p,s,m,h,r)
     local cfg=C.Slide;local n=clock()
     local horizontal=r.AssemblyLinearVelocity*Vector3.new(1,0,1)
-    if h.FloorMaterial==Enum.Material.Air or horizontal.Magnitude<cfg.MinSpeed or (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    if s.slideEntry then horizontal=s.slideEntry;s.slideEntry=nil end
+    if horizontal.Magnitude<cfg.MinSpeed and h.MoveDirection.Magnitude>.1 then horizontal=h.MoveDirection*BASE_SPEED end
+    if not grounded(m,h,r) or horizontal.Magnitude<cfg.MinSpeed or (m:GetAttribute("SlowedUntil") or 0)>n then return end
     if (s.cooldowns.Slide or 0)>n or s.energy<cfg.Cost then return end
     local direction=horizontal.Unit
     if workspace:Blockcast(r.CFrame,Vector3.new(2.5,2.5,2.5),direction*2.5,rayParams(m)) then return end
@@ -336,7 +365,12 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
     local rezeDive=kind=="Rampage" and (s.rezeAirUntil or 0)>n
     local windup=kind=="Rampage" and rezeDive and .05 or C[kind].Windup or .2
     if kind=="Kick" then windup+=C.Kick.Fuse end
-    s.busyUntil=n+(kind=="FlameGod" and C.FlameGod.Duration or kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
+    s.busyUntil=n+(kind=="BombDevil" and windup+C.BombDevil.Blackout or kind=="Purple" and windup+C.Purple.Recovery or windup)
+    if kind=="Thunderclap" or kind=="Godspeed" or kind=="FlameGod" then
+        s.busyUntil=n+windup+C[kind].RushDuration+.15
+        s.zenDrawUntil=s.busyUntil+C[kind].DrawHold
+        setTimed(m,h,"RootedUntil",windup)
+    end
     if kind=="Purple" then cancelBlue(p,s);beginPurpleHover(s,m,h,r) end
     fx:FireAllClients("Cast",{owner=p.UserId,kind=kind,position=r.Position,direction=direction,start=n,windup=windup,charge=thunderCharge,enhanced=thunderEnhanced,phase=rezeDive and "Dive" or "Rise"})
     if kind=="Haki" then
@@ -370,13 +404,16 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         end)
     elseif kind=="Blue" then
         cancelBlue(p,s)
-        local desired=r.Position+direction*C.Blue.Range
-        local result=workspace:Raycast(r.Position,direction*C.Blue.Range,rayParams(m))
-        if result then desired=result.Position-direction*2 end
-        desired=Vector3.new(desired.X,math.max(2,desired.Y),desired.Z)
         delayed(p,s,m,C.Blue.Windup,function()
-            s.blueUntil=clock()+C.Blue.Duration;blues[p]={position=desired,untilTime=s.blueUntil,model=m}
-            fx:FireAllClients("Blue",{owner=p.UserId,position=desired,duration=C.Blue.Duration});sendState(p,s)
+            local aim,eye=releaseAim(s,m,r,direction)
+            local desired=eye+aim*C.Blue.Range
+            local result=workspace:Raycast(eye,aim*C.Blue.Range,rayParams(m))
+            if result then desired=result.Position-aim*2 end
+            desired=Vector3.new(desired.X,math.max(2,desired.Y),desired.Z)
+            local from=eye+aim*1.5
+            s.blueUntil=clock()+C.Blue.Duration
+            blues[p]={position=from,from=from,to=desired,start=clock(),travel=.6,untilTime=s.blueUntil,model=m}
+            fx:FireAllClients("Blue",{owner=p.UserId,position=desired,from=from,start=clock(),travel=.6,duration=C.Blue.Duration});sendState(p,s)
         end)
     elseif kind=="Red" or kind=="Purple" then
         delayed(p,s,m,C[kind].Windup,function()
@@ -427,25 +464,18 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         local flat=Vector3.new(direction.X,0,direction.Z)
         if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
         flat=flat.Unit
-        local result=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),flat*C.Dash.Distance,rayParams(m))
-        local distance=result and math.max(0,result.Distance-.5) or C.Dash.Distance
-        r.CFrame+=flat*distance
-    elseif kind=="Thunderclap" then
-        local cfg=C.Thunderclap
+        dashStrike(p,s,m,h,r,flat,C.Dash.Distance,0,C.Dash.RushDuration,nil,true)
+    elseif kind=="Thunderclap" or kind=="Godspeed" then
+        local cfg=C[kind]
         local flat=Vector3.new(direction.X,0,direction.Z)
         if flat.Magnitude<.05 then flat=r.CFrame.LookVector*Vector3.new(1,0,1) end
         flat=flat.Unit
-        local charged=math.clamp(thunderCharge or 0,0,cfg.MaxCharge)
-        local distance=cfg.MinDistance+(cfg.Distance-cfg.MinDistance)*charged/cfg.MaxCharge
+        local distance=cfg.Distance
         delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,distance,cfg.Width)
-            for _,t in victims do damage(p,t,cfg.Damage) end
-            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=start,to=finish,charged=charged,distance=distance})
-        end)
-    elseif kind=="Breath" then
-        delayed(p,s,m,C.Breath.Windup,function()
-            s.charges=C.Breath.Charges;s.chargesUntil=clock()+C.Breath.ChargeWindow;sendState(p,s)
-            fx:FireAllClients("Strike",{position=r.Position-Vector3.new(0,3,0),big=true})
+            local rush=dashStrike(p,s,m,h,r,flat,distance,cfg.Width,cfg.RushDuration,function(_,_,victims)
+                for _,t in victims do damage(p,t,cfg.Damage) end
+            end)
+            fx:FireAllClients("Thunderclap",{owner=p.UserId,from=rush.from,to=rush.to,technique=kind,distance=rush.distance,duration=cfg.RushDuration})
         end)
     elseif kind=="FlameGod" then
         local cfg=C.FlameGod
@@ -454,19 +484,13 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         flat=flat.Unit
         setTimed(m,h,"RootedUntil",windup)
         delayed(p,s,m,windup,function()
-            local start,finish,victims=dashStrike(m,r,flat,cfg.Distance,cfg.Width)
-            fx:FireAllClients("FlameGod",{owner=p.UserId,from=start,to=finish})
-            -- Too fast to see: the cuts land only after the user is already past.
-            task.delay(cfg.HitDelay,function()
-                for _,t in victims do damage(p,t,cfg.Damage) end
+            local rush=dashStrike(p,s,m,h,r,flat,cfg.Distance,cfg.Width,cfg.RushDuration,function(start,finish,victims)
+                -- Too fast to see: the cuts land only after the user is already past.
+                task.delay(cfg.HitDelay,function()
+                    for _,t in victims do damage(p,t,cfg.Damage) end
+                end)
             end)
-            -- The cut lands after the turn; recoil follows just after the user sees the result.
-            task.delay(cfg.RecoilDelay,function()
-                if p.Character~=m or not m.Parent or not h.Parent or h.Health<=0 then return end
-                if h.Health>1 then h.Health=math.max(1,h.Health-cfg.SelfDamage) end
-                setTimed(m,h,"SlowedUntil",cfg.SlowDuration)
-                fx:FireClient(p,"Recoil",{damage=cfg.SelfDamage,duration=cfg.SlowDuration})
-            end)
+            fx:FireAllClients("FlameGod",{owner=p.UserId,from=rush.from,to=rush.to,duration=cfg.RushDuration})
         end)
     elseif kind=="BombDevil" then
         local cfg=C.BombDevil
@@ -629,67 +653,37 @@ local function perform(p,s,m,h,r,kind,direction,instant,thunderCharge,thunderEnh
         end)
     end
 end
-local function releaseThunder(p,s,aim)
-    local hold=s.thunderHold
-    if not hold then return end
-    s.thunderHold=nil
-    local m,h,r=character(p)
-    if m~=hold.model or hold.generation~=s.generation then return end
-    m:SetAttribute("RootedUntil",0);updateSpeed(m,h)
-    local n=clock()
-    if (m:GetAttribute("DomainLockedUntil") or 0)>n then s.busyUntil=0;sendState(p,s);return end
-    local charged=math.clamp(n-hold.start,0,C.Thunderclap.MaxCharge)
-    local enhanced=s.charges>0 and s.chargesUntil>n
-    if enhanced then
-        s.charges-=1
-        if s.charges<=0 then
-            s.chargesUntil=0
-            s.cooldowns.Thunderclap=n+C.Thunderclap.Cooldown
-        else
-            s.cooldowns.Thunderclap=n+C.Thunderclap.ChainCooldown
-        end
-    else
-        if s.energy<C.Thunderclap.Cost then s.busyUntil=0;sendState(p,s);return end
-        s.energy-=C.Thunderclap.Cost;s.cooldowns.Thunderclap=n+C.Thunderclap.Cooldown
-    end
-    s.busyUntil=0
-    local direction=validVector(aim) and aim.Unit or hold.direction
-    perform(p,s,m,h,r,"Thunderclap",direction,false,charged,enhanced)
-    s.busyUntil=n+C.Thunderclap.Windup+.45
-    sendState(p,s)
-end
 remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     local s=states[p];if not s then return end
-    if skill=="ThunderclapStart" or skill=="ThunderclapRelease" then
-        if kitOf(p)~="Zenitsu" or not validVector(aim) then return end
-        if skill=="ThunderclapRelease" then releaseThunder(p,s,aim);return end
-        local n=clock()
-        local m,h,r=character(p);if not m or s.thunderHold or s.busyUntil>n or s.hold or s.slide then return end
-        if (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
-        local enhanced=s.charges>0 and s.chargesUntil>n
-        if (s.cooldowns.Thunderclap or 0)>n or (not enhanced and s.energy<C.Thunderclap.Cost) then return end
-        local hold={start=n,model=m,generation=s.generation,direction=aim.Unit}
-        s.thunderHold=hold;s.busyUntil=n+C.Thunderclap.MaxCharge+.4
-        setTimed(m,h,"RootedUntil",C.Thunderclap.MaxCharge+.05)
-        fx:FireAllClients("ThunderCharge",{owner=p.UserId,position=r.Position,start=n,duration=C.Thunderclap.MaxCharge,enhanced=enhanced})
-        task.delay(C.Thunderclap.MaxCharge,function()
-            if s.thunderHold==hold then releaseThunder(p,s,hold.direction) end
-        end)
-        return
-    end
     if skill=="SlideCancel" then
         if s.slide then stopSlide(p,s);s.busyUntil=clock() end
         return
     end
     local n=clock()
-    if n-s.lastRequest<.1 then return end;s.lastRequest=n
+    local moveInput=skill=="Dash" or skill=="Slide" or skill=="MoveJump"
+    if n-s.lastRequest<(moveInput and .025 or .1) then return end;s.lastRequest=n
     local shanksAction=kitOf(p)=="Shanks" and (skill=="ShanksSlash" or skill=="ShanksParry")
-    if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
+    if type(skill)~="string" or (skill~="BasicAttack" and skill~="Slide" and skill~="MoveJump" and not kits[kitOf(p)][skill] and not shanksAction) or not validVector(aim) then return end
     local m,h,r=character(p);if not m then return end
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
     -- Held by Pain (pulled, thrown, sealed) or All Might (smashed, carried, launched): no attacks, dashes or skills.
     if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) then return end
-    if skill=="Thunderclap" then return end
+    if skill=="MoveJump" then
+        if (m:GetAttribute("RootedUntil") or 0)>n or (m:GetAttribute("BombRecoilUntil") or 0)>n then return end
+        if s.slide then stopSlide(p,s,true);s.busyUntil=n end
+        if s.moveRush and Rush.isActive(r) then Rush.cancel(r,true);s.busyUntil=n end
+        if s.busyUntil<=n then h.Jump=true end
+        return
+    end
+    if skill=="Dash" or skill=="Slide" then
+        local cfg=C[skill]
+        if (m:GetAttribute("RootedUntil") or 0)>n or s.energy<cfg.Cost or (s.cooldowns[skill] or 0)>n then return end
+        if skill=="Dash" and s.slide then stopSlide(p,s,true);s.busyUntil=n end
+        if skill=="Slide" and s.moveRush and Rush.isActive(r) then
+            s.slideEntry=s.moveRush.direction*math.min(C.Slide.StartSpeed,math.max(BASE_SPEED,(r.AssemblyLinearVelocity*Vector3.new(1,0,1)).Magnitude))
+            Rush.cancel(r,true);s.busyUntil=n
+        end
+    end
     if Kizaru.handles(skill) then
         if kitOf(p)=="Kizaru" then Kizaru.request(p,s,m,h,r,skill,aim.Unit) end
         return
@@ -715,20 +709,13 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if kitOf(p)=="Shanks" and skill=="ShanksSlash" then
         local cfg=C.EnGarde
         if s.enGardeUntil<=n or s.busyUntil>n then return end
-        s.enGardeUntil=0;s.busyUntil=n+.55
+        s.enGardeUntil=0;s.busyUntil=n+.8
         fx:FireAllClients("ShanksSlash",{owner=p.UserId,start=n,direction=aim.Unit})
-        task.delay(.2,function()
+        task.delay(.25,function()
             if p.Character~=m or not m.Parent or h.Health<=0 then return end
             local flat=Vector3.new(aim.X,0,aim.Z);if flat.Magnitude<.05 then flat=Vector3.new(0,0,-1) end;flat=flat.Unit
-            r.AssemblyLinearVelocity=flat*65+Vector3.yAxis*16
-            local start=r.Position
-            task.delay(.08,function()
-                if p.Character~=m or not m.Parent then return end
-                local finish=r.Position
-                for _,t in targets(m) do
-                    local path=finish-start;local along=path.Magnitude>0 and math.clamp((t.r.Position-start):Dot(path.Unit),0,path.Magnitude) or 0
-                    if (start+path.Unit*along-t.r.Position).Magnitude<=cfg.SlashWidth then damage(p,t,cfg.SlashDamage) end
-                end
+            dashStrike(p,s,m,h,r,flat,cfg.SlashDistance,cfg.SlashWidth,.22,function(_,_,victims)
+                for _,t in victims do damage(p,t,cfg.SlashDamage) end
             end)
         end)
         return
@@ -780,6 +767,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if skill=="Rampage" and not rezeDive and (s.rezeAirUntil or 0)>0 then s.rezeAirUntil=0 end
     if skill=="BombDevil" and devil(m) then return end
     if skill=="Dash" and (m:GetAttribute("SlowedUntil") or 0)>n then return end
+    if skill=="Godspeed" and m:GetAttribute("GodspeedUsed") then return end
     local cfg=C[skill]
     local instant=false
     if instant then
@@ -788,6 +776,7 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
         if ((s.cooldowns[skill] or 0)>n and not rezeDive) or s.energy<cfg.Cost then return end
         s.energy-=cfg.Cost;s.cooldowns[skill]=n+cfg.Cooldown
     end
+    if skill=="Godspeed" then m:SetAttribute("GodspeedUsed",true);updateSpeed(m,h) end
     -- Reze pays in health, never lethally.
     if cfg.HpCost and h.Health>1 then h.Health=math.max(1,h.Health-h.MaxHealth*cfg.HpCost) end
     -- Gojo: Blue and Red are held with an arm raised for up to Hold.Duration seconds instead of firing at once.
@@ -815,7 +804,7 @@ selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
     clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p)
-    stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
+    stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0;s.zenDrawUntil=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
     p:SetAttribute("Character",name);sendState(p,s)
@@ -861,17 +850,21 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
         updateBombRecoil(p,s,n,dt)
-        local slide
+        local slide=s.slide
         if slide then
             local age=n-slide.start
             local m,h,r=slide.model,slide.humanoid,slide.root
             if p.Character~=m or not m.Parent or not r.Parent or h.Health<=0 or age>=C.Slide.Duration
                 or (m:GetAttribute("DomainLockedUntil") or 0)>n or (m:GetAttribute("RootedUntil") or 0)>n
-                or (age>.08 and h.FloorMaterial==Enum.Material.Air)
+                or (age>.08 and not grounded(m,h,r))
                 or workspace:Blockcast(r.CFrame,Vector3.new(2.5,2.5,2.5),slide.direction*math.max(1.5,C.Slide.StartSpeed*dt+.5),rayParams(m)) then
                 stopSlide(p,s);s.busyUntil=n
             else
                 local u=math.clamp(age/C.Slide.Duration,0,1)
+                local move=h.MoveDirection*Vector3.new(1,0,1)
+                if move.Magnitude>.1 and move.Unit:Dot(slide.direction)>-.3 then
+                    slide.direction=slide.direction:Lerp(move.Unit,1-math.exp(-dt*5)).Unit
+                end
                 slide.velocity.VectorVelocity=slide.direction*(C.Slide.EndSpeed+(C.Slide.StartSpeed-C.Slide.EndSpeed)*(1-u)^2)
             end
         end
@@ -884,6 +877,8 @@ RunService.Heartbeat:Connect(function(dt)
         if n>b.untilTime or not b.model.Parent then
             if states[p] then cancelBlue(p,states[p]) else blues[p]=nil end
         else
+            local u=math.clamp((n-b.start)/b.travel,0,1)
+            b.position=b.from:Lerp(b.to,u*u*(3-2*u))
             for _,t in targets(b.model) do
                 local delta=b.position-t.r.Position;local distance=delta.Magnitude
                 if distance<C.Blue.Radius and distance>2 then
@@ -958,7 +953,7 @@ AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targe
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
-        stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0
+        stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0;s.zenDrawUntil=0
         clearPurpleHover(s);clearDoraFlight(s);Okkotsu.reset(p);Kizaru.reset(p)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")

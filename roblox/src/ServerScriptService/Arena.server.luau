@@ -1,4 +1,16 @@
 local Players = game:GetService("Players")
+-- Avatar display rigs retain a Humanoid for classic clothing. Roblox can restore
+-- torso CanCollide even with EvaluateStateMachine disabled, so isolate their physics.
+local PhysicsService = game:GetService("PhysicsService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local visualCollisionGroup = "InfinityViewmodel"
+if not PhysicsService:IsCollisionGroupRegistered(visualCollisionGroup) then
+    PhysicsService:RegisterCollisionGroup(visualCollisionGroup)
+end
+for _,group in PhysicsService:GetRegisteredCollisionGroups() do
+    PhysicsService:CollisionGroupSetCollidable(visualCollisionGroup,group.name,false)
+end
+ReplicatedStorage:SetAttribute("ViewmodelCollisionGroup",visualCollisionGroup)
 local Lighting = game:GetService("Lighting")
 -- Apply daylight when the arena starts, including places synced from older builds.
 Lighting.ClockTime = 13.5

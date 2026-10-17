@@ -11,7 +11,7 @@ local function part(name,size,parent,color)
 end
 local function sound(at,charge)
     local p=part("LightSound",Vector3.one*.1,workspace);p.CFrame=CFrame.new(at);p.Transparency=1
-    local s=Instance.new("Sound");s.SoundId=charge and "rbxasset://sounds/electronicpingshort.mp3" or "rbxasset://sounds/impact_generic.mp3";s.Volume=.55;s.PlaybackSpeed=charge and 1.7 or 1.2;s.RollOffMaxDistance=95;s.Parent=p;s:Play();Debris:AddItem(p,3)
+    local s=Instance.new("Sound");s.SoundId=charge and C.SoundIds.Charge or C.SoundIds.Blast;s.Volume=.55;s.PlaybackSpeed=charge and 1.7 or 1.2;s.RollOffMaxDistance=95;s.Parent=p;s:Play();Debris:AddItem(p,3)
 end
 function M.init(e)
     env=e;boot=part("KizaruRightBoot",Vector3.new(.26,.32,.62),e.viewmodel,Color3.fromRGB(40,37,29));boot.Material=Enum.Material.SmoothPlastic
@@ -59,7 +59,7 @@ function M.render(dt,selected,alive)
     local core=CFrame.new(.28,.18*k,-1.15-.22*k);local fov=66
     boot.Transparency=1
     if cast.skill=="LightKick" then
-        local dash=smooth((a-cfg.Windup)/.05);local sweep=smooth((a-cfg.Windup-.05)/.1);local rush=math.sin(math.pi*math.clamp((a-cfg.Windup)/.2,0,1));back=smooth((a-cfg.Windup-.3)/(cfg.Duration-cfg.Windup-.3))
+        local dash=smooth((a-cfg.Windup)/cfg.DashTime);local sweep=smooth((a-cfg.Windup-cfg.DashTime)/.16);local rush=math.sin(math.pi*math.clamp((a-cfg.Windup)/(cfg.DashTime+.16),0,1));back=smooth((a-cfg.Windup-.3)/(cfg.Duration-cfg.Windup-.3))
         boot.Transparency=0;boot.CFrame=cam.CFrame*CFrame.new(.58-1.15*sweep,-1.1+.95*wind-.9*back,-.65-.6*wind)*CFrame.Angles(-.5*wind,.7-1.7*sweep,-.25+.65*wind-1.35*sweep)
         core=cam.CFrame:ToObjectSpace(boot.CFrame*CFrame.new(0,.05,-.32));r=CFrame.new(.65,-.28,-.65)*CFrame.Angles(.2,.2,.55)
         env.commonLook(CFrame.Angles(0,(.04*wind-.09*sweep)*(1-back),(.065*wind-.15*sweep)*(1-back)));fov=66-5*wind*(1-dash)+30*rush

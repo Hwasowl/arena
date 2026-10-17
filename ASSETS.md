@@ -27,3 +27,10 @@
 - 아이콘은 내장 imagegen으로 각각 생성. 생성 원본을 `sources/`에 보관하고 업로드용 파일은 투명 여백을 정리해 512×512 PNG로 저장.
 - 효과음은 `tools/make-skill-audio.py`의 노이즈·발진음·금속 공명 합성으로 제작. 원작 대사나 음원 샘플 없음. 48kHz / 16bit PCM / 모노 WAV.
 - `InfinityArena-SkillAssets-v1.zip`에 업로드용 PNG·WAV·갤러리·ID 카탈로그를 묶음. 브라우저 게임 프리뷰와 단일 HTML에 아이콘·스킬별 효과음을 연결함. Roblox 업로드·Roblox HUD/SoundId 연결·Studio 재생은 아직 하지 않음.
+
+## Roblox playback audio
+Free Creator Store audio checked in Studio (2026-10-17):
+- Menacing laser charge — pebblm — https://create.roblox.com/store/asset/139131445232833
+- Magic blast sfx — NisterBol — https://create.roblox.com/store/asset/117861167307650
+- sword-slash-and-swing — timutye — https://create.roblox.com/store/asset/137628815514180
+The web WAV pack has no uploaded Roblox IDs. GojoConfig.SoundIds selects the playable replacements; local Roblox content provides a fallback if permission changes.

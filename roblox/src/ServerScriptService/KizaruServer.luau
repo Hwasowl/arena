@@ -5,7 +5,9 @@ local C=require(game:GetService("ReplicatedStorage"):WaitForChild("GojoConfig"))
 local Run=game:GetService("RunService")
 local M={};local ctx;local active={}
 local skills={LightLaser=true,LightKick=true,LightJewels=true,LightMirror=true}
-local DASH_TIME=.05
+local kick
+local Rush=require(script.Parent:WaitForChild("RushServer"))
+local DASH_TIME=C.LightKick.DashTime
 function M.init(c) ctx=c end
 function M.handles(skill) return skills[skill]==true end
 local function emit(p,kind,data) data.owner=p.UserId;ctx.fx:FireAllClients("Kizaru"..kind,data) end
@@ -64,9 +66,15 @@ local function startDash(p,a)
     local distance=hit and math.max(0,hit.Distance-.6) or want
     local to=origin+dir*distance
     a.dash={from=r.CFrame,to=CFrame.lookAt(to,to+dir),start=ctx.clock(),dir=dir,target=target}
-    emit(p,"Dash",{from=origin,to=to,direction=dir,start=a.dash.start,time=DASH_TIME})
+    local rush=Rush.start(p,a.m,a.m:FindFirstChildOfClass("Humanoid"),r,dir,distance,DASH_TIME,{
+        walkSpeed=game:GetService("StarterPlayer").CharacterWalkSpeed,
+        valid=function() return valid(p,a) end,
+        complete=function() a.dash.done=true;kick(p,a) end,
+    })
+    emit(p,"Dash",{from=origin,to=rush.to,direction=dir,start=a.dash.start,time=DASH_TIME})
+    ctx.fx:FireAllClients("Rush",{owner=p.UserId,from=origin,to=rush.to,direction=dir,start=rush.start,duration=DASH_TIME})
 end
-local function kick(p,a)
+kick=function(p,a)
     local cfg=C.LightKick;local d=a.dash;local r=a.r;local hitAny=false
     for _,t in ctx.targets(a.m) do
         local delta=t.r.Position-r.Position;local flat=Vector3.new(delta.X,0,delta.Z);local along=flat:Dot(d.dir)
@@ -100,7 +108,8 @@ function M.request(p,s,m,h,r,skill,aim)
             local dir=flat.Unit;local origin=r.Position
             local hit=workspace:Blockcast(r.CFrame,Vector3.new(3,4,3),dir*cfg.Range,params(m,false))
             local distance=hit and math.max(0,hit.Distance-.6) or cfg.Range
-            r.CFrame+=dir*distance;r.AssemblyLinearVelocity=Vector3.zero
+            local rush=Rush.start(p,m,h,r,dir,distance,cfg.RushDuration,{valid=function() return valid(p,a) end})
+            ctx.fx:FireAllClients("Rush",{owner=p.UserId,from=origin,to=rush.to,direction=dir,start=rush.start,duration=cfg.RushDuration})
             emit(p,"Beam",{skill=skill,position=origin,direction=dir,distance=distance})
         end)
     elseif skill=="LightKick" then task.delay(cfg.Windup,function() startDash(p,a) end)
@@ -121,11 +130,7 @@ Run.Heartbeat:Connect(function()
             M.reset(p)
         else
             local n=ctx.clock();local r=a.r
-            if a.dash and not a.dash.done then
-                local u=math.clamp((n-a.dash.start)/DASH_TIME,0,1)
-                r.CFrame=a.dash.from:Lerp(a.dash.to,u);r.AssemblyLinearVelocity=Vector3.zero
-                if u>=1 then a.dash.done=true;kick(p,a) end
-            elseif a.skill=="LightJewels" then
+            if a.skill=="LightJewels" then
                 local cfg=C.LightJewels;local e=n-a.start
                 local up=math.clamp((e-cfg.Windup)/cfg.Rise,0,1);local rise=1-(1-up)*(1-up)
                 local dn=math.clamp((e-cfg.Hover)/cfg.Fall,0,1)
