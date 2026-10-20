@@ -4,13 +4,16 @@ return {
     -- Shared mouse attack: wind back, contact, then recover. One target per hit; third hit pushes it away.
     BasicAttack = { Windups = { 0.16, 0.18, 0.24 }, Swing = 0.1, Recoveries = { 0.22, 0.24, 0.32 }, Damages = { 12, 14, 20 }, Reach = 6, Width = 2.4, ComboReset = 0.95, Knockback = 24, Lift = 8 },
     -- First cut draws from the saya; four slower cuts alternate right/left before an idle resheath.
-    ZenBasicAttack = { Windups = { 0.52, 0.32, 0.32, 0.32 }, Swing = 0.24, Recoveries = { 0.30, 0.28, 0.28, 0.34 }, Damages = { 12, 14, 16, 20 }, Reach = 6, Width = 2.4, ComboReset = 0.70, Knockback = 24, Lift = 8, Sheath = 0.42 },
+    ZenBasicAttack = { Windups = { 0.52, 0.32, 0.32, 0.32 }, Swing = 0.24, Recoveries = { 0.30, 0.28, 0.28, 0.34 }, Damages = { 12, 14, 16, 20 }, Reach = 6, Width = 2.4, DrawnWindup = .08, ComboReset = 0.70, Knockback = 24, Lift = 8, Sheath = 0.42 },
+    ShanksBasicAttack = { Windups = { .34, .20, .20, .20 }, Swing = .16, Recoveries = { .20, .17, .17, .22 }, Damages = { 10, 11, 12, 17 }, Reach = 6, Width = 2.4, ComboReset = .6, Knockback = 24, Lift = 8 },
     -- Ctrl while moving on the ground. Horizontal force only, so gravity and jumping still work.
     Slide = { Cost = 6, Cooldown = 1.4, Duration = 0.7, StartSpeed = 38, EndSpeed = 12, MinSpeed = 3, CameraDip = 1.1 },
     -- Skills each character may request; the server rejects anything outside the player's kit.
     Kits = {
+        Kizaru = {"LightLaser","LightKick","LightJewels","LightMirror"},
+        Okkotsu = { "ReverseCursed", "RikaStrike", "PureLove", "Dash" },
         Gojo = { "Blue", "Red", "Domain", "Dash" },
-        Zenitsu = { "Breath", "Thunderclap", "FlameGod", "Dash" },
+        Zenitsu = { "Thunderclap", "Godspeed", "FlameGod", "Dash" },
         Reze = { "Rampage", "Kick", "BombDevil", "Detonation", "Dash" },
         Shanks = { "Haki", "EnGarde", "DivineDeparture", "Dash" },
         Doraemon = { "Pocket", "BambooCopter", "AnywhereDoor", "Dash" },
@@ -21,7 +24,11 @@ return {
         -- Uchiha Itachi: tuning and judgement live in ItachiConfig / ItachiServer. Crow Clone is a passive.
         Itachi = { "Tsukuyomi", "Amaterasu", "Susanoo", "Dash" },
     },
-    Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 8, Range = 24, Radius = 14, PullSpeed = 10 },
+    LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
+    LightKick = {DashTime=.24,Cost=24,Cooldown=8,Windup=.3,Duration=1.1,Damage=65,Range=48,Width=4.5},
+    LightJewels = {Cost=55,Cooldown=28,Windup=.5,Duration=2.9,Damage=12,Range=90,Width=1.25,Height=26,Rise=.45,Hover=2.25,Fall=.5,Shoot=.95,Gap=.085},
+    LightMirror = {RushDuration=.28,Cost=12,Cooldown=6,Windup=.45,Duration=1.05,Range=24},
+    Blue = { Cost = 15, Cooldown = 5, Windup = 0.65, Duration = 1, Range = 24, Radius = 14, PullSpeed = 10 },
     Red = { Cost = 20, Cooldown = 6, Windup = 0.45, Damage = 65, Speed = 100, Radius = 3.5, WorldRadius = 1.2, Range = 140 },
     -- Blue and Red are held for up to Hold.Duration before they fire; the other one during the hold makes Purple.
     Hold = { Duration = 3 },
@@ -31,13 +38,12 @@ return {
         OrbDistance = 5, ChargeRadius = 0.6, MergedRadius = 1.4, VisualRadius = 3, PierceWorld = true,
     },
     Domain = { Cost = 45, Cooldown = 15, Windup = 2, Duration = 7.5, Radius = 26, Tick = 0.5, Damage = 8, ClashWindow = 0.75 },
-    Dash = { Cost = 5, Cooldown = 2.5, Distance = 16 },
-    -- Every E keeps the same hold time and 10–40 stud range. Breath grants three separately charged consecutive uses.
-    Thunderclap = { Cost = 18, Cooldown = 6, ChainCooldown = 0.5, Windup = 0.05, MaxCharge = 1.6, MinDistance = 10, Distance = 40, Width = 5, Damage = 70 },
-    Breath = { Cost = 20, Cooldown = 14, Windup = 2, Charges = 3, ChargeWindow = 12 },
-    -- Seventh form: a draw-dash ten times faster than Thunderclap. Victims are hit HitDelay after the pass;
-    -- the user pays SelfDamage (never lethal) and moves at SlowFactor speed with Dash locked for SlowDuration.
-    FlameGod = { DragonScale = 2.5, Cost = 50, Cooldown = 25, Windup = 0.8, Duration = 1.6, Distance = 60, Width = 7, Damage = 150, HitDelay = 0.9, RecoilDelay = 1, SelfDamage = 30, SlowDuration = 4, SlowFactor = 0.4 },
+    Dash = { Windup = .01, Cost = 5, Cooldown = 2.5, Distance = 16, RushDuration = .28 },
+    -- Fixed draw preparation: Q is visible travel, E has half the preparation/travel time.
+    Thunderclap = { RushDuration = .24, Cost = 18, Cooldown = 6, Windup = .4, Distance = 40, Width = 5, Damage = 70, DrawHold = 2 },
+    Godspeed = { RushDuration = .12, Cost = 28, Cooldown = 0, Windup = .2, Distance = 55, Width = 5, Damage = 100, DrawHold = 2, SpeedFactor = .7 },
+    -- Seventh form: the same crouched draw, with a lightning dragon and no recoil/debuff.
+    FlameGod = { RushDuration = .18, DragonScale = 2.5, Cost = 50, Cooldown = 25, Windup = .6, Distance = 60, Width = 7, Damage = 150, HitDelay = .18, DrawHold = 2 },
     -- Reze. Q: crouch, blast upward, then press Q again during AirWindow to dive and slam. E raises the right hand
     -- for a close forward blast. Each costs HpCost of max HP (never lethal). R starts the original moving fuse.
     -- BombDevil can be used again Recharge seconds after she reverts.
@@ -57,5 +63,7 @@ return {
         CannonDamage = 10, CannonWallDamage = 30, CannonDistance = 20, CannonTime = 0.38, Heal = 20 },
     BambooCopter = { Cost = 18, Cooldown = 12, Windup = 2.05, Recovery = 0.35, Duration = 3, FlySpeed = 24, VerticalSpeed = 15 },
     AnywhereDoor = { Cost = 28, Cooldown = 18, Windup = 2.3, Recovery = 0.35, Distance = 24 },
+    -- Free Creator Store audio, preload-checked in Studio. Local fallbacks live in the client.
+    SoundIds = { Charge = "rbxassetid://139131445232833", Blast = "rbxassetid://117861167307650", Sword = "rbxassetid://137628815514180" },
     Colors = { Dora = Color3.fromRGB(48, 166, 221), Blue = Color3.fromRGB(35, 180, 255), Red = Color3.fromRGB(255, 54, 94), Purple = Color3.fromRGB(171, 95, 255), Thunder = Color3.fromRGB(255, 210, 63), Bomb = Color3.fromRGB(255, 122, 46), Haki = Color3.fromRGB(255, 45, 67) },
 }
