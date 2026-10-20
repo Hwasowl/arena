@@ -331,6 +331,20 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"ItachiNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(96,70,128)) end
         end
+    elseif kind=="Yujiro" then
+        -- Third-person symbol only: Yujiro's wild red hair, a cap with spikes swept up and back. The rest of the
+        -- avatar is the player's own; the Demon Back is drawn by YujiroVFX on the torso only during Ogre's Judgment.
+        local red,deep=Color3.fromRGB(196,22,24),Color3.fromRGB(120,10,14)
+        local hy=head.Size.Y/2
+        attach(head,"YujiroHair",Vector3.new(head.Size.X*1.1,.46,head.Size.Z*1.12),CFrame.new(0,hy-.1,.05),red,nil,Enum.PartType.Ball)
+        attach(head,"YujiroHairBack",Vector3.new(head.Size.X*1.04,.7,.34),CFrame.new(0,hy-.42,head.Size.Z/2-.02),deep)
+        -- Spikes: {x, z, length, tilt back, tilt out}
+        for _,spike in {{0,-.3,.9,.35,0},{-.32,-.2,.8,.3,-.45},{.32,-.2,.8,.3,.45},{-.18,.05,.95,.75,-.25},{.18,.05,.95,.75,.25},
+            {0,.2,1,1.05,0},{-.42,.15,.75,.85,-.7},{.42,.15,.75,.85,.7},{-.25,.38,.8,1.3,-.35},{.25,.38,.8,1.3,.35}} do
+            local base=CFrame.new(spike[1],hy+.02,spike[2])*CFrame.Angles(spike[4],0,-spike[5])
+            attach(head,"YujiroHairSpike",Vector3.new(.2,spike[3],.2),base*CFrame.new(0,spike[3]*.45,0),red,Enum.Material.SmoothPlastic)
+            attach(head,"YujiroHairTip",Vector3.new(.09,spike[3]*.4,.09),base*CFrame.new(0,spike[3]*.95,0),deep,Enum.Material.SmoothPlastic)
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end

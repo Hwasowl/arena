@@ -50,7 +50,7 @@ local function setUntil(m,attribute,untilTime)
     if m and m.Parent then m:SetAttribute(attribute,untilTime) end
 end
 local function heldByOthers(m,n)
-    return (m:GetAttribute("PainHeldUntil") or 0)>n or (m:GetAttribute("AllMightHeldUntil") or 0)>n
+    return (m:GetAttribute("PainHeldUntil") or 0)>n or (m:GetAttribute("AllMightHeldUntil") or 0)>n or (m:GetAttribute("YujiroHeldUntil") or 0)>n
 end
 local function isSealed(m,n) return (m:GetAttribute("ItachiSealedUntil") or 0)>n end
 local function headOf(t) local head=t.m:FindFirstChild("Head");return head and head.Position or t.r.Position+Vector3.yAxis*1.5 end

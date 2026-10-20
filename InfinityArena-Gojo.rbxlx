@@ -850,6 +850,7 @@ local KizaruClient=require(script.Parent:WaitForChild("KizaruClient"))
 local OkkotsuClient=require(script.Parent:WaitForChild("OkkotsuClient"))
 local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
 local ItachiClient=require(script.Parent:WaitForChild("ItachiClient"))
+local YujiroClient=require(script.Parent:WaitForChild("YujiroClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
 local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.Parent=camera
@@ -989,14 +990,17 @@ local KITS={
         slots={{"OneForAll","Q","원 포 올: 풀 파워"},{"UnitedStatesOfSmash","E","UNITED STATES OF SMASH"},{"PlusUltra","R","PLUS ULTRA!"},{"Dash","SHIFT","대시"}}},
     Itachi={title="うちはイタチ  ·  우치하 이타치",energy="MANGEKYO SHARINGAN",hint="Q 츠쿠요미 · E 아마테라스 (바라본 바닥) · R 스사노오 · 패시브 까마귀 분신   /   SHIFT 대시   /   0 캐릭터",handScale=1,
         slots={{"Tsukuyomi","Q","츠쿠요미"},{"Amaterasu","E","아마테라스"},{"Susanoo","R","스사노오 · 토츠카의 검"},{"Dash","SHIFT","대시"}}},
+    Yujiro={title="範馬勇次郎  ·  한마 유지로",energy="OGRE",hint="Q 지상 최강의 생물 (정면 반격 자세) · E 오거 러시 · R 오거의 심판 (시야 중앙 25스터드 붙잡기)   /   SHIFT 대시   /   - 캐릭터",handScale=1,
+        slots={{"OgreCounter","Q","지상 최강의 생물"},{"OgreRush","E","오거 러시"},{"OgreJudgment","R","오거의 심판"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
 local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
 local ITACHI_KINDS={Tsukuyomi=true,Amaterasu=true,Susanoo=true}
+local YUJIRO_KINDS={OgreCounter=true,OgreRush=true,OgreJudgment=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end if string.sub(kind,1,5)=="Light" then return Color3.fromRGB(255,220,119) end if kind=="ReverseCursed" then return Color3.fromRGB(112,255,203) end if kind=="RikaStrike" or kind=="PureLove" then return Color3.fromRGB(227,139,203) end if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Godspeed" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end if YUJIRO_KINDS[kind] then return Color3.fromRGB(214,62,44) end if string.sub(kind,1,5)=="Light" then return Color3.fromRGB(255,220,119) end if kind=="ReverseCursed" then return Color3.fromRGB(112,255,203) end if kind=="RikaStrike" or kind=="PureLove" then return Color3.fromRGB(227,139,203) end if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Godspeed" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.CollisionGroup=visualCollisionGroup
@@ -1638,12 +1642,13 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(900,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(990,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Kizaru="키자루",Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Okkotsu="옷코츠",Itachi="이타치"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Okkotsu","Kizaru","Itachi"} do
+local PICK_NAMES={Kizaru="키자루",Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Okkotsu="옷코츠",Itachi="이타치",Yujiro="유지로"}
+local PICK_KEYS={"1","2","3","4","5","6","7","8","9","0","-"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Okkotsu","Kizaru","Itachi","Yujiro"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
-    b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
+    b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=PICK_KEYS[i].."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
     b.Activated:Connect(function() selectRemote:FireServer(name) end)
     pickButtons[name]=b
@@ -1657,13 +1662,14 @@ AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=
 KizaruClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 OkkotsuClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 ItachiClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+YujiroClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
     comboLabel.TextColor3=name=="Okkotsu" and Color3.fromRGB(239,181,222) or Color3.fromRGB(255,224,176)
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Okkotsu" and colorOf("ReverseCursed") or name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or C.Colors.Blue
-    GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset()
+    energy.TextColor3=name=="Okkotsu" and colorOf("ReverseCursed") or name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or name=="Yujiro" and colorOf("OgreJudgment") or C.Colors.Blue
+    GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset();YujiroClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -1687,11 +1693,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) or (current()=="Yujiro" and YujiroClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if (cast and cast.kind~="Dash") or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
+    if (cast and cast.kind~="Dash") or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) or (current()=="Yujiro" and YujiroClient.busy()) then return end
     local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if h and h.FloorMaterial==Enum.Material.Air then slideBufferedUntil=time()+.18;return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
@@ -1711,7 +1717,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Nine]="Kizaru",[Enum.KeyCode.Eight]="Okkotsu",[Enum.KeyCode.Zero]="Itachi"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Nine]="Kizaru",[Enum.KeyCode.Eight]="Okkotsu",[Enum.KeyCode.Zero]="Itachi",[Enum.KeyCode.Minus]="Yujiro"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -1743,6 +1749,7 @@ event.OnClientEvent:Connect(function(kind,data)
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
     if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
     if string.sub(kind,1,6)=="Itachi" then ItachiClient.onEvent(kind,data);return end
+    if string.sub(kind,1,6)=="Yujiro" then YujiroClient.onEvent(kind,data);return end
     if kind=="Rush" then
         if data.owner==player.UserId then
             rushView={start=data.start,duration=data.duration,from=data.from,to=data.to,locomotion=data.locomotion}
@@ -2541,6 +2548,13 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if (isItachi and ItachiClient.busy()) or itachiOut.victim then desiredFov=itachiOut.fov end
         desiredFov+=itachiOut.fovAdd
     end
+    -- Yujiro: own techniques for the Yujiro kit; the view from his grip for anyone caught in it.
+    local isYujiro=current()=="Yujiro"
+    local yujiroOut=YujiroClient.render(dt,{isYujiro=isYujiro,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0,sliding=sliding~=nil})
+    if yujiroOut then
+        if (isYujiro and YujiroClient.busy()) or yujiroOut.victim then desiredFov=yujiroOut.fov end
+        desiredFov+=yujiroOut.fovAdd
+    end
     local kizaruOut=KizaruClient.render(dt,current()=="Kizaru",h~=nil and h.Health>0)
     if kizaruOut then l=kizaruOut.left;r=kizaruOut.right;desiredFov=kizaruOut.fov end
     local isOkkotsu=current()=="Okkotsu"
@@ -2661,8 +2675,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             if v:IsA("BasePart") and v:GetAttribute("Outfit") then v.LocalTransparencyModifier=firstPerson and 1 or 0 end
         end
     end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isOkkotsu and not isItachi)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isOkkotsu and not isItachi)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isOkkotsu and not isItachi and not isYujiro)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isOkkotsu and not isItachi and not isYujiro)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -2731,6 +2745,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             comboLabel.Text=mightOut.combo;comboLabel.TextTransparency=mightOut.rReady and .1+.25*math.abs(math.sin(n*9)) or .15
         elseif itachiOut and itachiOut.combo then
             comboLabel.Text=itachiOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
+        elseif yujiroOut and yujiroOut.combo then
+            comboLabel.Text=yujiroOut.combo;comboLabel.TextTransparency=.15
         elseif isDora and dora.rotorUntil>n then
             comboLabel.Text=string.format("대나무 헬리콥터   %.1f초 · SPACE ↑ / CTRL ↓",dora.rotorUntil-n);comboLabel.TextTransparency=0
         else comboLabel.Text="" end
@@ -2749,7 +2765,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset()
+    clearCastVFX();GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset();YujiroClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenReadyPose=nil;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)
@@ -3630,6 +3646,710 @@ function O.reset()
     for _,f in transient do f.cleanup() end;transient={};VFX.reset();avatarSword(player.Character,false)
 end
 return O
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_YujiroClient"><Properties><string name="Name">YujiroClient</string><ProtectedString name="Source"><![CDATA[-- Yujiro Hanma on the client: huge bare first-person arms (deltoid, biceps, forearm muscle masses and veins, jointed
+-- fingers: fist, open palm, claw grab, palm strike, two-hand lift) and a first-person leg for the axe kick; camera work
+-- for each technique (including the Ogre's Judgment cinematic: rear shot of the Demon Back opening, side shot before
+-- the final punch), screen grade and overlays, hitstop, and the victim's side (the view from Yujiro's grip).
+-- Gojo.client.luau owns input and the shared HUD; it forwards Yujiro* events here and asks for the arm pose every
+-- frame. All judgement stays on the server. The camera is only ever offset per frame through env.commonLook (undone
+-- by Gojo.client every frame), the FOV is returned to Gojo.client, and the colour grade is rewritten every frame, so
+-- nothing can stay stuck after a cinematic, a death, a reset or a character switch.
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local UIS=game:GetService("UserInputService")
+local Lighting=game:GetService("Lighting")
+local Y=require(RS:WaitForChild("YujiroConfig"))
+local VFX=require(RS:WaitForChild("YujiroVFX"))
+local COLORS=Y.Colors
+local player=Players.LocalPlayer
+local smoothstep,window,bump,easeOut=VFX.smoothstep,VFX.window,VFX.bump,VFX.easeOut
+local function clock() return workspace:GetServerTimeNow() end
+local function lerp(a,b,t) return a+(b-a)*t end
+
+local YujiroClient={}
+local env
+local cast=nil            -- own technique in progress: {kind, start, ...}
+local victim=nil          -- something being done to us: {kind="Judgment"|"Rush", start, caster}
+local combo={untilTime=0,text=""}
+local shake={untilTime=0,power=0,duration=.1}
+local freeze={at=0,length=0}   -- hitstop / slowdown: own animation time stops for `length` at `at`
+local revealed={}
+local buffUntil=0
+-- Comfort setting (player attribute "Comfort"): weaker shakes and flashes.
+local function comfort() return player:GetAttribute("Comfort")==true end
+local function kick(power,duration)
+    power*=comfort() and .3 or 1
+    if power>=shake.power or clock()>shake.untilTime then shake.power=power;shake.untilTime=clock()+duration;shake.duration=duration end
+end
+local function stop(at,length) freeze.at=at;freeze.length=length end
+local function animTime(n,start)
+    local a=n-start
+    local fa=freeze.at-start
+    if a>fa and fa>=0 then a=math.max(fa,a-freeze.length) end
+    return a
+end
+
+---------------------------------------------------------------- arms and leg
+-- Hand frame: origin at the wrist, +Y toward the knuckles, palm facing -Z, back of the hand +Z.
+-- The forearm runs from the wrist along -Y; the upper arm joins the elbow to a shoulder point in camera space.
+local arms={}
+local leg=nil
+local SKIN,DEEP,MUSCLE,VEIN,NAIL=COLORS.Skin,COLORS.SkinDeep,COLORS.Muscle,COLORS.Vein,COLORS.Nail
+local function vmPart(model,name,size,color,shape)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.Shape=shape or Enum.PartType.Block
+    p.Material=Enum.Material.SmoothPlastic;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false
+    p.CastShadow=false;p.Transparency=1;p.Parent=model
+    return p
+end
+local FINGERS={{x=.082,a=.104,b=.072,c=.058},{x=.028,a=.112,b=.078,c=.062},{x=-.025,a=.106,b=.074,c=.058},{x=-.075,a=.088,b=.062,c=.05}}
+local FOREARM=1.0
+local MUSCLES={ -- forearm masses in the hand frame (x mirrored by side): extensors, brachioradialis, flexors
+    {at=Vector3.new(.04,-.36,.11),size=Vector3.new(.27,.48,.22)},
+    {at=Vector3.new(.11,-.68,.08),size=Vector3.new(.34,.6,.3)},
+    {at=Vector3.new(-.09,-.62,-.07),size=Vector3.new(.3,.56,.27)},
+}
+local VEINS={ -- thin raised veins along the forearm: from, to (hand frame)
+    {Vector3.new(.05,-.12,.13),Vector3.new(.09,-.5,.17)},{Vector3.new(.09,-.5,.17),Vector3.new(.04,-.86,.16)},
+    {Vector3.new(-.06,-.2,.12),Vector3.new(-.02,-.62,.15)},
+}
+local function buildArm(side)
+    local m=Instance.new("Model");m.Name=side>0 and "YujiroRightArm" or "YujiroLeftArm";m.Parent=env.viewmodel
+    local a={side=side,thumbSide=side>0 and -1 or 1,model=m,fingers={},muscles={},veins={}}
+    a.palm=vmPart(m,"Palm",Vector3.new(.27,.27,.14),SKIN)
+    a.heel=vmPart(m,"PalmHeel",Vector3.new(.24,.12,.16),DEEP,Enum.PartType.Ball)
+    a.knuckles=vmPart(m,"Knuckles",Vector3.new(.27,.07,.12),DEEP)
+    for i,f in FINGERS do
+        a.fingers[i]={def=f,a=vmPart(m,"Finger",Vector3.new(.064,f.a,.064),SKIN),b=vmPart(m,"Finger",Vector3.new(.06,f.b,.06),SKIN),
+            c=vmPart(m,"Finger",Vector3.new(.055,f.c,.055),SKIN),nail=vmPart(m,"Nail",Vector3.new(.044,.022,.016),NAIL)}
+    end
+    a.thumb={a=vmPart(m,"Thumb",Vector3.new(.07,.095,.07),SKIN),b=vmPart(m,"Thumb",Vector3.new(.064,.08,.064),SKIN)}
+    a.wrist=vmPart(m,"Wrist",Vector3.new(.22,.3,.28),SKIN,Enum.PartType.Cylinder)
+    a.forearm=vmPart(m,"Forearm",Vector3.new(FOREARM,.3,.3),SKIN,Enum.PartType.Cylinder)
+    for i,spec in MUSCLES do a.muscles[i]={spec=spec,p=vmPart(m,"ForearmMuscle",spec.size,MUSCLE,Enum.PartType.Ball)} end
+    for i,v in VEINS do a.veins[i]={from=v[1],to=v[2],p=vmPart(m,"Vein",Vector3.new(.026,.026,.3),VEIN,Enum.PartType.Cylinder)} end
+    a.elbow=vmPart(m,"Elbow",Vector3.one*.36,SKIN,Enum.PartType.Ball)
+    a.upper=vmPart(m,"UpperArm",Vector3.new(1,.44,.44),SKIN,Enum.PartType.Cylinder)
+    a.bicep=vmPart(m,"Bicep",Vector3.new(.56,.5,.66),MUSCLE,Enum.PartType.Ball)
+    a.tricep=vmPart(m,"Tricep",Vector3.new(.5,.42,.5),DEEP,Enum.PartType.Ball)
+    a.deltoid=vmPart(m,"Deltoid",Vector3.new(.86,.78,.86),MUSCLE,Enum.PartType.Ball)
+    return a
+end
+local function buildLeg()
+    local m=Instance.new("Model");m.Name="YujiroLeg";m.Parent=env.viewmodel
+    local pants=Color3.fromRGB(44,42,50)
+    return {model=m,thigh=vmPart(m,"Thigh",Vector3.new(1.15,.62,.62),pants,Enum.PartType.Cylinder),knee=vmPart(m,"Knee",Vector3.one*.6,pants,Enum.PartType.Ball),
+        shin=vmPart(m,"Shin",Vector3.new(1.1,.5,.5),pants,Enum.PartType.Cylinder),ankle=vmPart(m,"Ankle",Vector3.one*.44,SKIN,Enum.PartType.Ball),
+        foot=vmPart(m,"Foot",Vector3.new(.46,.32,.95),Color3.fromRGB(30,26,24))}
+end
+local function handFrame(position,fingerDir,palmNormal)
+    local y=fingerDir.Unit
+    local z=-(palmNormal-y*palmNormal:Dot(y))
+    if z.Magnitude<.01 then z=Vector3.zAxis end
+    z=z.Unit
+    return CFrame.fromMatrix(position,y:Cross(z),y,z)
+end
+local ALONG=CFrame.Angles(0,0,math.pi/2)
+-- pose: {frame, curl (0..1 or per finger, thumb 5th), flex 0..1 (muscles swell), spread 0..1 (claw), shoulder}
+local function poseArm(a,pose,visible)
+    local cam=workspace.CurrentCamera.CFrame
+    local world=cam*pose.frame
+    local function put(p,cf) p.CFrame=cf;p.Transparency=visible and 0 or 1 end
+    local flex=math.clamp(pose.flex or 0,0,1);local spread=math.clamp(pose.spread or 0,0,1)
+    put(a.palm,world*CFrame.new(0,.13,0))
+    put(a.heel,world*CFrame.new(0,.05,-.04))
+    put(a.knuckles,world*CFrame.new(0,.27,.01))
+    for i,f in a.fingers do
+        local d=f.def
+        local c=math.clamp(type(pose.curl)=="table" and pose.curl[i] or pose.curl or 0,0,1)
+        local fan=(i-2.5)*.12*spread*a.thumbSide
+        local base=world*CFrame.new(d.x*a.thumbSide*(1+.25*spread),.27,0)*CFrame.Angles(0,0,fan)
+        -- A claw bends the last two joints more than the first.
+        local pa=base*CFrame.Angles(-c*(1.5-.7*spread),0,0)
+        put(f.a,pa*CFrame.new(0,d.a/2,0))
+        local pb=pa*CFrame.new(0,d.a,0)*CFrame.Angles(-c*(1.6+.2*spread),0,0)
+        put(f.b,pb*CFrame.new(0,d.b/2,0))
+        local pc=pb*CFrame.new(0,d.b,0)*CFrame.Angles(-c*(1.1+.3*spread),0,0)
+        put(f.c,pc*CFrame.new(0,d.c/2,0))
+        put(f.nail,pc*CFrame.new(0,d.c-.012,.022))
+    end
+    local tc=math.clamp(type(pose.curl)=="table" and pose.curl[5] or pose.curl or 0,0,1)
+    local thumb=world*CFrame.new(a.thumbSide*.12,.08,-.035)*CFrame.Angles(0,0,-a.thumbSide*(.85-.7*tc+.25*spread))*CFrame.Angles(-.3-tc*.75,0,0)
+    put(a.thumb.a,thumb*CFrame.new(0,.048,0))
+    local tip=thumb*CFrame.new(0,.095,0)*CFrame.Angles(-tc*.9,a.thumbSide*tc*.5,0)
+    put(a.thumb.b,tip*CFrame.new(0,.04,0))
+    put(a.wrist,world*CFrame.new(0,-.06,0)*ALONG)
+    put(a.forearm,world*CFrame.new(0,-FOREARM/2-.05,0)*ALONG)
+    for _,mu in a.muscles do
+        mu.p.Size=mu.spec.size*(1+.22*flex)
+        put(mu.p,world*CFrame.new(mu.spec.at.X*a.side,mu.spec.at.Y,mu.spec.at.Z*(1+.25*flex)))
+    end
+    for _,v in a.veins do
+        local from=Vector3.new(v.from.X*a.side,v.from.Y,v.from.Z*(1+.3*flex));local to=Vector3.new(v.to.X*a.side,v.to.Y,v.to.Z*(1+.3*flex))
+        local wf=(world*CFrame.new(from)).Position;local wt=(world*CFrame.new(to)).Position
+        v.p.Size=Vector3.new((wt-wf).Magnitude,.024+.014*flex,.024+.014*flex)
+        put(v.p,CFrame.lookAt((wf+wt)/2,wt)*CFrame.Angles(0,math.pi/2,0))
+    end
+    local elbow=(world*CFrame.new(0,-FOREARM-.05,0)).Position
+    local shoulder=(cam*CFrame.new(pose.shoulder or Vector3.new(a.side*1.0,-1.08,.14))).Position
+    put(a.elbow,CFrame.new(elbow))
+    local span=shoulder-elbow
+    if span.Magnitude>.05 then
+        a.upper.Size=Vector3.new(span.Magnitude+.12,.44,.44)
+        put(a.upper,CFrame.lookAt(elbow+span*.5,shoulder)*CFrame.Angles(0,math.pi/2,0))
+        a.bicep.Size=Vector3.new(.56,.5,.66)*(1+.25*flex)
+        put(a.bicep,CFrame.lookAt(elbow+span*.42+cam.UpVector*.12,shoulder)*CFrame.Angles(0,math.pi/2,0)*CFrame.new(0,.06,0))
+        put(a.tricep,CFrame.lookAt(elbow+span*.4-cam.UpVector*.1,shoulder)*CFrame.Angles(0,math.pi/2,0))
+        put(a.deltoid,CFrame.new(shoulder+cam.RightVector*a.side*.06+cam.UpVector*(.06+.06*flex)))
+    else
+        for _,p in {a.upper,a.bicep,a.tricep,a.deltoid} do put(p,CFrame.new(0,-5000,0)) end
+    end
+end
+-- The axe-kick leg in camera space: hip -> knee -> ankle -> foot; `lift` is the thigh angle from straight down
+-- (radians, toward the front), `bend` the knee.
+local function poseLeg(lift,bend,visible)
+    local cam=workspace.CurrentCamera.CFrame
+    local hip=Vector3.new(.38,-2.25,.05)
+    local thighDir=CFrame.Angles(lift,0,0)*Vector3.new(0,-1,0)
+    local knee=hip+thighDir*1.15
+    local shinDir=CFrame.Angles(lift-bend,0,0)*Vector3.new(0,-1,0)
+    local ankle=knee+shinDir*1.1
+    local function put(p,cf) p.CFrame=cam*cf;p.Transparency=visible and 0 or 1 end
+    put(leg.thigh,CFrame.lookAt((hip+knee)/2,knee)*CFrame.Angles(0,math.pi/2,0))
+    put(leg.knee,CFrame.new(knee))
+    put(leg.shin,CFrame.lookAt((knee+ankle)/2,ankle)*CFrame.Angles(0,math.pi/2,0))
+    put(leg.ankle,CFrame.new(ankle))
+    -- The heel leads the chop: the foot points forward of the shin.
+    local footDir=CFrame.Angles(lift-bend+1.4,0,0)*Vector3.new(0,-1,0)
+    put(leg.foot,CFrame.lookAt(ankle+footDir*.35,ankle+footDir))
+end
+local function fist(position,fingers,palm,curl,flex,shoulder,spread)
+    return {frame=handFrame(position,fingers,palm),curl=curl or 1,flex=flex or 0,shoulder=shoulder,spread=spread or 0}
+end
+local function blend(p,q,t)
+    if t<=0 then return p elseif t>=1 then return q end
+    local curl
+    if type(p.curl)=="table" or type(q.curl)=="table" then
+        curl={}
+        for i=1,5 do
+            local x=type(p.curl)=="table" and p.curl[i] or p.curl
+            local y=type(q.curl)=="table" and q.curl[i] or q.curl
+            curl[i]=x+(y-x)*t
+        end
+    else curl=p.curl+(q.curl-p.curl)*t end
+    local sp=p.shoulder or Vector3.zero;local sq=q.shoulder or Vector3.zero
+    return {frame=p.frame:Lerp(q.frame,t),curl=curl,flex=(p.flex or 0)+((q.flex or 0)-(p.flex or 0))*t,spread=(p.spread or 0)+((q.spread or 0)-(p.spread or 0))*t,
+        shoulder=(p.shoulder and q.shoulder) and sp:Lerp(sq,t) or q.shoulder or p.shoulder}
+end
+-- Poses (camera space; x right, y up, -z forward).
+local function REST(side,breathe,s,run)
+    s=s or 0;run=run or 0
+    return fist(Vector3.new(side*.6,-.72+(breathe or 0)+.06*math.max(0,s)*run,-.98-.22*s*run),Vector3.new(-side*.12,.42,-1),Vector3.new(-side,-.25,0),.78,.25,Vector3.new(side*1.02,-1.08,.14))
+end
+local function LOW(side) return fist(Vector3.new(side*.62,-1.28,-.72),Vector3.new(-side*.05,-.2,-1),Vector3.new(-side,0,0),.55,.2,Vector3.new(side*1.0,-1.12,.12)) end
+local function GUARD(side) return fist(Vector3.new(side*.36,-.36,-.9),Vector3.new(-side*.12,.9,-.4),Vector3.new(-side*.4,0,1),1,.6,Vector3.new(side*.95,-1.0,.05)) end
+local function JAB(side) return fist(Vector3.new(side*.12,-.24,-1.55),Vector3.new(0,.05,-1),Vector3.new(0,-1,0),1,1,Vector3.new(side*.72,-.84,-.32)) end
+local function LIFT(side) return fist(Vector3.new(side*.4,.3,-1.25),Vector3.new(side*.08,.3,-1),Vector3.new(0,1,0),.35,1,Vector3.new(side*.85,-.72,-.12),.3) end
+local function PUSH(side) return fist(Vector3.new(side*.36,.0,-1.7),Vector3.new(0,.7,-.8),Vector3.new(0,.3,-1),.1,1,Vector3.new(side*.75,-.8,-.4)) end
+-- Q
+local WAIST_R=fist(Vector3.new(.62,-1.02,-.55),Vector3.new(-.1,.55,-.8),Vector3.new(-1,0,-.2),1,.6,Vector3.new(1.02,-1.12,.22))
+local FRONT_L=fist(Vector3.new(-.24,-.44,-1.08),Vector3.new(.15,.95,-.35),Vector3.new(.15,-.1,-1),.15,.45,Vector3.new(-.92,-1.0,0))
+local DEFLECT_L=fist(Vector3.new(-.9,-.22,-.88),Vector3.new(-.6,.8,-.25),Vector3.new(-.6,0,-.8),.2,.9,Vector3.new(-1.08,-.95,.1))
+local COCK_R=fist(Vector3.new(.55,-1.08,-.7),Vector3.new(-.2,.8,-.5),Vector3.new(-.6,0,.6),1,.9,Vector3.new(1.06,-1.12,.26))
+local UPPER_R=fist(Vector3.new(.1,.14,-1.28),Vector3.new(-.05,1,-.45),Vector3.new(-.3,0,1),1,1,Vector3.new(.7,-.74,-.26))
+-- E
+local BODY_L=fist(Vector3.new(-.08,-.62,-1.52),Vector3.new(.05,-.05,-1),Vector3.new(1,0,0),1,1,Vector3.new(-.74,-.96,-.32))
+local HOOK_COCK_R=fist(Vector3.new(1.02,-.3,-.72),Vector3.new(-.6,.2,-.8),Vector3.new(-.3,-1,0),1,.9,Vector3.new(1.12,-.95,.26))
+local HOOK_HIT_R=fist(Vector3.new(-.12,-.2,-1.32),Vector3.new(-1,.05,-.35),Vector3.new(0,-1,0),1,1,Vector3.new(.76,-.85,-.22))
+local HOOK_FOLLOW_R=fist(Vector3.new(-.62,-.26,-1.0),Vector3.new(-1,0,.15),Vector3.new(0,-1,0),1,.8,Vector3.new(.62,-.9,-.1))
+-- R
+local CLAW_L=fist(Vector3.new(-.18,-.3,-1.6),Vector3.new(.02,.15,-1),Vector3.new(.2,-.6,-.75),.4,1,Vector3.new(-.74,-.86,-.36),1)
+local GRIP_L=fist(Vector3.new(-.16,-.26,-1.38),Vector3.new(.08,.35,-1),Vector3.new(.3,-.6,-.7),.88,1,Vector3.new(-.78,-.9,-.24),.6)
+local BODY_R=fist(Vector3.new(.08,-.64,-1.52),Vector3.new(-.05,-.05,-1),Vector3.new(-1,0,0),1,1,Vector3.new(.74,-.96,-.32))
+local SLAP_FROM=fist(Vector3.new(1.05,-.08,-.88),Vector3.new(-.3,.9,-.3),Vector3.new(-1,0,-.2),.05,.8,Vector3.new(1.12,-.92,.22))
+local SLAP_TO=fist(Vector3.new(-.32,-.06,-1.22),Vector3.new(-.2,.9,-.4),Vector3.new(-1,0,-.1),.05,1,Vector3.new(.68,-.86,-.26))
+local WIND_R=fist(Vector3.new(1.08,-.26,-.34),Vector3.new(-.4,.4,-.9),Vector3.new(-.2,-1,0),1,1,Vector3.new(1.2,-.9,.52))
+local FINAL_R=fist(Vector3.new(.05,-.48,-1.62),Vector3.new(0,-.28,-1),Vector3.new(0,-1,0),1,1,Vector3.new(.6,-.84,-.46))
+
+---------------------------------------------------------------- screen
+local overlay={}
+local function frame(parent,name,size,position,color,z)
+    local f=Instance.new("Frame");f.Name=name;f.Size=size;f.Position=position or UDim2.new();f.BackgroundColor3=color or Color3.new()
+    f.BackgroundTransparency=1;f.BorderSizePixel=0;f.ZIndex=z or 4;f.Parent=parent
+    return f
+end
+local function buildOverlay()
+    local root=frame(env.gui,"YujiroOverlay",UDim2.fromScale(1,1));overlay.root=root
+    overlay.edges={}
+    for i,spec in {{UDim2.fromScale(1,.34),UDim2.fromScale(0,0),90},{UDim2.fromScale(1,.34),UDim2.fromScale(0,.66),-90},{UDim2.fromScale(.28,1),UDim2.fromScale(0,0),0},{UDim2.fromScale(.28,1),UDim2.fromScale(.72,0),180}} do
+        local e=frame(root,"Edge",spec[1],spec[2],Color3.fromRGB(10,2,2))
+        local g=Instance.new("UIGradient");g.Rotation=spec[3];g.Transparency=NumberSequence.new(0,1);g.Parent=e
+        overlay.edges[i]=e
+    end
+    overlay.red=frame(root,"Pressure",UDim2.fromScale(1,1),nil,COLORS.Pressure,5)
+    overlay.flash=frame(root,"Flash",UDim2.fromScale(1,1),nil,Color3.new(1,1,1),6)
+    local label=Instance.new("TextLabel");label.AnchorPoint=Vector2.new(.5,0);label.Position=UDim2.fromScale(.5,.12);label.Size=UDim2.fromOffset(560,30)
+    label.BackgroundTransparency=1;label.Font=Enum.Font.GothamBold;label.TextSize=16;label.TextColor3=Color3.fromRGB(255,222,214)
+    label.TextStrokeTransparency=.4;label.Text="";label.ZIndex=9;label.Parent=root
+    overlay.label=label
+    local shout=Instance.new("TextLabel");shout.AnchorPoint=Vector2.new(.5,.5);shout.Position=UDim2.fromScale(.5,.3);shout.Size=UDim2.fromScale(1,.12)
+    shout.BackgroundTransparency=1;shout.Font=Enum.Font.GothamBlack;shout.TextScaled=true;shout.TextColor3=Color3.fromRGB(255,236,230)
+    shout.TextStrokeColor3=COLORS.HairDeep;shout.TextStrokeTransparency=1;shout.TextTransparency=1;shout.ZIndex=9;shout.Parent=root
+    local c=Instance.new("UITextSizeConstraint");c.MaxTextSize=64;c.Parent=shout
+    overlay.shout=shout
+    overlay.grade=Instance.new("ColorCorrectionEffect");overlay.grade.Name="YujiroGrade";overlay.grade.Parent=Lighting
+end
+-- o: {vignette, red, flash, grey (desaturation 0..1), label, shout}
+local function setOverlay(o)
+    for _,e in overlay.edges do e.BackgroundTransparency=1-math.clamp(o.vignette or 0,0,1) end
+    overlay.red.BackgroundTransparency=1-math.clamp(o.red or 0,0,.6)
+    overlay.flash.BackgroundTransparency=1-math.clamp((o.flash or 0)*(comfort() and .5 or 1),0,.95)
+    overlay.label.Text=o.label or "";overlay.label.TextTransparency=o.label and 0 or 1;overlay.label.TextStrokeTransparency=o.label and .4 or 1
+    overlay.shout.Text=o.shout or "";overlay.shout.TextTransparency=o.shout and (o.shoutFade or 0) or 1;overlay.shout.TextStrokeTransparency=o.shout and (o.shoutFade or 0) or 1
+    local grey=math.clamp(o.grey or 0,0,1)
+    overlay.grade.Saturation=-.85*grey;overlay.grade.Contrast=.25*grey+(o.contrast or 0);overlay.grade.Brightness=-.05*grey
+    overlay.grade.TintColor=Color3.new(1,1,1):Lerp(Color3.fromRGB(255,214,206),math.clamp(o.tint or 0,0,1))
+end
+
+---------------------------------------------------------------- events
+local function ownerOf(data)
+    local owner=Players:GetPlayerByUserId(data.owner)
+    return owner and owner.Character,owner==player
+end
+function YujiroClient.onEvent(kind,data)
+    local model,mine=ownerOf(data)
+    local me=player.Character
+    local myRoot=VFX.rootOf(me)
+    if kind=="YujiroCounter" then
+        VFX.counterStance(model,data)
+        if mine then cast={kind="Counter",start=data.start};combo.untilTime=0 end
+    elseif kind=="YujiroCounterRead" then
+        VFX.counterRead(model,data)
+        if mine and cast and cast.kind=="Counter" then
+            cast.read=data.start;cast.attacker=data.attacker
+            stop(data.start,Y.OgreCounter.Slowdown);kick(.05,.15)
+        end
+        if data.attacker==me and me then kick(.06,.2) end
+    elseif kind=="YujiroCounterHit" then
+        VFX.counterHit(data)
+        if mine and cast and cast.kind=="Counter" then cast.hit=data.start;cast.landed=data.landed;if data.landed then kick(.12,.35) end end
+        if data.target==me and me and data.landed then victim={kind="Counter",start=data.start,caster=model};kick(.16,.4) end
+    elseif kind=="YujiroCounterFail" then
+        if mine and cast and cast.kind=="Counter" then cast.failed=data.start end
+    elseif kind=="YujiroCounterEnd" then
+        VFX.counterEnd(model)
+        if mine then
+            if cast and cast.kind=="Counter" then cast.ended=clock() end
+            if data.buffUntil then buffUntil=data.buffUntil;combo={untilTime=data.buffUntil,text="반격 성공 · 기본공격 +15%"} end
+        end
+    elseif kind=="YujiroCounterBlock" then
+        VFX.counterBlock(model,data.from)
+        if mine then kick(.03,.12) end
+    elseif kind=="YujiroRush" then
+        VFX.rushStart(model,data)
+        if mine then cast={kind="Rush",start=data.start,direction=data.direction} end
+    elseif kind=="YujiroRushDash" then
+        VFX.rushDash(model,data)
+        if mine and cast and cast.kind=="Rush" then cast.dash=data.start end
+    elseif kind=="YujiroRushLink" then
+        if mine and cast and cast.kind=="Rush" then cast.target=data.target end
+        if data.target==me and me then victim={kind="Rush",start=data.start,caster=model} end
+    elseif kind=="YujiroRushHit" then
+        VFX.rushHit(data)
+        if mine then kick(data.index==3 and .14 or .07,data.index==3 and .4 or .2);if data.index==3 then stop(data.start+Y.OgreRush.Blows[3].Time,.05) end end
+        if data.target==me and me then kick(data.index==3 and .18 or .1,.3);if victim then victim.lastHit=clock();victim.hitIndex=data.index end end
+    elseif kind=="YujiroRushWhiff" then
+        if mine and cast and cast.kind=="Rush" then cast.whiff=data.start end
+    elseif kind=="YujiroRushStop" then
+        if mine and cast and cast.kind=="Rush" then cast.stopped=data.start end
+        if victim and victim.kind=="Rush" and victim.caster==model then victim=nil end
+    elseif kind=="YujiroRushEnd" then
+        VFX.rushEnd(model)
+        if mine and cast and cast.kind=="Rush" then cast.ended=clock() end
+        if victim and victim.kind=="Rush" and victim.caster==model then victim=nil end
+    elseif kind=="YujiroJudgment" then
+        VFX.judgment(model,data)
+        if mine then cast={kind="Judgment",start=data.start,direction=data.direction};combo.untilTime=0 end
+    elseif kind=="YujiroJudgmentFail" then
+        VFX.closeDemon(model)
+        if mine and cast and cast.kind=="Judgment" then cast.failed=clock();env.announce("오거의 심판","25스터드 · 시야 중앙 15° 안에 잡을 대상이 없다 · 재사용 30초") end
+    elseif kind=="YujiroJudgmentCapture" then
+        VFX.judgmentCapture(model,data)
+        if mine and cast and cast.kind=="Judgment" then cast.target=data.target;cast.direction=data.direction end
+        if data.target==me and me then victim={kind="Judgment",start=data.start,caster=model} end
+    elseif kind=="YujiroJudgmentHit" then
+        VFX.judgmentHit(data)
+        if mine and cast and cast.kind=="Judgment" then
+            if data.final then stop(data.start+Y.OgreJudgment.Final,Y.OgreJudgment.Hitstop);kick(.3,.7);cast.finalAt=clock() else kick(.05,.15) end
+        end
+        if data.target==me and me then kick(data.final and .35 or .1,data.final and .7 or .2);if victim then victim.lastHit=clock() end end
+        if data.final and myRoot and not mine and data.target~=me and (myRoot.Position-data.position).Magnitude<45 then kick(.08,.5) end
+    elseif kind=="YujiroJudgmentEnd" then
+        VFX.judgmentEnd(model,data.reason~="done")
+        if mine and cast and cast.kind=="Judgment" then cast.ended=clock() end
+        if victim and victim.kind=="Judgment" and victim.caster==model then victim.ended=clock() end
+    end
+end
+
+---------------------------------------------------------------- render
+local function lookToward(camera,point,k,maxPitch)
+    local d=camera.CFrame:VectorToObjectSpace((point-camera.CFrame.Position).Unit)
+    local yaw=math.atan2(-d.X,-d.Z);local pitch=math.clamp(math.atan2(d.Y,math.sqrt(d.X*d.X+d.Z*d.Z)),-(maxPitch or 1.2),maxPitch or 1.2)
+    return CFrame.Angles(0,yaw*k,0)*CFrame.Angles(pitch*k,0,0)
+end
+local function revealBody(m,on)
+    if on and m then
+        for _,v in m:GetDescendants() do
+            if v:IsA("BasePart") and v.Name~="HumanoidRootPart" then v.LocalTransparencyModifier=0;revealed[v]=true end
+        end
+    else
+        for v in revealed do if v.Parent then v.LocalTransparencyModifier=1 end end
+        table.clear(revealed)
+    end
+end
+local cinemaParams=RaycastParams.new();cinemaParams.FilterType=Enum.RaycastFilterType.Exclude;cinemaParams.RespectCanCollide=true
+-- A shot around the caster that never goes through walls: swings to the clearest angle when blocked.
+local function shot(camera,root,offset,look)
+    local list={VFX.folder,camera}
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    cinemaParams.FilterDescendantsInstances=list
+    local from=root.Position+Vector3.yAxis*1.5
+    local best,bestLen=offset.Unit,-1
+    for _,ang in {0,.45,-.45,.9,-.9} do
+        local want=CFrame.Angles(0,ang,0)*offset
+        local hit=workspace:Raycast(from,want,cinemaParams)
+        local len=hit and math.max(1.5,hit.Distance-1) or want.Magnitude
+        if len>bestLen+.01 then best=want.Unit;bestLen=len end
+        if len>=want.Magnitude*.85 then break end
+    end
+    return CFrame.lookAt(from+best*bestLen,look)
+end
+local function headOf(model) local h=model and model:FindFirstChild("Head");return h and h.Position or (VFX.rootOf(model) and VFX.rootOf(model).Position+Vector3.yAxis*1.5) end
+-- info: {isYujiro, melee, sliding, moving, alive}. Returns {fov, fovAdd, combo, ready, victim} for Gojo.client.
+function YujiroClient.render(dt,info)
+    local n=clock()
+    local camera=workspace.CurrentCamera
+    if not arms.right then return end
+    YujiroClient.updateVictims(n)
+    local m=player.Character
+    local o={vignette=0,red=0,flash=0,grey=0,tint=0,contrast=0,label=nil}
+    local out={fov=72,fovAdd=0}
+    ---------------------------------------------------------------- things done to us (any kit)
+    if victim then
+        local cfg=Y.OgreJudgment
+        local a=n-victim.start
+        local casterHead=headOf(victim.caster)
+        if victim.kind=="Judgment" then
+            if a>cfg.End+.3 or (victim.ended and n-victim.ended>.25) or not info.alive then victim=nil
+            else
+                -- Up close on Yujiro, the floor dropping away during the lift, then flat on our back looking up.
+                local held=smoothstep(window(a,cfg.Capture,cfg.Capture+.2))
+                local lie=smoothstep(window(a,cfg.Final,cfg.Final+.12))*(1-smoothstep(window(a,cfg.Final+.1+cfg.Down,cfg.Final+.3+cfg.Down)))
+                local lift=smoothstep(window(a,cfg.LiftFrom,cfg.LiftTo))*(1-smoothstep(window(a,cfg.Release,cfg.Final)))
+                if casterHead and held>0 then env.commonLook(lookToward(camera,casterHead,.85*held*(1-lie),1)) end
+                env.commonLook(CFrame.Angles(-.35*lift,0,.1*bump(a,cfg.Release,cfg.Final))*CFrame.Angles(.9*lie,0,.5*lie))
+                if lie>0 then env.commonLook(CFrame.new(0,-1.6*lie,0)) end
+                o.vignette=.55*held;o.red=.12*held
+                o.flash=.8*(1-smoothstep((n-(victim.lastHit or -10))/.25))*(a>=cfg.Final and 1 or .35)
+                o.label=a<cfg.Final+.1 and "오거의 심판 · 붙잡혔다" or "쓰러졌다"
+                out.fov=72-6*held+10*bump(a,cfg.Final-.05,cfg.Final+.4);out.victim=true
+            end
+        elseif victim.kind=="Rush" then
+            local rcfg=Y.OgreRush
+            if a>rcfg.End+.2 or not info.alive then victim=nil
+            else
+                local k=smoothstep(window(a,rcfg.DashEnd,rcfg.DashEnd+.1))*(1-smoothstep(window(a,rcfg.AxeEnd,rcfg.End)))
+                if casterHead then env.commonLook(lookToward(camera,casterHead,.7*k,1)) end
+                local fold=bump(a,rcfg.Blows[1].Time,rcfg.Blows[1].Time+.25);local turn=bump(a,rcfg.Blows[2].Time,rcfg.Blows[2].Time+.3)
+                local down=smoothstep(window(a,rcfg.Blows[3].Time,rcfg.Blows[3].Time+.08))*(1-smoothstep(window(a,rcfg.AxeEnd,rcfg.End)))
+                env.commonLook(CFrame.new(0,-1.2*down,0)*CFrame.Angles(-.35*fold-.5*down,.6*turn,.15*turn))
+                o.vignette=.45*k;o.flash=.5*(1-smoothstep((n-(victim.lastHit or -10))/.2))
+                out.fov=72;out.victim=true
+            end
+        elseif victim.kind=="Counter" then
+            if a>.8 then victim=nil
+            else
+                env.commonLook(CFrame.Angles(.45*bump(a,0,.6),0,.08*bump(a,0,.5)))
+                o.flash=.6*(1-smoothstep(a/.2));o.vignette=.3*bump(a,0,.8)
+            end
+        end
+    end
+    if not info.isYujiro then
+        poseArm(arms.right,REST(1),false);poseArm(arms.left,REST(-1),false);poseLeg(0,0,false)
+        cast=nil;revealBody(nil,false)
+        if n<shake.untilTime and out.victim then
+            local k=(shake.untilTime-n)/math.max(.01,shake.duration);local p=shake.power*k
+            env.commonLook(CFrame.new((math.random()-.5)*p*4,(math.random()-.5)*p*4,0)*CFrame.Angles((math.random()-.5)*p,(math.random()-.5)*p,0))
+        end
+        setOverlay(o)
+        return (out.victim or victim) and out or nil
+    end
+    ---------------------------------------------------------------- own techniques
+    local visible=info.alive
+    local legLift,legBend,legShown=0,0,false
+    local breathe=math.sin(n*1.5)*.012
+    local swing=info.moving and math.sin(n*8.5) or 0
+    local run=info.moving and 1 or 0
+    local R,L=REST(1,breathe,swing,run),REST(-1,breathe,-swing,run)
+    if info.moving and not cast then env.commonLook(CFrame.new(0,-.1*run,0)*CFrame.Angles(-.03*run,0,swing*.006)) end
+    -- Shared M1: heavy straight punches, alternating fists, shoulder driving through.
+    if info.melee and not cast then
+        local me=info.melee;local a=n-me.start
+        local wind=smoothstep(a/me.windup);local strike=easeOut((a-me.windup)/me.swing,3)
+        local back=smoothstep((a-me.windup-me.swing)/math.max(.05,me.duration-me.windup-me.swing))
+        local side=me.combo%2==0 and -1 or 1
+        local rest=side>0 and R or L
+        local cock=fist(Vector3.new(side*.72,-.6,-.6),Vector3.new(-side*.15,.2,-1),Vector3.new(-side*.3,-1,0),1,.8,Vector3.new(side*1.08,-1.0,.3))
+        local p=blend(blend(blend(rest,cock,wind),JAB(side),strike),rest,back)
+        if side>0 then R=p else L=p end
+        out.fovAdd+=4*strike*(1-back)
+    end
+    if info.sliding then R.frame=R.frame*CFrame.new(0,-.1,.1);L.frame=L.frame*CFrame.new(0,-.1,.1) end
+    if not info.alive then cast=nil end
+    local cinematic,shotCF=0,nil
+    if cast then
+        local a=animTime(n,cast.start)
+        if cast.kind=="Counter" then
+            ---------------------------------------------------------------- Q
+            local cfg=Y.OgreCounter
+            local entry=smoothstep(window(a,0,cfg.Entry))
+            local stance=blend(R,WAIST_R,entry);local front=blend(L,FRONT_L,entry)
+            -- Entry: stop, stand a little upright, head tilted; the camera dips and the edges darken.
+            local look=CFrame.new(0,-.12*bump(a,0,cfg.Entry*1.6),0)*CFrame.Angles(.02*entry-.05*bump(a,0,cfg.Entry*1.6),0,.06*entry)
+            o.vignette=.35*entry;o.contrast=.08*entry
+            if not cast.read then
+                local idle=math.sin(n*2.2)*.012
+                stance.frame=CFrame.new(0,idle,0)*stance.frame;front.frame=CFrame.new(0,idle*.6,0)*front.frame
+                if a>=cfg.Entry and a<cfg.WindowEnd then o.label="지상 최강의 생물 · 정면 피해 −70% · 직접 공격을 읽는다" end
+                if cast.failed then
+                    -- No read: the hands drop and the body sags for the slowed recovery.
+                    local f=smoothstep(window(n-cast.failed,0,cfg.FailRecovery))
+                    stance=blend(stance,LOW(1),f);front=blend(front,LOW(-1),f)
+                    look=look*CFrame.new(0,-.15*f,0)*CFrame.Angles(-.06*f,0,-.06*entry*f)
+                    o.vignette=.2*(1-f)
+                end
+                R,L=stance,front
+                if (cast.ended and n-cast.ended>.05) or a>cfg.FailEnd+.1 then cast=nil end
+            else
+                local k=animTime(n,cast.read)
+                -- 0-.15 the head snaps to the attacker and the left arm sweeps it aside; .15-.3 the right uppercut;
+                -- hold to .5, lower by .9.
+                local deflect=easeOut(window(k,0,cfg.Snap),3)*(1-smoothstep(window(k,cfg.Hit,cfg.PunchEnd+.2)))
+                local cock=smoothstep(window(k,0,cfg.Snap))
+                local up=easeOut(window(k,cfg.Snap,cfg.Hit),3.2)
+                local lower=smoothstep(window(k,cfg.PunchEnd,cfg.End))
+                R=blend(blend(blend(stance,COCK_R,cock),UPPER_R,up),REST(1,breathe),lower)
+                L=blend(blend(front,DEFLECT_L,deflect),REST(-1,breathe),lower)
+                local attackerHead=headOf(cast.attacker)
+                local snap=easeOut(window(k,0,.08),3)*(1-lower)
+                look=CFrame.Angles(0,0,.08*bump(k,0,cfg.Snap))
+                if attackerHead then look=look*lookToward(camera,attackerHead,.75*snap,.6) end
+                -- The punch pushes the view forward and up; then a shake.
+                local push=bump(k,cfg.Hit-.05,cfg.PunchEnd+.1)
+                look=look*CFrame.new(0,.1*push,-.45*push)*CFrame.Angles(.05*push,0,0)
+                out.fov=72-4*deflect+12*bump(k,cfg.Hit-.04,cfg.PunchEnd)
+                if cast.landed then
+                    o.flash=math.max(o.flash,.6*(1-smoothstep(window(k,cfg.Hit,cfg.Hit+.2))))
+                    o.shout=k<cfg.End and "!" or nil;o.shoutFade=smoothstep(window(k,cfg.PunchEnd,cfg.End))
+                end
+                o.vignette=.3*(1-lower)
+                if k>cfg.End+.15 or (cast.ended and n-cast.ended>.2) then cast=nil end
+            end
+            env.commonLook(look)
+        elseif cast.kind=="Rush" then
+            ---------------------------------------------------------------- E
+            local cfg=Y.OgreRush
+            local crouch=easeOut(window(a,0,cfg.Crouch),2)*(1-smoothstep(window(a,cfg.Crouch,cfg.Crouch+.12)))
+            local dash=window(a,cfg.Crouch,cfg.DashEnd)
+            local guard=smoothstep(window(a,0,cfg.Crouch))
+            local recover=smoothstep(window(a,cfg.AxeEnd,cfg.End))
+            local gR,gL=blend(R,GUARD(1),guard),blend(L,GUARD(-1),guard)
+            local look=CFrame.new(0,-.7*crouch,0)*CFrame.Angles(-.06*crouch,0,0)
+            out.fov=72-6*crouch+18*(dash>0 and dash<1 and 1 or 0)*bump(a,cfg.Crouch,cfg.DashEnd+.1)
+            o.vignette=.4*crouch+.25*(dash>0 and dash<1 and 1 or 0)
+            if cast.whiff then
+                local w=n-cast.whiff
+                gR=blend(gR,LOW(1),smoothstep(w/.2));gL=blend(gL,LOW(-1),smoothstep(w/.2))
+                look=look*CFrame.Angles(-.08*bump(w,0,.35),0,.05*bump(w,0,.35))
+                R,L=gR,gL
+                if w>.4 or (cast.ended and n-cast.ended>.1) then cast=nil end
+            else
+                -- .5-.7 left body blow (hit .62), .7-.95 right hook to the face (hit .84), .95-1.35 axe kick (hit 1.21).
+                local b1=cfg.Blows[1].Time;local b2=cfg.Blows[2].Time;local b3=cfg.Blows[3].Time
+                local body=easeOut(window(a,cfg.DashEnd+.02,b1),3)*(1-smoothstep(window(a,b1+.02,cfg.BodyEnd+.08)))
+                local hookCock=smoothstep(window(a,cfg.BodyEnd-.05,b2-.08));local hookHit=easeOut(window(a,b2-.08,b2),3)
+                local hookFollow=smoothstep(window(a,b2,cfg.HookEnd));local hookBack=smoothstep(window(a,cfg.HookEnd,cfg.HookEnd+.2))
+                L=blend(gL,BODY_L,body)
+                R=blend(blend(blend(blend(gR,HOOK_COCK_R,hookCock),HOOK_HIT_R,hookHit),HOOK_FOLLOW_R,hookFollow),gR,hookBack)
+                -- The leg: hip -> knee -> ankle, raised high and straight, then chopped down through the target.
+                local raise=easeOut(window(a,cfg.HookEnd,1.15),2.2);local chop=easeOut(window(a,1.15,b3),3.5)
+                local settle=smoothstep(window(a,cfg.AxeEnd-.05,cfg.AxeEnd+.25))
+                legLift=(2.65*raise-1.75*chop)*(1-settle);legBend=.35*(1-raise)+.15*raise-.1*chop
+                legShown=a>=cfg.HookEnd and a<cfg.AxeEnd+.25
+                local twist=-.12*hookCock*(1-hookHit)+.16*hookHit*(1-hookBack)
+                look=look*CFrame.Angles(-.06*body+.12*raise*(1-chop)-.42*chop*(1-recover*.2),twist,.04*hookHit*(1-hookBack))
+                look=look*CFrame.Angles(-.3*recover*(1-smoothstep(window(a,cfg.End-.15,cfg.End))),0,0)
+                if cast.target and a>=cfg.DashEnd then
+                    local th=headOf(cast.target)
+                    if th then look=lookToward(camera,th,.35*(1-raise),.5)*look end
+                end
+                out.fov=out.fov+6*body+8*hookHit*(1-hookBack)-6*raise*(1-chop)+10*bump(a,b3-.02,b3+.3)
+                if a>=b3 then o.flash=math.max(o.flash,.35*(1-smoothstep(window(a,b3,b3+.2)))) end
+                if cast.stopped then
+                    local s=smoothstep((n-cast.stopped)/.25)
+                    R=blend(R,REST(1,breathe),s);L=blend(L,REST(-1,breathe),s);legShown=legShown and s<.5
+                    if n-cast.stopped>.4 then cast=nil end
+                end
+                if cast and (a>cfg.End+.1 or (cast.ended and n-cast.ended>.15)) then cast=nil end
+            end
+            env.commonLook(look)
+        elseif cast.kind=="Judgment" then
+            ---------------------------------------------------------------- R
+            local cfg=Y.OgreJudgment
+            local root=VFX.rootOf(m)
+            local dir=cast.direction or Vector3.new(0,0,-1)
+            local side=dir:Cross(Vector3.yAxis).Unit
+            -- 0-.5 serious: frozen, head down, the world loses its colour; heartbeat and a low laugh (VFX).
+            local serious=smoothstep(window(a,0,cfg.Serious))
+            local grey=serious*(1-smoothstep(window(a,cfg.End-.6,cfg.End)))
+            o.grey=grey*(cast.failed and (1-smoothstep((n-cast.failed)/.4)) or 1)
+            o.tint=.6*smoothstep(window(a,cfg.Serious,cfg.Open))*(1-smoothstep(window(a,cfg.End-.6,cfg.End)))
+            o.red=.12*bump(a,cfg.Serious,cfg.Open+.3)+.06*o.tint
+            o.vignette=.5*serious
+            R=blend(R,LOW(1),serious);L=blend(L,LOW(-1),serious)
+            local look=CFrame.Angles(-.22*serious*(1-smoothstep(window(a,cfg.Serious,cfg.Serious+.2))),0,0)
+            out.fov=72-6*serious
+            -- .5-1 the Demon Back opens: rear third-person shot of the back.
+            if root then
+                local shots={{cfg.Serious,cfg.Open,-dir*9+Vector3.yAxis*3.5+side*1.5,root.Position+Vector3.yAxis*1.4}}
+                if cast.target and not cast.failed then
+                    table.insert(shots,{cfg.WindFrom,cfg.WindTo,side*9-dir*4+Vector3.yAxis*2.5,root.Position+Vector3.yAxis*1.2+dir*1.5})
+                end
+                for _,s in shots do
+                    local k=smoothstep(window(a,s[1],s[1]+.12))*(1-smoothstep(window(a,s[2]-.1,s[2])))
+                    if k>cinematic then cinematic=k;shotCF=shot(camera,root,s[3],s[4]) end
+                end
+            end
+            if cast.failed then
+                -- Nobody in reach: the arms drop with a short exhale, back to normal by 1.55.
+                local f=n-cast.failed
+                R=blend(R,REST(1,breathe),smoothstep(f/.5));L=blend(L,REST(-1,breathe),smoothstep(f/.5))
+                look=look*CFrame.Angles(-.1*bump(f,0,.5),0,0)
+                if f>.6 or (cast.ended and n-cast.ended>.1) then cast=nil end
+            elseif a>=cfg.Capture then
+                local th=cast.target and headOf(cast.target)
+                -- 1-1.5 dash in, the left hand reaches as a claw and closes on the collar.
+                local reach=easeOut(window(a,cfg.Capture,cfg.DashEnd-.08),2)
+                local grip=smoothstep(window(a,cfg.DashEnd-.1,cfg.DashEnd))
+                local liftK=smoothstep(window(a,cfg.LiftFrom,cfg.LiftTo))
+                local release=easeOut(window(a,cfg.Release-.06,cfg.Release+.06),2)
+                local relax=smoothstep(window(a,cfg.Release+.1,cfg.WindTo))
+                local lpose=blend(blend(L,CLAW_L,reach),GRIP_L,grip)
+                -- Blows: body 1.66, slap 2.05, then four alternating rush punches 2.40 / 2.56 / 2.72 / 2.88.
+                local h=cfg.Hits
+                local rpose=R
+                local body=easeOut(window(a,h[1].Time-.14,h[1].Time),3)*(1-smoothstep(window(a,h[1].Time+.05,cfg.Hits[2].Time-.2)))
+                rpose=blend(rpose,BODY_R,body)
+                local slapCock=smoothstep(window(a,h[2].Time-.3,h[2].Time-.08));local slap=easeOut(window(a,h[2].Time-.08,h[2].Time),3)
+                local slapBack=smoothstep(window(a,h[2].Time+.06,h[3].Time-.12))
+                rpose=blend(blend(blend(rpose,SLAP_FROM,slapCock),SLAP_TO,slap),R,slapBack)
+                for i=3,6 do
+                    local k=bump(a,h[i].Time-.08,h[i].Time+.08)
+                    if i%2==1 then rpose=blend(rpose,JAB(1),k) else lpose=blend(lpose,JAB(-1),k) end
+                end
+                -- 3.0-3.5 both hands lift the body; 3.62 thrown forward; then the right fist winds far back.
+                rpose=blend(rpose,LIFT(1),liftK);lpose=blend(lpose,LIFT(-1),liftK)
+                rpose=blend(rpose,PUSH(1),release*(1-relax));lpose=blend(lpose,PUSH(-1),release*(1-relax))
+                local wind=smoothstep(window(a,cfg.Release+.1,cfg.WindTo))
+                rpose=blend(rpose,WIND_R,wind);lpose=blend(lpose,LOW(-1),relax)
+                -- 4.12 the final punch, hitstop, then a slow recovery.
+                local final=easeOut(window(a,cfg.WindTo,cfg.Final),3.5)
+                local recover=smoothstep(window(a,cfg.Final+.4,cfg.End))
+                rpose=blend(blend(rpose,FINAL_R,final),REST(1,breathe),recover);lpose=blend(lpose,REST(-1,breathe),recover)
+                R,L=rpose,lpose
+                look=CFrame.identity
+                if th then
+                    local track=(1-smoothstep(window(a,cfg.LiftFrom-.1,cfg.LiftFrom+.2)))*smoothstep(window(a,cfg.Capture,cfg.Capture+.15))
+                    look=lookToward(camera,th,.6*track,.6)
+                end
+                look=look*CFrame.Angles(.25*liftK*(1-release)-.32*final*(1-recover),0,0)
+                look=look*CFrame.new(0,0,-.5*bump(a,cfg.Final-.05,cfg.Final+.3))
+                out.fov=72+14*bump(a,cfg.Capture,cfg.DashEnd)+4*body+6*slap*(1-slapBack)-4*wind+18*bump(a,cfg.Final-.04,cfg.Final+.5)
+                if a>=cfg.Final then
+                    o.flash=math.max(o.flash,.9*(1-smoothstep(window(a,cfg.Final+.04,cfg.Final+.35))))
+                    o.contrast=.3*(1-smoothstep(window(a,cfg.Final,cfg.Final+.6)))
+                    o.shout=a<cfg.Final+1 and "오거의 심판" or nil;o.shoutFade=smoothstep(window(a,cfg.Final+.6,cfg.Final+1))
+                end
+                if a>cfg.End+.1 or (cast.ended and n-cast.ended>.25) then cast=nil end
+            elseif cast.ended and n-cast.ended>.25 then cast=nil end
+            env.commonLook(look)
+        end
+    end
+    if cinematic>.001 and shotCF then
+        local blended=camera.CFrame:Lerp(shotCF,smoothstep(cinematic))
+        env.commonLook(camera.CFrame:Inverse()*blended)
+        revealBody(m,cinematic>.25)
+        if cinematic>.25 then visible=false;legShown=false end
+        out.fov=lerp(out.fov,62,cinematic)
+    elseif next(revealed) then revealBody(nil,false) end
+    if n<shake.untilTime then
+        local k=(shake.untilTime-n)/math.max(.01,shake.duration);local p=shake.power*k
+        env.commonLook(CFrame.new((math.random()-.5)*p*4,(math.random()-.5)*p*4,0)*CFrame.Angles((math.random()-.5)*p,(math.random()-.5)*p,(math.random()-.5)*p*.5))
+    end
+    local squeeze=math.min(1,camera.ViewportSize.X/math.max(1,camera.ViewportSize.Y))
+    local function narrow(p)
+        local f=p.frame
+        p.frame=CFrame.new(f.Position*Vector3.new(math.max(.72,squeeze),1,1))*f.Rotation
+        if p.shoulder then p.shoulder=p.shoulder*Vector3.new(math.max(.8,squeeze),1,1) end
+        return p
+    end
+    poseArm(arms.right,narrow(R),visible and not out.victim)
+    poseArm(arms.left,narrow(L),visible and not out.victim)
+    poseLeg(legLift,legBend,legShown and visible and not out.victim)
+    setOverlay(o)
+    -- Never draw our own hair into the first-person view (the cinematic shows the whole body).
+    if m and cinematic<=.25 then
+        for _,v in m:GetChildren() do if v:IsA("BasePart") and string.sub(v.Name,1,6)=="Yujiro" then v.LocalTransparencyModifier=1 end end
+    end
+    if n<combo.untilTime then out.combo=string.format("%s   %.1f",combo.text,combo.untilTime-n);out.ready=nil end
+    return out
+end
+-- Victim side: a held body is moved by the server; locally the humanoid stops fighting it and cannot jump.
+local heldApplied=false
+function YujiroClient.updateVictims(n)
+    local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+    local held=(m:GetAttribute("YujiroHeldUntil") or 0)>n
+    if held~=heldApplied then
+        heldApplied=held
+        h.PlatformStand=held
+        if not held then h:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    end
+    if held or (m:GetAttribute("YujiroLockUntil") or 0)>n or (m:GetAttribute("YujiroNoJumpUntil") or 0)>n then
+        h:SetStateEnabled(Enum.HumanoidStateType.Jumping,false)
+    end
+end
+function YujiroClient.busy() return cast~=nil end
+function YujiroClient.buffed() return clock()<buffUntil end
+function YujiroClient.reset()
+    cast=nil;victim=nil;combo={untilTime=0,text=""};shake.untilTime=0;freeze.length=0;buffUntil=0
+    revealBody(nil,false)
+    -- A respawned character must never stay platform-stood from an old hold.
+    if heldApplied then
+        heldApplied=false
+        local m=player.Character;local h=m and m:FindFirstChildOfClass("Humanoid")
+        if h then h.PlatformStand=false end
+    end
+    if overlay.root then setOverlay({}) end
+    if leg then poseLeg(0,0,false) end
+end
+function YujiroClient.init(environment)
+    env=environment
+    arms.right=buildArm(1);arms.left=buildArm(-1);leg=buildLeg()
+    buildOverlay()
+    UIS.WindowFocusReleased:Connect(function() shake.untilTime=0 end)
+end
+return YujiroClient
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX_ItachiClient"><Properties><string name="Name">ItachiClient</string><ProtectedString name="Source"><![CDATA[-- Uchiha Itachi on the client: slim first-person hands with jointed fingers and purple nails inside wide Akatsuki
 -- sleeves (red clouds, red lining), the seal / face / sleeve-grip / point poses, the Mangekyo overlay, camera work for
@@ -5269,6 +5989,8 @@ return {
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
         -- Uchiha Itachi: tuning and judgement live in ItachiConfig / ItachiServer. Crow Clone is a passive.
         Itachi = { "Tsukuyomi", "Amaterasu", "Susanoo", "Dash" },
+        -- Yujiro Hanma: tuning and judgement live in YujiroConfig / YujiroServer.
+        Yujiro = { "OgreCounter", "OgreRush", "OgreJudgment", "Dash" },
     },
     LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
     LightKick = {DashTime=.24,Cost=24,Cooldown=8,Windup=.3,Duration=1.1,Damage=65,Range=48,Width=4.5},
@@ -6130,6 +6852,86 @@ end
 function VFX.reset() for _,f in effects do f.cleanup() end;effects={};claws={} end
 return VFX
 ]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_YujiroConfig"><Properties><string name="Name">YujiroConfig</string><ProtectedString name="Source"><![CDATA[-- Yujiro Hanma tuning. Read by YujiroServer (every combat decision), YujiroClient and YujiroVFX (timing of the
+-- visuals). Times are seconds from the key press (Q: from the read for the counter itself) unless noted; distances are
+-- studs. The browser preview (preview/yujiro.js) uses the same numbers.
+return {
+    Kit = { "OgreCounter", "OgreRush", "OgreJudgment" },
+    Colors = {
+        Skin = Color3.fromRGB(214, 150, 112), SkinDeep = Color3.fromRGB(176, 108, 78), Muscle = Color3.fromRGB(196, 128, 92),
+        Shadow = Color3.fromRGB(92, 44, 34), Vein = Color3.fromRGB(150, 62, 54), Nail = Color3.fromRGB(232, 196, 170),
+        Hair = Color3.fromRGB(196, 22, 24), HairDeep = Color3.fromRGB(120, 10, 14), Red = Color3.fromRGB(255, 50, 40),
+        Pressure = Color3.fromRGB(150, 20, 20), White = Color3.fromRGB(250, 248, 244), Dust = Color3.fromRGB(176, 166, 150),
+        Rock = Color3.fromRGB(118, 110, 100), Crack = Color3.fromRGB(34, 30, 28),
+    },
+    -- Q 지상 최강의 생물: a counter stance. Damage kinds a read can answer; everything else (Projectile, DoT, fields,
+    -- shockwaves, explosions, ultimates) can never be countered. Projectiles still lose the frontal reduction.
+    OgreCounter = {
+        Cooldown = 18,
+        Entry = 0.25,                 -- stance entry; the window opens here
+        WindowEnd = 2.5,              -- no read by now: failure
+        Arc = 80,                     -- frontal half-angle in degrees (160 degrees in all)
+        Reduction = 0.7,              -- frontal hits lose 70% while waiting
+        Counterable = { Basic = true, Melee = true, Weapon = true, Dash = true, Kick = true },
+        -- relative to the read
+        Snap = 0.15, Hit = 0.30, PunchEnd = 0.5, End = 0.9,
+        Damage = 30, Knockback = 12, KnockLift = 3, KnockTime = 0.35, Stagger = 0.8,
+        Reach = 9,                    -- the uppercut lands if the attacker is still this close at the hit
+        StepTo = 2.6,                 -- the caster steps in to this distance in front of the attacker (never through walls)
+        StepMax = 6,
+        Slowdown = 0.06,              -- client-only visual slowdown on the read
+        BuffDuration = 0.5, BasicDamage = 1.15,   -- after a successful counter (from the end of the cast)
+        FailRecovery = 0.4, FailEnd = 2.9, FailSpeed = 0.45,
+    },
+    -- E 오거 러시: crouch, dash, body blow, hook, axe kick on one held target. 10 + 15 + 20 = 45 at most.
+    OgreRush = {
+        Cooldown = 15,
+        Crouch = 0.2, DashEnd = 0.5, Distance = 18, Width = 2.2, Stop = 2.25, Escape = 5.3,
+        BodyEnd = 0.7, HookEnd = 0.95, AxeEnd = 1.35, End = 1.75,
+        WhiffEnd = 0.85,              -- nobody linked: a short stumble, then the cast ends
+        Blows = {
+            { Time = 0.62, Damage = 10, Kind = "Melee", Name = "Body" },
+            { Time = 0.84, Damage = 15, Kind = "Melee", Name = "Hook" },
+            { Time = 1.21, Damage = 20, Kind = "Kick", Name = "Axe" },
+        },
+    },
+    -- R 오거의 심판. 15 + 15 + 4 x 5 + 50 = 100 at most; every hit is "Ultimate" and lands at most once.
+    OgreJudgment = {
+        Cooldown = 90, FailCooldown = 30,
+        Serious = 0.5, Open = 1.0, Capture = 1.0, FailEnd = 1.55,
+        Range = 25, Angle = 15,
+        DashEnd = 1.5, Hold = 2.2,    -- the caster reaches the target and grabs it at this distance
+        Hits = {
+            { Time = 1.66, Damage = 15, Name = "Body" },
+            { Time = 2.05, Damage = 15, Name = "Slap" },
+            { Time = 2.40, Damage = 5, Name = "Rush" },
+            { Time = 2.56, Damage = 5, Name = "Rush" },
+            { Time = 2.72, Damage = 5, Name = "Rush" },
+            { Time = 2.88, Damage = 5, Name = "Rush" },
+            { Time = 4.12, Damage = 50, Name = "Final" },
+        },
+        LiftFrom = 3.0, LiftTo = 3.5, LiftHeight = 3,
+        Release = 3.62, ThrowDistance = 4.5, ThrowHeight = 1.2,
+        WindFrom = 3.5, WindTo = 4.0, Final = 4.12, Hitstop = 0.08, StepIn = 1.6,
+        Down = 0.8,                   -- the target lies on the floor this long after the final punch lands
+        End = 5.5,
+        DamageTaken = 0.7,            -- the caster takes 30% less for the whole cast
+    },
+    -- Placeholder sounds (built-in assets); replace with uploaded ids.
+    Sounds = {
+        Laugh = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.32 },
+        Parry = { id = "rbxasset://sounds/electronicpingshort.mp3", speed = 0.7 },
+        Swing = { id = "rbxasset://sounds/swordslash.wav", speed = 0.5 },
+        Punch = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.7 },
+        Heavy = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.42 },
+        Slap = { id = "rbxasset://sounds/impact_generic.mp3", speed = 1.25 },
+        Boom = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.3 },
+        Heartbeat = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.36 },
+        Dash = { id = "rbxasset://sounds/swordslash.wav", speed = 0.75 },
+        Thud = { id = "rbxasset://sounds/impact_generic.mp3", speed = 0.85 },
+    },
+}
+]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX_ItachiConfig"><Properties><string name="Name">ItachiConfig</string><ProtectedString name="Source"><![CDATA[-- Uchiha Itachi tuning. Read by ItachiServer (every combat decision), ItachiClient and ItachiVFX (timing of the
 -- visuals). Times are seconds from the key press (or from the dodge) unless noted; distances are studs.
 return {
@@ -6203,6 +7005,552 @@ return {
         Seal = { id = "rbxasset://sounds/action_falling.mp3", speed = 0.6 },
     },
 }
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_YujiroVFX"><Properties><string name="Name">YujiroVFX</string><ProtectedString name="Source"><![CDATA[-- Yujiro Hanma world effects, run on every client from the server's Yujiro* events: white air shockwaves, dust, floor
+-- cracks and rocks, afterimages, the Demon Back (배면귀: the back muscles contracting into a demon face, built from
+-- parts that follow the torso, never a decal), and the third-person body poses of casters and victims (stance, rush,
+-- arms spread, lift, folded / turned / dangling / lying victims) for everyone watching.
+-- Nothing here touches gameplay: positions come from the server, every part is anchored and non-collidable, dust and
+-- rocks are pooled, and each effect has a hard lifetime. No beams, no energy explosions.
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local Debris=game:GetService("Debris")
+local RS=game:GetService("ReplicatedStorage")
+local Y=require(RS:WaitForChild("YujiroConfig"))
+local COLORS=Y.Colors
+
+local VFX={}
+VFX.Sounds=Y.Sounds
+local folder=Instance.new("Folder");folder.Name="YujiroFX";folder.Parent=workspace
+VFX.folder=folder
+local active={}
+local function clock() return workspace:GetServerTimeNow() end
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function window(a,from,to) return math.clamp((a-from)/(to-from),0,1) end
+local function bump(a,from,to) return math.sin(window(a,from,to)*math.pi) end
+local function easeOut(x,power) x=math.clamp(x,0,1);return 1-(1-x)^(power or 2) end
+VFX.smoothstep=smoothstep;VFX.window=window;VFX.bump=bump;VFX.easeOut=easeOut
+local function run(duration,update,cleanup,start)
+    local e={start=start or clock(),duration=duration,update=update,cleanup=cleanup}
+    table.insert(active,e);return e
+end
+VFX.run=run
+local function part(name,size,color,cf,shape,material)
+    local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
+    p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
+    p.Material=material or Enum.Material.SmoothPlastic;p.Shape=shape or Enum.PartType.Block;p.Parent=folder
+    return p
+end
+VFX.part=part
+function VFX.sound(name,position,volume,duration,speedScale)
+    local cue=VFX.Sounds[name];if not cue or not position then return end
+    local holder=part("YujiroSound",Vector3.one*.1,Color3.new(),CFrame.new(position));holder.Transparency=1
+    local s=Instance.new("Sound");s.SoundId=cue.id;s.Volume=volume or .6;s.PlaybackSpeed=cue.speed*(speedScale or 1)
+    s.RollOffMinDistance=14;s.RollOffMaxDistance=260;s.Parent=holder;s:Play()
+    Debris:AddItem(holder,duration or 3)
+    return s
+end
+local function rootOf(model) return model and model:FindFirstChild("HumanoidRootPart") end
+VFX.rootOf=rootOf
+local function torsoOf(model) return model and (model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")) end
+local function modelOf(userId) local p=Players:GetPlayerByUserId(userId);return p and p.Character end
+local PARK=CFrame.new(0,-5000,0)
+
+---------------------------------------------------------------- pooled pieces
+local pools={Rock={},Dust={},Streak={}}
+local function acquire(kind)
+    local p=table.remove(pools[kind])
+    if not p then
+        if kind=="Rock" then p=part("YujiroRock",Vector3.one,COLORS.Rock,PARK,Enum.PartType.Block,Enum.Material.Slate)
+        elseif kind=="Dust" then p=part("YujiroDust",Vector3.one,COLORS.Dust,PARK,Enum.PartType.Ball)
+        else p=part("YujiroStreak",Vector3.one,COLORS.White,PARK,Enum.PartType.Block,Enum.Material.Neon) end
+    end
+    p.Transparency=0;return p
+end
+local function release(kind,p)
+    if not p or not p.Parent then return end
+    p.Transparency=1;p.CFrame=PARK
+    if #pools[kind]<200 then table.insert(pools[kind],p) else p:Destroy() end
+end
+local groundParams=RaycastParams.new();groundParams.FilterType=Enum.RaycastFilterType.Exclude;groundParams.RespectCanCollide=true
+local function groundAt(position)
+    local list={folder,workspace.CurrentCamera}
+    for _,pl in Players:GetPlayers() do if pl.Character then table.insert(list,pl.Character) end end
+    groundParams.FilterDescendantsInstances=list
+    local hit=workspace:Raycast(position+Vector3.yAxis*3,Vector3.yAxis*-60,groundParams)
+    return hit and hit.Position or position-Vector3.yAxis*3,hit and hit.Normal or Vector3.yAxis
+end
+VFX.groundAt=groundAt
+function VFX.dust(position,size,velocity,life,color,startAlpha)
+    local p=acquire("Dust");p.Size=Vector3.one*size*.5;p.CFrame=CFrame.new(position);p.Color=color or COLORS.Dust
+    local a0=startAlpha or .45;p.Transparency=a0
+    local grow=size*(1.5+math.random()*.7)
+    run(life,function(age)
+        local u=age/life
+        p.CFrame=CFrame.new(position+velocity*life*(1-(1-u)^2.5))
+        p.Size=Vector3.one*(size*.5+(grow-size*.5)*smoothstep(u))
+        p.Transparency=a0+(1-a0)*u
+    end,function() release("Dust",p) end)
+end
+function VFX.rock(position,velocity,size,life)
+    local p=acquire("Rock");p.Size=Vector3.new(size,size*(.5+math.random()*.5),size*(.7+math.random()*.4))
+    local spin=CFrame.Angles(math.random()*6,math.random()*6,math.random()*6)
+    local axis=Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5).Unit
+    local floor=position.Y-1
+    run(life,function(age)
+        local at=position+velocity*age-Vector3.yAxis*55*age*age
+        if at.Y<floor then at=Vector3.new(at.X,floor,at.Z) end
+        p.CFrame=CFrame.new(at)*CFrame.fromAxisAngle(axis,age*9)*spin
+        p.Transparency=smoothstep((age-life*.65)/(life*.35))
+    end,function() release("Rock",p) end)
+end
+function VFX.streak(position,direction,length,speed,life,color,width)
+    local p=acquire("Streak");p.Color=color or COLORS.White
+    local w=width or .07
+    run(life,function(age)
+        local u=age/life
+        local at=position+direction*speed*age
+        p.Size=Vector3.new(w,w,length*(1-.5*u))
+        p.CFrame=CFrame.lookAt(at,at+direction)
+        p.Transparency=.3+.7*u
+    end,function() release("Streak",p) end)
+end
+-- A thin ring of segments; pose(frame, radius, transparency, width).
+local function ring(segments,thickness,color)
+    local list={}
+    for i=1,segments do list[i]=part("YujiroRing",Vector3.one*thickness,color,PARK,nil,Enum.Material.Neon) end
+    local function pose(frame,radius,transparency,width)
+        local w=width or thickness
+        for i,p in list do
+            local a=(i-1)*math.pi*2/#list;local b=i*math.pi*2/#list
+            local from=(frame*CFrame.new(math.cos(a)*radius,0,math.sin(a)*radius)).Position
+            local to=(frame*CFrame.new(math.cos(b)*radius,0,math.sin(b)*radius)).Position
+            p.Size=Vector3.new(w,w*.5,(to-from).Magnitude+w*.5)
+            p.CFrame=CFrame.lookAt((from+to)/2,to);p.Transparency=transparency
+        end
+    end
+    local function destroy() for _,p in list do p:Destroy() end end
+    return pose,destroy
+end
+-- An expanding white air ring around `axis` through `center`.
+function VFX.shockRing(center,axis,radius,life,thickness,segments,delayTime,color)
+    local pose,destroy=ring(segments or 26,thickness or .4,color or COLORS.White)
+    local up=axis.Unit
+    local right=math.abs(up.Y)<.95 and up:Cross(Vector3.yAxis).Unit or Vector3.xAxis
+    local frame=CFrame.fromMatrix(center,right,up)
+    pose(frame,.1,1)
+    run(life,function(age)
+        local u=age/life
+        pose(frame,radius*(1-(1-u)^3),.15+.85*u*u,(thickness or .4)*(1-.6*u))
+    end,destroy,clock()+(delayTime or 0))
+end
+-- A translucent sphere of displaced air.
+function VFX.pressure(center,radius,life,startAlpha)
+    local p=part("YujiroPressure",Vector3.one*.5,COLORS.White,CFrame.new(center),Enum.PartType.Ball,Enum.Material.ForceField)
+    local a0=startAlpha or .25
+    run(life,function(age) local u=age/life;p.Size=Vector3.one*radius*2*(1-(1-u)^3);p.Transparency=a0+(1-a0)*u end,function() p:Destroy() end)
+end
+function VFX.flash(position,brightness,range,life)
+    local holder=part("YujiroFlash",Vector3.one*.1,Color3.new(),CFrame.new(position));holder.Transparency=1
+    local light=Instance.new("PointLight");light.Color=Color3.new(1,1,1);light.Range=range;light.Brightness=brightness;light.Parent=holder
+    run(life,function(age) light.Brightness=brightness*(1-age/life) end,function() holder:Destroy() end)
+end
+-- Radial cracks on the floor with a dark dent in the middle; fades after `life`.
+function VFX.cracks(center,radius,count,life)
+    local floor,normal=groundAt(center)
+    local parts={}
+    local disc=part("YujiroCrater",Vector3.new(.06,radius*.5,radius*.5),Color3.fromRGB(58,52,46),CFrame.new(floor+normal*.03)*CFrame.Angles(0,0,math.pi/2),Enum.PartType.Cylinder,Enum.Material.Slate)
+    table.insert(parts,disc)
+    for i=1,count do
+        local a=i/count*math.pi*2+math.random()*.4
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        local length=radius*(.45+math.random()*.55)
+        local mid=floor+d*length*.5+Vector3.new(-d.Z,0,d.X)*(math.random()-.5)*length*.18
+        local tip=floor+d*length
+        for j,seg in {{floor+d*radius*.1,mid},{mid,tip}} do
+            local from,to=seg[1],seg[2]
+            local full=Vector3.new(.26-j*.07,.06,(to-from).Magnitude)
+            local p=part("YujiroCrack",Vector3.new(full.X,.06,.05),COLORS.Crack,CFrame.lookAt(from+normal*.05,to+normal*.05),nil,Enum.Material.Slate)
+            table.insert(parts,p)
+            run(.12,function(age)
+                local u=smoothstep(age/.12)
+                p.Size=Vector3.new(full.X,.06,math.max(.05,full.Z*u));p.CFrame=CFrame.lookAt(from:Lerp(to,u*.5)+normal*.05,to+normal*.05)
+            end,nil,clock()+(j-1)*.05)
+        end
+    end
+    run(life,function(age)
+        local fade=smoothstep((age-life*.75)/(life*.25))
+        for _,p in parts do p.Transparency=fade end
+    end,function() for _,p in parts do p:Destroy() end end)
+    return floor
+end
+function VFX.dustRing(center,radius,count,life,rocks)
+    local floor=groundAt(center)
+    for i=1,count do
+        local a=i/count*math.pi*2+math.random()*.3
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        VFX.dust(floor+d*radius*.2+Vector3.yAxis*.6,2+math.random()*1.4,d*radius*.9+Vector3.yAxis*(.8+math.random()*1.6),life*(.8+math.random()*.4))
+    end
+    for _=1,rocks or 0 do
+        local a=math.random()*math.pi*2
+        local d=Vector3.new(math.cos(a),0,math.sin(a))
+        VFX.rock(floor+d*1.2+Vector3.yAxis*.6,d*(10+math.random()*16)+Vector3.yAxis*(12+math.random()*16),.3+math.random()*.6,1.1+math.random()*.5)
+    end
+end
+-- Faint red copies of the body left behind along a dash.
+function VFX.afterimage(model,life)
+    if not model then return end
+    local copies={}
+    for _,v in model:GetChildren() do
+        if v:IsA("BasePart") and v.Name~="HumanoidRootPart" and v.Transparency<1 and #copies<16 then
+            local p=part("YujiroAfterimage",v.Size,COLORS.Red,v.CFrame,nil,Enum.Material.ForceField)
+            p.Transparency=.4;table.insert(copies,p)
+        end
+    end
+    run(life,function(age) for _,p in copies do p.Transparency=.4+.6*(age/life) end end,function() for _,p in copies do p:Destroy() end end)
+end
+
+---------------------------------------------------------------- the Demon Back (배면귀)
+-- Muscle relief on the back of the torso (+Z is the back in the torso's frame), mirrored left/right:
+-- trapezius "horns", angry brow ridges, sunken eye grooves, cheek masses, the spine as the nose, the lats as the jaw
+-- and a dark grimace groove. Each piece: name, size (fractions of the torso), offset (fractions), roll, groove?
+local DEMON={
+    {"Horn",Vector3.new(.2,.42,.2),Vector3.new(.36,.5,.48),.55,false,true},
+    {"Brow",Vector3.new(.36,.1,.16),Vector3.new(.2,.24,.5),-.38,false,true},
+    {"EyeGroove",Vector3.new(.2,.08,.06),Vector3.new(.2,.13,.56),-.2,true,true},
+    {"Cheek",Vector3.new(.3,.22,.18),Vector3.new(.25,-.02,.5),.1,false,true},
+    {"Lat",Vector3.new(.34,.38,.2),Vector3.new(.33,-.28,.48),-.15,false,true},
+    {"Nose",Vector3.new(.1,.36,.16),Vector3.new(0,.04,.52),0,false,false},
+    {"Mouth",Vector3.new(.5,.06,.05),Vector3.new(0,-.24,.57),0,true,false},
+    {"Fang",Vector3.new(.06,.12,.05),Vector3.new(.13,-.2,.57),.15,true,true},
+    {"Jaw",Vector3.new(.6,.14,.16),Vector3.new(0,-.4,.5),0,false,false},
+}
+local demons={}   -- [model] = {parts, open, close}
+local function buildDemon(model)
+    local torso=torsoOf(model);if not torso then return nil end
+    local base=torso.Color:Lerp(COLORS.SkinDeep,.4)
+    local d={model=model,torso=torso,parts={}}
+    for _,spec in DEMON do
+        local sides=spec[6] and {-1,1} or {1}
+        for _,side in sides do
+            local p=part("YujiroDemon"..spec[1],Vector3.one*.05,spec[5] and COLORS.Shadow or base,PARK,
+                (spec[1]=="Cheek" or spec[1]=="Lat" or spec[1]=="Horn") and Enum.PartType.Ball or Enum.PartType.Block)
+            p.Transparency=1
+            table.insert(d.parts,{p=p,spec=spec,side=side})
+        end
+    end
+    return d
+end
+-- Opens at `open`, holds, closes at `close` (server clock). Replaces any earlier one on the same body.
+function VFX.demonBack(model,open,close)
+    if not model then return end
+    local old=demons[model];if old and old.effect then old.effect.dead=true end
+    local d=buildDemon(model);if not d then return end
+    demons[model]=d
+    local life=close-open+.6
+    d.close=close
+    d.effect=run(life,function(age)
+        local torso=d.torso
+        if not torso.Parent then return end
+        local size=torso.Size
+        -- Contracting: the masses rise out of the back over .5 s with a short tremble, then settle into the face.
+        local k=easeOut(age/.5,2.2)*(1-smoothstep((clock()-d.close)/.4))
+        local tremble=(1-smoothstep((age-.3)/.4))*.03
+        for i,e in d.parts do
+            local spec=e.spec
+            local s=spec[2]*Vector3.new(size.X,size.Y,size.Z*2)*(.2+.8*k)
+            -- On the back surface (+Z); the dark grooves sit slightly proud so they read as lines across the masses.
+            local off=Vector3.new(spec[3].X*size.X*e.side,spec[3].Y*size.Y,size.Z*.5+(spec[3].Z-.5)*size.Z+s.Z*.3*k)
+            e.p.Size=Vector3.new(math.max(.05,s.X),math.max(.05,s.Y),math.max(.05,s.Z))
+            e.p.CFrame=torso.CFrame*CFrame.new(off+Vector3.new(math.sin(age*60+i)*tremble,0,0))*CFrame.Angles(0,0,spec[4]*e.side)
+            e.p.Transparency=k>.02 and 0 or 1
+        end
+    end,function()
+        for _,e in d.parts do e.p:Destroy() end
+        if demons[model]==d then demons[model]=nil end
+    end,open)
+end
+function VFX.closeDemon(model)
+    local d=demons[model];if d then d.close=math.min(d.close,clock()) end
+end
+
+---------------------------------------------------------------- body poses (third person, every client)
+-- Joint offsets are written to Motor6D.Transform after animation each frame (R15 joint names). Victim poses come
+-- from the server's YujiroPose attributes; caster poses from the cast timeline.
+local casts={}    -- [model] = {kind, start, read, side}
+function VFX.setCast(model,info) if model then casts[model]=info end end
+function VFX.clearCast(model,kind) if model and casts[model] and (not kind or casts[model].kind==kind) then casts[model]=nil end end
+local JOINTS={Neck="Neck",Waist="Waist",Root="Root",RS="RightShoulder",LS="LeftShoulder",RH="RightHip",LH="LeftHip",RE="RightElbow",LE="LeftElbow"}
+local function A(x,y,z) return CFrame.Angles(x or 0,y or 0,z or 0) end
+local function victimPose(pose,age,side)
+    local o={}
+    local hit=easeOut(age/.08,2)
+    if pose=="Fold" then
+        local k=hit*(1-smoothstep((age-.3)/.25))
+        o.Waist=A(-.7*k);o.Neck=A(-.35*k);o.RS=A(.5*k,0,.2*k);o.LS=A(.5*k,0,-.2*k)
+    elseif pose=="Turn" or pose=="Rock" then
+        local hold=pose=="Turn" and .3 or .12
+        local k=hit*(1-smoothstep((age-hold)/.22))
+        o.Neck=A(.15*k,side*.9*k,side*.25*k);o.Waist=A(0,side*.3*k,0)
+    elseif pose=="Uppercut" then
+        local k=hit*(1-smoothstep((age-.45)/.35))
+        o.Neck=A(.7*k);o.Waist=A(.35*k);o.RS=A(0,0,.6*k);o.LS=A(0,0,-.6*k)
+    elseif pose=="Down" then
+        local k=hit
+        o.Root=CFrame.new(0,-1.1*k,0)*A(-.35*k);o.Waist=A(-.75*k);o.Neck=A(-.4*k);o.RH=A(1.2*k);o.LH=A(1.2*k)
+    elseif pose=="Dangle" then
+        local k=smoothstep(age/.3);local sway=math.sin(age*7)*.12*k
+        o.Neck=A(-.45*k);o.RS=A(.1+sway,0,.12*k);o.LS=A(.1-sway,0,-.12*k);o.RH=A(.25*k+sway);o.LH=A(.25*k-sway);o.Waist=A(-.15*k)
+    elseif pose=="Thrown" then
+        local k=smoothstep(age/.15)
+        o.Waist=A(.4*k);o.Neck=A(.5*k);o.RS=A(0,0,1.1*k);o.LS=A(0,0,-1.1*k);o.RH=A(-.3*k);o.LH=A(.3*k)
+    elseif pose=="Lie" then
+        local k=easeOut(age/.1,2)
+        o.Root=A(1.45*k);o.Neck=A(.3*k);o.RS=A(0,0,1.2*k);o.LS=A(0,0,-1.2*k);o.RH=A(0,0,.2*k);o.LH=A(0,0,-.2*k)
+    end
+    return o
+end
+local function casterPose(c,n)
+    local o={}
+    local a=n-c.start
+    if c.kind=="Counter" then
+        -- Upright, right hand by the waist, left hand forward, head tilted; on the read the right uppercut.
+        local k=smoothstep(a/Y.OgreCounter.Entry)
+        local endK=c.read and 1-smoothstep(window(n-c.read,Y.OgreCounter.PunchEnd,Y.OgreCounter.End)) or (c.ended and 1-smoothstep((n-c.ended)/.3) or 1)
+        k*=endK
+        o.Waist=A(.08*k);o.Neck=A(0,0,.18*k);o.RS=A(.25*k,0,.18*k);o.LS=A(1.15*k,0,-.15*k);o.LE=A(.5*k)
+        if c.read then
+            local r=n-c.read
+            local up=easeOut(window(r,.15,.3),3)*(1-smoothstep(window(r,.5,.9)))
+            o.RS=o.RS:Lerp(A(2.6,0,.1),up);o.Neck=A(0,.3*bump(r,0,.2),0)
+            o.LS=o.LS:Lerp(A(1.2,0,.4),bump(r,0,.15))
+        end
+    elseif c.kind=="Rush" then
+        local cfg=Y.OgreRush
+        local crouch=smoothstep(a/cfg.Crouch)*(1-smoothstep(window(a,cfg.AxeEnd,cfg.End)))
+        o.Root=CFrame.new(0,-.5*crouch,0);o.Waist=A(-.3*crouch)
+        o.LS=A(1.3*bump(a,cfg.DashEnd,cfg.BodyEnd),0,.3*bump(a,cfg.DashEnd,cfg.BodyEnd))
+        o.RS=A(1.5*bump(a,cfg.BodyEnd,cfg.HookEnd),0,.6*bump(a,cfg.BodyEnd,cfg.HookEnd))
+        local raise=easeOut(window(a,cfg.HookEnd,1.15),2);local chop=easeOut(window(a,1.15,cfg.Blows[3].Time),3)
+        local back=smoothstep(window(a,cfg.AxeEnd,cfg.End))
+        o.RH=A((2.3*raise-2.1*chop)*(1-back))
+    elseif c.kind=="Judgment" then
+        local cfg=Y.OgreJudgment
+        local spread=smoothstep(window(a,cfg.Serious,cfg.Serious+.25))*(1-smoothstep(window(a,cfg.Open,cfg.Open+.2)))
+        o.Neck=A(-.35*smoothstep(window(a,0,cfg.Serious))*(1-spread));o.Waist=A(.12*spread)
+        o.RS=A(-.2*spread,0,1.35*spread);o.LS=A(-.2*spread,0,-1.35*spread)
+        if c.captured then
+            local grab=smoothstep(window(a,cfg.DashEnd-.15,cfg.DashEnd))*(1-smoothstep(window(a,cfg.LiftFrom-.1,cfg.LiftFrom)))
+            o.LS=o.LS*A(1.4*grab)
+            local punch=0
+            for i,hit in cfg.Hits do if i<#cfg.Hits then punch=math.max(punch,bump(a,hit.Time-.1,hit.Time+.12)) end end
+            o.RS=o.RS*A(1.5*punch,0,.2*punch)
+            local lift=smoothstep(window(a,cfg.LiftFrom,cfg.LiftTo))*(1-smoothstep(window(a,cfg.Release-.05,cfg.Release+.08)))
+            o.RS=o.RS*A(2.6*lift);o.LS=o.LS*A(2.6*lift)
+            local wind=smoothstep(window(a,cfg.WindFrom+.1,cfg.WindTo))*(1-easeOut(window(a,cfg.WindTo,cfg.Final),3))
+            local final=easeOut(window(a,cfg.WindTo,cfg.Final),3)*(1-smoothstep(window(a,cfg.Final+.4,cfg.End)))
+            o.RS=o.RS*A(-.9*wind+1.6*final,0,.4*wind);o.Waist=o.Waist*A(-.25*final,.35*wind-.25*final,0)
+        end
+    end
+    return o
+end
+local applied={}   -- [model] = {joint name -> current CFrame}
+local function jointOf(model,name)
+    local j=model:FindFirstChild(name,true)
+    return j and j:IsA("Motor6D") and j or nil
+end
+local function applyPoses(dt)
+    local n=clock()
+    local wanted={}
+    for model,c in casts do
+        if not model.Parent then casts[model]=nil
+        else wanted[model]=casterPose(c,n) end
+    end
+    for _,model in workspace:GetChildren() do
+        if model:IsA("Model") then
+            local pose=model:GetAttribute("YujiroPose")
+            if pose and pose~="" and (model:GetAttribute("YujiroHeldUntil") or 0)>n-.3 then
+                local o=victimPose(pose,n-(model:GetAttribute("YujiroPoseAt") or n),model:GetAttribute("YujiroPoseSide") or 1)
+                local w=wanted[model] or {};for k,v in o do w[k]=v end;wanted[model]=w
+            end
+        end
+    end
+    for model,o in wanted do applied[model]=applied[model] or {} end
+    for model,cur in applied do
+        local o=wanted[model] or {}
+        local any=false
+        if model.Parent then
+            for key,name in JOINTS do
+                local target=o[key] or CFrame.identity
+                local now_=(cur[key] or CFrame.identity):Lerp(target,math.min(1,dt*18))
+                local small=(now_.Position.Magnitude<.002) and (math.abs(now_.LookVector.Z+1)<.0005) and (math.abs(now_.UpVector.Y-1)<.0005)
+                if small and not o[key] then
+                    if cur[key] then local j=jointOf(model,name);if j then j.Transform=CFrame.identity end end
+                    cur[key]=nil
+                else
+                    cur[key]=now_;any=true
+                    local j=jointOf(model,name);if j then j.Transform=now_ end
+                end
+            end
+        end
+        if not any then applied[model]=nil end
+    end
+end
+
+---------------------------------------------------------------- techniques (every client)
+function VFX.counterStance(model,data)
+    local root=rootOf(model);if not root then return end
+    VFX.setCast(model,{kind="Counter",start=data.start})
+    local floor=groundAt(root.Position)
+    for i=1,8 do
+        local a=i/8*math.pi*2
+        VFX.dust(floor+Vector3.new(math.cos(a),.4,math.sin(a))*1.2,1.2,Vector3.new(math.cos(a),.2,math.sin(a))*3,.7,nil,.6)
+    end
+    VFX.sound("Laugh",root.Position,.55,2)
+end
+function VFX.counterRead(model,data)
+    local c=model and casts[model]
+    if c and c.kind=="Counter" then c.read=data.start end
+    local root=rootOf(model);if not root then return end
+    local at=root.Position:Lerp(data.position,.5)+Vector3.yAxis*1.2
+    for _=1,10 do
+        local d=Vector3.new(math.random()-.5,math.random()-.3,math.random()-.5).Unit
+        VFX.streak(at,d,.5,22,.18,COLORS.White,.05)
+    end
+    VFX.flash(at,4,10,.15)
+    VFX.sound("Parry",at,.9,2)
+end
+function VFX.counterHit(data)
+    local at=data.position+Vector3.yAxis*1.4
+    local dir=data.direction or Vector3.zAxis
+    if data.landed then
+        VFX.shockRing(at,dir+Vector3.yAxis*.8,6,.35,.35,24)
+        VFX.shockRing(at,dir+Vector3.yAxis*.8,3.5,.25,.25,18,.05)
+        VFX.pressure(at,3,.3,.3)
+        VFX.flash(at,6,16,.2)
+        for _=1,8 do VFX.streak(at,(Vector3.yAxis+dir*.6+Vector3.new(math.random()-.5,0,math.random()-.5)).Unit,1.2,30,.25) end
+        VFX.sound("Heavy",at,1,2)
+    else
+        VFX.sound("Swing",at,.7,1.5)
+    end
+end
+function VFX.counterEnd(model) local c=model and casts[model];if c and c.kind=="Counter" then c.ended=c.ended or clock() end
+    task.delay(.35,function() VFX.clearCast(model,"Counter") end)
+end
+function VFX.counterBlock(model,from)
+    local root=rootOf(model);if not root then return end
+    local at=root.Position+(Vector3.new(from.X,root.Position.Y,from.Z)-root.Position).Unit*1.4+Vector3.yAxis*1.2
+    for _=1,5 do VFX.streak(at,Vector3.new(math.random()-.5,math.random()-.5,math.random()-.5).Unit,.35,14,.15,COLORS.White,.04) end
+    VFX.sound("Punch",at,.5,1,1.4)
+end
+function VFX.rushStart(model,data)
+    local root=rootOf(model);if not root then return end
+    VFX.setCast(model,{kind="Rush",start=data.start})
+    local floor=groundAt(root.Position)
+    for i=1,6 do VFX.dust(floor+Vector3.new(math.random()-.5,.4,math.random()-.5)*2,1.4,-data.direction*2+Vector3.yAxis,.6) end
+end
+function VFX.rushDash(model,data)
+    if not model then return end
+    VFX.sound("Dash",data.from,.8,1.5)
+    local last=0
+    run(Y.OgreRush.DashEnd-Y.OgreRush.Crouch,function(age)
+        if age-last<.05 then return end
+        last=age
+        VFX.afterimage(model,.25)
+        local root=rootOf(model)
+        if root then
+            local floor=groundAt(root.Position)
+            VFX.dust(floor+Vector3.yAxis*.5,1.3,-data.direction*4+Vector3.yAxis*1.2,.5)
+        end
+    end,nil,data.start)
+end
+function VFX.rushHit(data)
+    local at=data.position;local dir=data.direction
+    if data.index==1 then
+        VFX.pressure(at,1.6,.2,.4);VFX.dust(at,1,dir*2,.3,COLORS.White,.5)
+        VFX.sound("Punch",at,.9,1.5,.9)
+    elseif data.index==2 then
+        local head=at+Vector3.yAxis*1.5
+        VFX.shockRing(head,dir:Cross(Vector3.yAxis),4.5,.3,.3,22)
+        VFX.pressure(head,2.4,.25,.35)
+        for _=1,6 do VFX.streak(head,(dir:Cross(Vector3.yAxis)*-1+Vector3.new(0,math.random()-.5,math.random()-.5)*.6).Unit,1,24,.2) end
+        VFX.sound("Heavy",head,.9,1.5,1.2)
+    else
+        VFX.cracks(at,6,9,3)
+        VFX.dustRing(at,6,12,1,4)
+        VFX.shockRing(groundAt(at)+Vector3.yAxis*.3,Vector3.yAxis,7,.4,.4,26)
+        VFX.sound("Heavy",at,1,2,.8)
+    end
+end
+function VFX.rushEnd(model) task.delay(.2,function() VFX.clearCast(model,"Rush") end) end
+function VFX.judgment(model,data)
+    local root=rootOf(model);if not root then return end
+    local cfg=Y.OgreJudgment
+    VFX.setCast(model,{kind="Judgment",start=data.start})
+    VFX.demonBack(model,data.start+cfg.Serious,data.start+cfg.End)
+    VFX.sound("Heartbeat",root.Position,.8,2)
+    task.delay(math.max(0,data.start+.25-clock()),function() if root.Parent then VFX.sound("Laugh",root.Position,.7,2,.85) end end)
+    -- .5: the back opens with a low boom and a radial push of dust along the floor (no energy blast).
+    task.delay(math.max(0,data.start+cfg.Serious-clock()),function()
+        if not root.Parent then return end
+        local floor=groundAt(root.Position)
+        VFX.sound("Boom",root.Position,.9,3,.8)
+        for i=1,20 do
+            local a=i/20*math.pi*2
+            local d=Vector3.new(math.cos(a),0,math.sin(a))
+            VFX.dust(floor+d*1.5+Vector3.yAxis*.4,1.6+math.random(),d*14+Vector3.yAxis*.6,.9,nil,.5)
+        end
+        VFX.shockRing(floor+Vector3.yAxis*.25,Vector3.yAxis,14,.6,.25,30,0,COLORS.Dust)
+    end)
+end
+function VFX.judgmentCapture(model,data)
+    local c=model and casts[model];if c and c.kind=="Judgment" then c.captured=true end
+    local last=0
+    run(Y.OgreJudgment.DashEnd-Y.OgreJudgment.Capture,function(age)
+        if age-last<.06 then return end
+        last=age;VFX.afterimage(model,.22)
+    end,nil,data.start+Y.OgreJudgment.Capture)
+end
+function VFX.judgmentHit(data)
+    local at=data.position;local dir=data.direction or Vector3.zAxis
+    if data.final then
+        local ground=data.ground or groundAt(at)
+        VFX.flash(ground+Vector3.yAxis*2,9,40,.35)
+        VFX.shockRing(at+Vector3.yAxis*.5,dir,8,.35,.5,30)
+        VFX.shockRing(ground+Vector3.yAxis*.3,Vector3.yAxis,18,.7,.6,36,.03)
+        VFX.pressure(ground+Vector3.yAxis*1,7,.45,.25)
+        VFX.cracks(ground,16,16,6)
+        VFX.dustRing(ground,14,24,1.8,16)
+        VFX.sound("Boom",ground,1,4,.7);VFX.sound("Heavy",ground,1,3,.6)
+    elseif data.name=="Body" then
+        VFX.pressure(at,1.8,.22,.4);VFX.sound("Punch",at,1,1.5,.85)
+    elseif data.name=="Slap" then
+        VFX.shockRing(at+Vector3.yAxis*1.5,dir:Cross(Vector3.yAxis),3.5,.25,.25,20);VFX.sound("Slap",at,1,1.5)
+    else
+        VFX.pressure(at+Vector3.yAxis*.8,1.2,.15,.45);VFX.sound("Punch",at,.8,1,1.1+math.random()*.2)
+    end
+end
+function VFX.judgmentEnd(model,early)
+    if early then VFX.closeDemon(model) end
+    task.delay(.3,function() VFX.clearCast(model,"Judgment") end)
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    local n=clock()
+    for i=#active,1,-1 do
+        local e=active[i];local age=n-e.start
+        if age>e.duration or e.dead then
+            table.remove(active,i)
+            if e.cleanup then local ok,err=pcall(e.cleanup);if not ok then warn("YujiroVFX cleanup",err) end end
+        elseif age>=0 then
+            local ok,err=pcall(e.update,age,dt);if not ok then warn("YujiroVFX",err);e.dead=true end
+        end
+    end
+    local ok,err=pcall(applyPoses,dt);if not ok then warn("YujiroVFX poses",err) end
+    for model in demons do if not model.Parent then VFX.closeDemon(model) end end
+end)
+VFX.modelOf=modelOf
+return VFX
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX_ItachiVFX"><Properties><string name="Name">ItachiVFX</string><ProtectedString name="Source"><![CDATA[-- Uchiha Itachi world effects, run on every client from the server's Itachi* events: real flapping crows, feathers,
 -- the black Amaterasu field, Susanoo with the Yata Mirror and the Totsuka Blade, the seal, eye glow and bowed heads.
@@ -7613,6 +8961,7 @@ end
 local function guarded(model)
     local n=ctx.clock()
     return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n or (model:GetAttribute("ItachiGuardUntil") or 0)>n
+        or (model:GetAttribute("YujiroGuardUntil") or 0)>n or (model:GetAttribute("YujiroHeldUntil") or 0)>n -- Ogre's Judgment caster / Yujiro's grip
 end
 local function startMover(t,owner,spec)
     if not alive(t) or guarded(t.m) then return end
@@ -8398,6 +9747,676 @@ Run.Heartbeat:Connect(function()
 end)
 return M
 ]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX_YujiroServer"><Properties><string name="Name">YujiroServer</string><ProtectedString name="Source"><![CDATA[-- Yujiro Hanma: server-side judgement for 지상 최강의 생물 (Q, counter stance), 오거 러시 (E) and 오거의 심판 (R).
+-- Required by Combat.server.luau, which owns the shared player state (cooldowns, busy time, generation) and passes its
+-- helpers in through Yujiro.init. Clients send only the key and their camera ray; the read, the frontal arc, targets,
+-- line of sight, every hit, every hold and every safe landing spot are decided here, from server positions and clocks.
+-- Every body this module moves (the caster during a dash or a step-in, every victim) is moved by a server-created
+-- AlignPosition or, for anchored training targets, kinematically; every step is blockcast against the world first.
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local RS=game:GetService("ReplicatedStorage")
+local Y=require(RS:WaitForChild("YujiroConfig"))
+
+local Yujiro={}
+local ctx
+local KIT={};for _,skill in Y.Kit do KIT[skill]=true end
+local counters={}     -- [caster player] = Q in progress
+local rushes={}       -- [caster player] = E in progress
+local ultras={}       -- [caster player] = R in progress
+local movers={}       -- [victim model] = forced hold / movement owned by one caster
+local drives={}       -- [caster player] = constraint moving the caster
+
+local function smoothstep(x) x=math.clamp(x,0,1);return x*x*(3-2*x) end
+local function easeOut(x,power) x=math.clamp(x,0,1);return 1-(1-x)^(power or 2) end
+local function window(a,from,to) return math.clamp((a-from)/(to-from),0,1) end
+local function bump(a,from,to) return math.sin(window(a,from,to)*math.pi) end
+local function flat(v,fallback)
+    local f=Vector3.new(v.X,0,v.Z)
+    return f.Magnitude>.05 and f.Unit or fallback or Vector3.new(0,0,-1)
+end
+local function alive(t) return t~=nil and t.m.Parent~=nil and t.r.Parent~=nil and t.h.Parent~=nil and t.h.Health>0 end
+local function now() return ctx.clock() end
+-- World geometry only: every character is excluded and non-collidable parts are ignored.
+local function worldParams()
+    local list={}
+    for _,t in ctx.targets(nil) do table.insert(list,t.m) end
+    for _,p in Players:GetPlayers() do if p.Character then table.insert(list,p.Character) end end
+    local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances=list;params.RespectCanCollide=true
+    return params
+end
+local function groundBelow(position,params,depth)
+    local hit=workspace:Raycast(position+Vector3.yAxis*3,Vector3.yAxis*-(depth or 60),params)
+    return hit and hit.Position or nil
+end
+local function hipOf(t,params)
+    local floor=groundBelow(t.r.Position,params,12)
+    return floor and math.clamp(t.r.Position.Y-floor.Y,1.5,6) or 3
+end
+local function headOf(t) local head=t.m:FindFirstChild("Head");return head and head.Position or t.r.Position+Vector3.yAxis*1.5 end
+local function lineOfSight(from,to,params) return workspace:Raycast(from,to-from,params)==nil end
+local function stillCaster(p,s,m,generation)
+    return ctx.states[p]==s and ctx.character(p)==m and s.generation==generation and ctx.kitOf(p)=="Yujiro"
+end
+local function attr(m,name) return m:GetAttribute(name) or 0 end
+-- Any hold that is not ours: a body in someone else's grip (or seal) cannot be grabbed or countered into a knock.
+local function heldElsewhere(m,n)
+    return attr(m,"PainHeldUntil")>n or attr(m,"AllMightHeldUntil")>n or attr(m,"ItachiHeldUntil")>n
+        or attr(m,"ItachiSealedUntil")>n or attr(m,"YujiroHeldUntil")>n
+end
+-- Bodies in the middle of their own ultimate resist displacement.
+local function guardedElsewhere(m,n)
+    return attr(m,"PainGuardUntil")>n or attr(m,"AllMightGuardUntil")>n or attr(m,"ItachiGuardUntil")>n or attr(m,"YujiroGuardUntil")>n
+end
+local function setPose(m,pose,n,side)
+    if m and m.Parent then m:SetAttribute("YujiroPose",pose);m:SetAttribute("YujiroPoseAt",n);m:SetAttribute("YujiroPoseSide",side or 1) end
+end
+local function hold(t,untilTime)
+    if t.m.Parent then t.m:SetAttribute("YujiroHeldUntil",math.max(attr(t.m,"YujiroHeldUntil"),untilTime)) end
+end
+local function unhold(t)
+    if t.m.Parent then t.m:SetAttribute("YujiroHeldUntil",0);setPose(t.m,"",now()) end
+    if t.h.Parent then ctx.updateSpeed(t.m,t.h) end
+end
+-- A spot is safe when there is floor under it and nothing solid inside the body's box.
+local function safeStand(position,hip,params)
+    local floor=groundBelow(position,params,40);if not floor then return nil end
+    local stand=Vector3.new(position.X,floor.Y+hip,position.Z)
+    local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude
+    overlap.FilterDescendantsInstances=params.FilterDescendantsInstances;overlap.RespectCanCollide=true
+    if #workspace:GetPartBoundsInBox(CFrame.new(stand),Vector3.new(2.2,hip*2-.4,2.2),overlap)>0 then return nil end
+    return stand
+end
+
+---------------------------------------------------------------- moving the caster
+local function driveCaster(p,r)
+    local d=drives[p]
+    if d and d.align.Parent and d.root==r then return d end
+    if d then d.align:Destroy();d.attachment:Destroy() end
+    local attachment=Instance.new("Attachment");attachment.Name="YujiroDriveAttachment";attachment.Parent=r
+    local align=Instance.new("AlignPosition");align.Name="YujiroDrive";align.Mode=Enum.PositionAlignmentMode.OneAttachment
+    align.Attachment0=attachment;align.Position=r.Position;align.ApplyAtCenterOfMass=true;align.RigidityEnabled=false
+    align.MaxForce=math.max(30000,r.AssemblyMass*workspace.Gravity*30);align.MaxVelocity=260;align.Responsiveness=90
+    align.Parent=r
+    d={align=align,attachment=attachment,root=r,last=r.Position}
+    drives[p]=d
+    return d
+end
+local function releaseCaster(p)
+    local d=drives[p];if not d then return end
+    drives[p]=nil
+    d.align:Destroy();d.attachment:Destroy()
+    if d.root.Parent then
+        local v=d.root.AssemblyLinearVelocity
+        d.root.AssemblyLinearVelocity=Vector3.new(v.X*.1,math.min(v.Y,0),v.Z*.1)
+    end
+end
+-- Moves the caster toward `desired`, stopping short of walls; returns the reached point and the wall hit.
+local function moveCaster(p,r,desired,params)
+    local d=driveCaster(p,r)
+    local from=d.last
+    local step=desired-from
+    local hit=nil
+    if step.Magnitude>.001 then
+        hit=workspace:Blockcast(CFrame.new(from),Vector3.new(2.4,4,2.4),step,params)
+        if hit then desired=from+step.Unit*math.max(0,hit.Distance-.15) end
+    end
+    d.align.Position=desired;d.last=desired
+    return desired,hit
+end
+
+---------------------------------------------------------------- moving victims
+local function releaseMover(model)
+    local mv=movers[model];if not mv then return end
+    movers[model]=nil
+    if mv.align then mv.align:Destroy() end
+    if mv.attachment then mv.attachment:Destroy() end
+    if mv.t.r.Parent then
+        if mv.t.r.Anchored then mv.t.r.CFrame=CFrame.new(mv.t.r.Position)*mv.rotation
+        else mv.t.r.AssemblyLinearVelocity=Vector3.zero end
+    end
+end
+local function startMover(t,owner,kind)
+    if not alive(t) then return nil end
+    local old=movers[t.m]
+    if old and old.owner~=owner then return nil end
+    local rotation=old and old.rotation or t.r.CFrame.Rotation
+    if old then releaseMover(t.m) end
+    if ctx.flights then ctx.flights[t.m]=nil end
+    if ctx.doraKnockbacks then ctx.doraKnockbacks[t.m]=nil end
+    local mv={t=t,owner=owner,kind=kind,start=now(),last=t.r.Position,rotation=rotation,params=worldParams()}
+    if not t.r.Anchored then
+        local attachment=Instance.new("Attachment");attachment.Name="YujiroForceAttachment";attachment.Parent=t.r
+        local align=Instance.new("AlignPosition");align.Name="YujiroForce";align.Mode=Enum.PositionAlignmentMode.OneAttachment
+        align.Attachment0=attachment;align.Position=t.r.Position;align.ApplyAtCenterOfMass=true;align.RigidityEnabled=false
+        align.MaxForce=math.max(25000,t.r.AssemblyMass*workspace.Gravity*25);align.MaxVelocity=200;align.Responsiveness=70
+        align.Parent=t.r
+        mv.attachment=attachment;mv.align=align
+        pcall(function() if not Players:GetPlayerFromCharacter(t.m) then t.r:SetNetworkOwner(nil) end end)
+    end
+    movers[t.m]=mv
+    return mv
+end
+-- Moves a held body toward `desired` (never through walls unless `free`); `face` turns anchored targets.
+local function drive(mv,desired,face,free)
+    local t=mv.t
+    local from=t.r.Anchored and mv.last or t.r.Position
+    local step=desired-from
+    if step.Magnitude>.001 and not free then
+        local hit=workspace:Blockcast(CFrame.new(from),Vector3.new(1.8,2.6,1.8),step,mv.params)
+        if hit then desired=from+step.Unit*math.max(0,hit.Distance-.1) end
+    end
+    if t.r.Anchored then
+        local rotation=face and CFrame.lookAt(Vector3.zero,flat(face)).Rotation or mv.rotation
+        t.m:PivotTo(CFrame.new(desired)*rotation)
+    elseif mv.align then
+        mv.align.Position=desired
+    end
+    mv.last=desired
+    return desired
+end
+-- Lets go of a body on safe ground: where it is, else `fallback`, else `last`. Never inside a wall or mid-air.
+local function setDown(t,fallback,last)
+    local mv=movers[t.m]
+    local params=mv and mv.params or worldParams()
+    local hip=mv and mv.hip or hipOf(t,params)
+    local spot=safeStand(t.r.Anchored and (mv and mv.last or t.r.Position) or t.r.Position,hip,params)
+        or (fallback and safeStand(fallback,hip,params)) or (last and safeStand(last,hip,params))
+    local rotation=mv and mv.rotation or t.r.CFrame.Rotation
+    releaseMover(t.m)
+    if spot and alive(t) then
+        t.r.AssemblyLinearVelocity=Vector3.zero
+        t.m:PivotTo(CFrame.new(spot)*rotation)
+    end
+end
+-- A short knock along the floor with a small hop, then the mover lets go (stagger is the hold attribute).
+local function knock(owner,t,direction,distance,lift,duration)
+    if guardedElsewhere(t.m,now()) then return end
+    local params=worldParams()
+    local from=t.r.Position
+    while distance>2 and not groundBelow(from+direction*distance,params,30) do distance-=2 end
+    local mv=startMover(t,owner,"Knock");if not mv then return end
+    mv.from=from;mv.direction=direction;mv.distance=distance;mv.lift=lift;mv.duration=duration;mv.hip=hipOf(t,params)
+    return mv
+end
+
+---------------------------------------------------------------- Q: 지상 최강의 생물
+local function endCounter(p,reason)
+    local c=counters[p];if not c then return end
+    counters[p]=nil
+    releaseCaster(p)
+    local m=c.m
+    if m.Parent then
+        m:SetAttribute("YujiroLockUntil",0);m:SetAttribute("YujiroNoJumpUntil",0);m:SetAttribute("YujiroSlowUntil",0)
+        if c.h.Parent then ctx.updateSpeed(m,c.h) end
+    end
+    ctx.fx:FireAllClients("YujiroCounterEnd",{owner=p.UserId,reason=reason})
+end
+local function counterStart(p,s,m,h,r)
+    local cfg=Y.OgreCounter;local n=now()
+    s.cooldowns.OgreCounter=n+cfg.Cooldown;s.busyUntil=n+cfg.FailEnd
+    m:SetAttribute("YujiroLockUntil",n+cfg.WindowEnd)
+    m:SetAttribute("YujiroNoJumpUntil",n+cfg.FailEnd)
+    ctx.updateSpeed(m,h)
+    counters[p]={p=p,s=s,m=m,h=h,r=r,start=n,generation=s.generation}
+    ctx.fx:FireAllClients("YujiroCounter",{owner=p.UserId,start=n,position=r.Position})
+end
+local function frontal(r,point,arc)
+    local to=Vector3.new(point.X-r.Position.X,0,point.Z-r.Position.Z)
+    if to.Magnitude<.3 then return true end
+    return to.Unit:Dot(flat(r.CFrame.LookVector))>=math.cos(math.rad(arc))
+end
+-- Called by Combat.damage before anything is dealt. A counterable frontal hit inside the window is cancelled
+-- entirely and starts the counter on the attacker. Returns true when the hit must deal nothing.
+function Yujiro.tryCounter(owner,t,kind)
+    if not ctx then return false end
+    local cfg=Y.OgreCounter
+    local victim=Players:GetPlayerFromCharacter(t.m)
+    local c=victim and counters[victim]
+    if not c or c.read or c.failed or not cfg.Counterable[kind or ""] then return false end
+    local n=now();local a=n-c.start
+    if a<cfg.Entry or a>cfg.WindowEnd or not stillCaster(victim,c.s,c.m,c.generation) then return false end
+    local attacker=owner and owner.Character
+    if not attacker or attacker==t.m then return false end
+    local ah=attacker:FindFirstChildOfClass("Humanoid");local ar=attacker:FindFirstChild("HumanoidRootPart")
+    if not ah or not ar or ah.Health<=0 or not frontal(c.r,ar.Position,cfg.Arc) then return false end
+    -- The read: one per use. The attacker is caught mid-swing and cannot act until the stagger ends.
+    c.read=n;c.attacker={m=attacker,h=ah,r=ar};c.attackerPlayer=owner
+    c.s.busyUntil=n+cfg.End
+    c.m:SetAttribute("YujiroLockUntil",n+cfg.End);c.m:SetAttribute("YujiroNoJumpUntil",n+cfg.End)
+    ctx.updateSpeed(c.m,c.h)
+    hold(c.attacker,n+cfg.Hit+cfg.Stagger);ctx.updateSpeed(attacker,ah)
+    -- Step in toward the attacker (never through walls), stopping StepTo in front of it.
+    local to=flat(ar.Position-c.r.Position,flat(c.r.CFrame.LookVector))
+    local gap=Vector3.new(ar.Position.X-c.r.Position.X,0,ar.Position.Z-c.r.Position.Z).Magnitude
+    local advance=math.clamp(gap-cfg.StepTo,0,cfg.StepMax)
+    c.direction=to;c.from=c.r.Position;c.stand=c.r.Position+to*advance;c.params=worldParams()
+    ctx.fx:FireAllClients("YujiroCounterRead",{owner=victim.UserId,start=n,attacker=attacker,position=ar.Position,from=c.r.Position,direction=to,kind=kind})
+    return true
+end
+local function stepCounter(p,c,n)
+    local cfg=Y.OgreCounter
+    if not stillCaster(p,c.s,c.m,c.generation) or c.h.Health<=0 then endCounter(p,"interrupted");return end
+    local a=n-c.start
+    if not c.read then
+        if a>=cfg.WindowEnd and not c.failed then
+            -- No read: a short slowed recovery; the stance has used up its cooldown.
+            c.failed=n
+            c.m:SetAttribute("YujiroLockUntil",0)
+            c.m:SetAttribute("YujiroSlowUntil",c.start+cfg.FailEnd);c.m:SetAttribute("YujiroSlowFactor",cfg.FailSpeed)
+            ctx.updateSpeed(c.m,c.h)
+            ctx.fx:FireAllClients("YujiroCounterFail",{owner=p.UserId,start=n})
+        end
+        if a>=cfg.FailEnd then endCounter(p,"failed") end
+        return
+    end
+    local k=n-c.read
+    if k<cfg.Hit and c.stand then
+        local u=easeOut(window(k,cfg.Snap*.5,cfg.Hit),2)
+        moveCaster(p,c.r,c.from:Lerp(c.stand,u),c.params)
+    end
+    if k>=cfg.Hit and not c.hit then
+        c.hit=true
+        releaseCaster(p)
+        local t=c.attacker
+        local landed=false
+        if alive(t) and (t.r.Position-c.r.Position).Magnitude<=cfg.Reach then
+            landed=true
+            ctx.damage(p,t,cfg.Damage,"Melee")
+            if alive(t) then
+                knock(p,t,flat(t.r.Position-c.r.Position,c.direction),cfg.Knockback,cfg.KnockLift,cfg.KnockTime)
+                hold(t,n+cfg.Stagger);ctx.updateSpeed(t.m,t.h)
+                setPose(t.m,"Uppercut",n)
+            end
+        end
+        ctx.fx:FireAllClients("YujiroCounterHit",{owner=p.UserId,start=n,target=t and t.m or nil,landed=landed,
+            position=t and t.r.Parent and t.r.Position or c.r.Position+c.direction*3,direction=c.direction})
+    end
+    if k>=cfg.End then
+        local m=c.m
+        counters[p]=nil
+        releaseCaster(p)
+        if m.Parent then
+            m:SetAttribute("YujiroLockUntil",0);m:SetAttribute("YujiroNoJumpUntil",0)
+            m:SetAttribute("YujiroBuffUntil",n+cfg.BuffDuration)
+            ctx.updateSpeed(m,c.h)
+        end
+        ctx.fx:FireAllClients("YujiroCounterEnd",{owner=p.UserId,reason="done",buffUntil=n+cfg.BuffDuration})
+    end
+end
+
+---------------------------------------------------------------- E: 오거 러시
+local function endRush(p,reason)
+    local e=rushes[p];if not e then return end
+    rushes[p]=nil
+    releaseCaster(p)
+    local t=e.target
+    if e.linked and t and e.holding then
+        if movers[t.m] and movers[t.m].owner==p then setDown(t,e.home,nil) end
+        unhold(t)
+    end
+    local m=e.m
+    if m.Parent then m:SetAttribute("YujiroLockUntil",0);if e.h.Parent then ctx.updateSpeed(m,e.h) end end
+    ctx.fx:FireAllClients("YujiroRushEnd",{owner=p.UserId,reason=reason})
+end
+local function firstAhead(m,origin,direction,reach,width,params)
+    local best,bestAlong=nil,math.huge
+    local n=now()
+    for _,t in ctx.targets(m) do
+        local rel=t.r.Position-origin;local along=rel:Dot(direction)
+        local side=Vector3.new(rel.X,0,rel.Z)-direction*along
+        if along>-.5 and along<=reach and side.Magnitude<=width and math.abs(rel.Y)<6 and along<bestAlong
+            and not heldElsewhere(t.m,n) and lineOfSight(origin,t.r.Position,params) then best=t;bestAlong=along end
+    end
+    return best,bestAlong
+end
+local function rushStart(p,s,m,h,r,aim)
+    local cfg=Y.OgreRush;local n=now()
+    local direction=flat(aim,flat(r.CFrame.LookVector))
+    s.cooldowns.OgreRush=n+cfg.Cooldown;s.busyUntil=n+cfg.End
+    m:SetAttribute("YujiroLockUntil",n+cfg.End);ctx.updateSpeed(m,h)
+    rushes[p]={p=p,s=s,m=m,h=h,r=r,start=n,direction=direction,generation=s.generation,params=worldParams(),flags={}}
+    ctx.fx:FireAllClients("YujiroRush",{owner=p.UserId,start=n,direction=direction,position=r.Position})
+end
+local function stepRush(p,e,n)
+    local cfg=Y.OgreRush
+    if not stillCaster(p,e.s,e.m,e.generation) or e.h.Health<=0 then endRush(p,"interrupted");return end
+    local a=n-e.start
+    if a<cfg.Crouch then return end
+    local r=e.r
+    if not e.from then
+        e.from=r.Position;driveCaster(p,r).last=r.Position
+        local t,along=firstAhead(e.m,r.Position,e.direction,cfg.Distance+cfg.Stop,cfg.Width,e.params)
+        e.target=t
+        e.limit=t and math.clamp(along-cfg.Stop,0,cfg.Distance) or cfg.Distance
+        ctx.fx:FireAllClients("YujiroRushDash",{owner=p.UserId,start=n,from=e.from,direction=e.direction,distance=e.limit,target=t and t.m or nil})
+    end
+    if a<cfg.DashEnd then
+        local u=easeOut(window(a,cfg.Crouch,cfg.DashEnd),1.8)
+        moveCaster(p,r,e.from+e.direction*e.limit*u,e.params)
+        return
+    end
+    if not e.linked and not e.whiff then
+        local t=e.target
+        local gap=t and alive(t) and Vector3.new(t.r.Position.X-r.Position.X,0,t.r.Position.Z-r.Position.Z).Magnitude or math.huge
+        if t and gap<=cfg.Stop+2 and not heldElsewhere(t.m,n) then
+            e.linked=true;e.home=t.r.Position;e.stand=drives[p] and drives[p].last or r.Position
+            -- A body in the middle of its own ultimate takes the blows but is not pinned.
+            if not guardedElsewhere(t.m,n) then
+                local mv=startMover(t,p,"Hold")
+                if mv then mv.hip=hipOf(t,mv.params);e.holding=true;hold(t,n+.3);ctx.updateSpeed(t.m,t.h) end
+            end
+            ctx.fx:FireAllClients("YujiroRushLink",{owner=p.UserId,start=e.start,target=t.m,position=t.r.Position,direction=e.direction})
+        else
+            e.whiff=true;e.target=nil
+            releaseCaster(p)
+            e.s.busyUntil=e.start+cfg.WhiffEnd;e.m:SetAttribute("YujiroLockUntil",e.start+cfg.WhiffEnd)
+            ctx.fx:FireAllClients("YujiroRushWhiff",{owner=p.UserId,start=n,position=r.Position,direction=e.direction})
+            ctx.sendState(p,e.s)
+        end
+    end
+    if e.whiff then
+        if a>=cfg.WhiffEnd then endRush(p,"whiff") end
+        return
+    end
+    if e.stand and not e.stopped then moveCaster(p,r,e.stand,e.params) end
+    local t=e.target
+    if not e.stopped then
+        local reason=nil
+        if not alive(t) then reason="dead"
+        elseif (t.r.Position-e.home).Magnitude>cfg.Escape then reason="escaped" end
+        if reason then
+            e.stopped=n
+            local mv=movers[t.m]
+            if mv and mv.owner==p then releaseMover(t.m) end
+            if t.m.Parent and e.holding then unhold(t) end
+            e.holding=false
+            releaseCaster(p)
+            e.s.busyUntil=math.min(e.s.busyUntil,n+.35);e.m:SetAttribute("YujiroLockUntil",n+.35)
+            ctx.fx:FireAllClients("YujiroRushStop",{owner=p.UserId,start=n,reason=reason})
+            ctx.sendState(p,e.s)
+        end
+    end
+    if not e.stopped then
+        if e.holding then hold(t,n+.3) end
+        local mv=movers[t.m]
+        -- The axe kick drives the body down: it sinks a little and stays low until the recovery ends.
+        if mv and mv.owner==p then
+            local sink=e.flags[3] and .9*easeOut(window(a,cfg.Blows[3].Time,cfg.Blows[3].Time+.08),2) or 0
+            drive(mv,e.home-Vector3.yAxis*sink,-e.direction,true)
+        end
+        for i,b in cfg.Blows do
+            if a>=b.Time and not e.flags[i] then
+                e.flags[i]=true
+                ctx.damage(p,t,b.Damage,b.Kind)
+                setPose(t.m,b.Name=="Body" and "Fold" or b.Name=="Hook" and "Turn" or "Down",n,b.Name=="Hook" and -1 or 1)
+                ctx.fx:FireAllClients("YujiroRushHit",{owner=p.UserId,start=e.start,index=i,target=t.m,position=t.r.Position,direction=e.direction})
+                if not alive(t) then break end
+            end
+        end
+    end
+    if a>=cfg.End or (e.stopped and n>=e.stopped+.35) then endRush(p,e.stopped and "stopped" or "done") end
+end
+
+---------------------------------------------------------------- R: 오거의 심판
+local function endUltra(p,reason)
+    local u=ultras[p];if not u then return end
+    ultras[p]=nil
+    releaseCaster(p)
+    local t=u.target
+    if t then
+        local mv=movers[t.m]
+        if mv and mv.owner==p then
+            if alive(t) then setDown(t,u.home,u.stand and u.stand+u.direction*Y.OgreJudgment.Hold) else releaseMover(t.m) end
+        end
+        if t.m.Parent then unhold(t) end
+    end
+    local m=u.m
+    if m.Parent then
+        for _,attribute in {"YujiroLockUntil","YujiroGuardUntil","YujiroNoJumpUntil"} do m:SetAttribute(attribute,0) end
+        if u.h.Parent then ctx.updateSpeed(m,u.h) end
+    end
+    ctx.fx:FireAllClients("YujiroJudgmentEnd",{owner=p.UserId,reason=reason,target=t and t.m or nil})
+end
+local function judgmentStart(p,s,m,h,r,aim,aimOrigin)
+    local cfg=Y.OgreJudgment;local n=now()
+    s.cooldowns.OgreJudgment=n+cfg.Cooldown;s.busyUntil=n+cfg.End
+    local head=m:FindFirstChild("Head")
+    local origin=head and head.Position or r.Position+Vector3.yAxis*1.5
+    if typeof(aimOrigin)=="Vector3" and (aimOrigin-origin).Magnitude<=12 then origin=aimOrigin end
+    m:SetAttribute("YujiroLockUntil",n+cfg.End);m:SetAttribute("YujiroGuardUntil",n+cfg.End);m:SetAttribute("YujiroNoJumpUntil",n+cfg.End)
+    ctx.updateSpeed(m,h)
+    if ultras[p] then endUltra(p,"replaced") end
+    local direction=flat(aim,flat(r.CFrame.LookVector))
+    ultras[p]={p=p,s=s,m=m,h=h,r=r,start=n,aim=aim,origin=origin,direction=direction,generation=s.generation,flags={},params=worldParams()}
+    ctx.fx:FireAllClients("YujiroJudgment",{owner=p.UserId,start=n,direction=direction,position=r.Position})
+end
+-- Capture: nearest body within Range and Angle of the view centre at cast start, in sight, not held by anyone.
+local function capture(u,n)
+    local cfg=Y.OgreJudgment
+    local best,bestDist=nil,math.huge
+    local cosMax=math.cos(math.rad(cfg.Angle))
+    for _,t in ctx.targets(u.m) do
+        if not heldElsewhere(t.m,n) and not guardedElsewhere(t.m,n) then
+            for _,point in {headOf(t),t.r.Position} do
+                local to=point-u.origin;local dist=to.Magnitude
+                if dist<=cfg.Range and dist>.5 and dist<bestDist and to.Unit:Dot(u.aim)>=cosMax and lineOfSight(u.origin,point,u.params) then
+                    best=t;bestDist=dist;break
+                end
+            end
+        end
+    end
+    return best
+end
+-- Where the target should be `a` seconds into the cast (after the grab).
+local function victimPoint(u,a)
+    local cfg=Y.OgreJudgment
+    local d=u.direction
+    local grip=u.stand+d*cfg.Hold+Vector3.yAxis*(u.targetHip-u.casterHip)
+    if a<cfg.DashEnd then return u.home end
+    if a<cfg.Release then
+        -- Recoil on each blow, then the two-hand lift.
+        local recoil=0
+        for i,hit in cfg.Hits do if i<#cfg.Hits then recoil+=.35*bump(a,hit.Time,hit.Time+.16) end end
+        local lift=cfg.LiftHeight*smoothstep(window(a,cfg.LiftFrom,cfg.LiftTo))
+        return grip+d*recoil+Vector3.yAxis*lift
+    end
+    local high=grip+Vector3.yAxis*cfg.LiftHeight
+    local throwTo=u.throwTo or high+d*cfg.ThrowDistance
+    if a<cfg.Final then
+        local k=window(a,cfg.Release,cfg.Final)
+        return high:Lerp(throwTo,easeOut(k,1.6))+Vector3.yAxis*.8*math.sin(k*math.pi)
+    end
+    local floor=u.floorAt or throwTo
+    return throwTo:Lerp(floor,easeOut(window(a,cfg.Final,cfg.Final+.1),2))
+end
+local function stepUltra(p,u,n)
+    local cfg=Y.OgreJudgment
+    if not stillCaster(p,u.s,u.m,u.generation) or u.h.Health<=0 then endUltra(p,"caster");return end
+    local a=n-u.start
+    if a>=cfg.End then endUltra(p,"done");return end
+    if a<cfg.Capture then return end
+    if u.failed then
+        if a>=cfg.FailEnd then endUltra(p,"failed") end
+        return
+    end
+    if not u.target then
+        local t=capture(u,n)
+        if not t then
+            u.failed=n
+            u.s.cooldowns.OgreJudgment=u.start+cfg.FailCooldown;u.s.busyUntil=u.start+cfg.FailEnd
+            u.m:SetAttribute("YujiroLockUntil",u.start+cfg.FailEnd);u.m:SetAttribute("YujiroGuardUntil",u.start+cfg.FailEnd)
+            u.m:SetAttribute("YujiroNoJumpUntil",u.start+cfg.FailEnd)
+            ctx.fx:FireAllClients("YujiroJudgmentFail",{owner=p.UserId,start=u.start})
+            ctx.sendState(p,u.s)
+            return
+        end
+        local mv=startMover(t,p,"Judgment")
+        if not mv then
+            u.failed=n;u.s.cooldowns.OgreJudgment=u.start+cfg.FailCooldown;u.s.busyUntil=u.start+cfg.FailEnd
+            ctx.fx:FireAllClients("YujiroJudgmentFail",{owner=p.UserId,start=u.start});ctx.sendState(p,u.s)
+            return
+        end
+        u.target=t;u.home=t.r.Position
+        mv.hip=hipOf(t,u.params)
+        u.casterHip=hipOf({m=u.m,h=u.h,r=u.r},u.params);u.targetHip=mv.hip
+        u.direction=flat(t.r.Position-u.r.Position,u.direction)
+        u.from=u.r.Position;driveCaster(p,u.r).last=u.r.Position
+        local stand=t.r.Position-u.direction*cfg.Hold
+        u.stand=Vector3.new(stand.X,t.r.Position.Y-u.targetHip+u.casterHip,stand.Z)
+        hold(t,n+.3);ctx.updateSpeed(t.m,t.h)
+        ctx.fx:FireAllClients("YujiroJudgmentCapture",{owner=p.UserId,start=u.start,target=t.m,position=t.r.Position,direction=u.direction})
+    end
+    local t=u.target
+    if not alive(t) then endUltra(p,t.m.Parent and "target" or "left");return end
+    local mv=movers[t.m]
+    if not mv or mv.owner~=p then endUltra(p,"lost");return end
+    -- The caster: dash to the grab, stand, then step into the final punch.
+    if a<cfg.DashEnd then
+        local reached=moveCaster(p,u.r,u.from:Lerp(u.stand,easeOut(window(a,cfg.Capture,cfg.DashEnd),2.2)),u.params)
+        if a>=cfg.DashEnd-.02 then u.stand=reached end
+    elseif a<cfg.Final+.1 then
+        if not u.grabbed then
+            u.grabbed=true;u.stand=drives[p] and drives[p].last or u.r.Position
+            ctx.fx:FireAllClients("YujiroJudgmentGrab",{owner=p.UserId,start=u.start,target=t.m,position=t.r.Position})
+        end
+        moveCaster(p,u.r,u.stand+u.direction*cfg.StepIn*easeOut(window(a,cfg.WindTo,cfg.Final),2),u.params)
+    elseif not u.landed then
+        u.landed=true;releaseCaster(p)
+    end
+    -- The throw path is fixed once at the release: shortened until it is clear of walls and has floor under it.
+    if a>=cfg.Release and not u.throwTo then
+        local high=(mv.last or t.r.Position)
+        local distance=cfg.ThrowDistance
+        local hit=workspace:Blockcast(CFrame.new(high),Vector3.new(1.8,2.6,1.8),u.direction*distance,u.params)
+        if hit then distance=math.max(0,hit.Distance-.3) end
+        while distance>.5 and not groundBelow(high+u.direction*distance,u.params,30) do distance-=.5 end
+        u.throwTo=high+u.direction*distance-Vector3.yAxis*(cfg.LiftHeight-cfg.ThrowHeight)
+        setPose(t.m,"Thrown",n)
+        ctx.fx:FireAllClients("YujiroJudgmentThrow",{owner=p.UserId,start=u.start,target=t.m,from=high,to=u.throwTo})
+    end
+    if a>=cfg.Final and not u.floorAt then
+        local floor=groundBelow(u.throwTo or t.r.Position,u.params,40)
+        u.floorAt=floor and floor+Vector3.yAxis*math.min(1.1,mv.hip) or (u.throwTo or t.r.Position)
+    end
+    -- Hits, once each, on the clock from the cast start.
+    for i,hit in cfg.Hits do
+        if a>=hit.Time and not u.flags[i] then
+            u.flags[i]=true
+            local final=i==#cfg.Hits
+            ctx.damage(p,t,hit.Damage,"Ultimate")
+            setPose(t.m,final and "Lie" or hit.Name=="Body" and "Fold" or hit.Name=="Slap" and "Turn" or "Rock",n,(i%2==0) and -1 or 1)
+            ctx.fx:FireAllClients("YujiroJudgmentHit",{owner=p.UserId,start=u.start,index=i,name=hit.Name,final=final,target=t.m,
+                position=t.r.Position,direction=u.direction,ground=final and u.floorAt or nil})
+            if not alive(t) then endUltra(p,"target");return end
+        end
+    end
+    if a>=cfg.LiftFrom and a<cfg.Release and not u.flags.lift then u.flags.lift=true;setPose(t.m,"Dangle",n) end
+    -- The body: held in the grip, lifted, thrown, driven into the floor, then left lying there.
+    local downUntil=cfg.Final+.1+cfg.Down
+    if a<downUntil then
+        hold(t,n+.3)
+        drive(mv,victimPoint(u,a),-u.direction,a>=cfg.Release and a<cfg.Final+.12)
+    elseif not u.released then
+        u.released=true
+        setDown(t,u.floorAt,u.home)
+        unhold(t)
+    end
+end
+
+---------------------------------------------------------------- per-frame movement
+local function stepMover(model,mv,n)
+    local t=mv.t
+    if not alive(t) then releaseMover(model);return end
+    if mv.kind=="Knock" then
+        local u=math.clamp((n-mv.start)/mv.duration,0,1)
+        local desired=mv.from+mv.direction*mv.distance*easeOut(u,2.4)+Vector3.yAxis*mv.lift*4*u*(1-u)
+        drive(mv,desired,-mv.direction,false)
+        if u>=1 then releaseMover(model) end
+    else
+        -- Holds are driven by their owner's step; an orphaned one is let go on safe ground.
+        local owner=mv.owner
+        local alive_=owner and ((mv.kind=="Hold" and rushes[owner] and rushes[owner].target==t)
+            or (mv.kind=="Judgment" and ultras[owner] and ultras[owner].target==t))
+        if not alive_ then setDown(t,nil,nil);unhold(t) end
+    end
+end
+RunService.Heartbeat:Connect(function()
+    if not ctx then return end
+    local n=now()
+    for p,c in counters do stepCounter(p,c,n) end
+    for p,e in rushes do stepRush(p,e,n) end
+    for p,u in ultras do stepUltra(p,u,n) end
+    for model,mv in movers do stepMover(model,mv,n) end
+end)
+Players.PlayerRemoving:Connect(function(p)
+    endCounter(p,"left");endRush(p,"left");endUltra(p,"left")
+    for model,mv in movers do if mv.owner==p then releaseMover(model) end end
+end)
+
+---------------------------------------------------------------- hooks used by Combat
+function Yujiro.init(context) ctx=context end
+function Yujiro.handles(skill) return KIT[skill]==true end
+function Yujiro.speedFactor(m,n)
+    if attr(m,"YujiroLockUntil")>n then return 0 end
+    if attr(m,"YujiroSlowUntil")>n then return m:GetAttribute("YujiroSlowFactor") or 1 end
+    return 1
+end
+function Yujiro.held(m,n) return attr(m,"YujiroHeldUntil")>n end
+function Yujiro.locked(m,n) return attr(m,"YujiroLockUntil")>n end
+function Yujiro.noJump(m,n) return Yujiro.held(m,n) or attr(m,"YujiroLockUntil")>n or attr(m,"YujiroNoJumpUntil")>n end
+-- Outgoing: +15% basic attacks right after a counter. Incoming: -70% from the front while the stance waits (any kind,
+-- countered or not: the counter itself cancels the hit before this runs), -30% for the whole of Ogre's Judgment.
+function Yujiro.damageFactor(attacker,victim,kind)
+    local n=now();local factor=1
+    if kind=="Basic" and attacker and attr(attacker,"YujiroBuffUntil")>n then factor*=Y.OgreCounter.BasicDamage end
+    if attr(victim,"YujiroGuardUntil")>n then factor*=Y.OgreJudgment.DamageTaken end
+    local owner=Players:GetPlayerFromCharacter(victim)
+    local c=owner and counters[owner]
+    if c and not c.read and not c.failed and c.m==victim then
+        local a=n-c.start
+        local ar=attacker and attacker:FindFirstChild("HumanoidRootPart")
+        if a>=Y.OgreCounter.Entry and a<=Y.OgreCounter.WindowEnd and ar and frontal(c.r,ar.Position,Y.OgreCounter.Arc) then
+            factor*=1-Y.OgreCounter.Reduction
+            ctx.fx:FireAllClients("YujiroCounterBlock",{owner=owner.UserId,from=ar.Position})
+        end
+    end
+    return factor
+end
+-- Ogre's Judgment: the caster is not staggered.
+function Yujiro.filterKnockback(victim,velocity)
+    if attr(victim,"YujiroGuardUntil")>now() then return nil end
+    return velocity
+end
+function Yujiro.guarded(model) return attr(model,"YujiroGuardUntil")>now() end
+-- Called by Combat after the request passed its own checks (kit, rate limit, domain lock, alive, not held).
+function Yujiro.request(p,s,m,h,r,skill,aim,aimOrigin)
+    local n=now()
+    if s.busyUntil>n or s.slide or attr(m,"RootedUntil")>n or attr(m,"YujiroLockUntil")>n then return end
+    if (s.cooldowns[skill] or 0)>n then return end
+    s.basicUntil=0
+    if skill=="OgreCounter" then counterStart(p,s,m,h,r)
+    elseif skill=="OgreRush" then rushStart(p,s,m,h,r,aim)
+    elseif skill=="OgreJudgment" then judgmentStart(p,s,m,h,r,aim,aimOrigin) end
+    ctx.sendState(p,s)
+end
+-- Character change, respawn or death: every stance, rush, ultimate and hold this player owns ends at once.
+function Yujiro.reset(p)
+    endCounter(p,"reset");endRush(p,"reset");endUltra(p,"reset")
+    for model,mv in movers do
+        if mv.owner==p then
+            if alive(mv.t) then setDown(mv.t,nil,nil);unhold(mv.t) else releaseMover(model) end
+        end
+    end
+    local m=p.Character
+    if m then
+        -- Holds placed on this player by someone else are theirs to release; only our own casting state is cleared.
+        for _,attribute in {"YujiroLockUntil","YujiroGuardUntil","YujiroNoJumpUntil","YujiroSlowUntil","YujiroBuffUntil"} do m:SetAttribute(attribute,0) end
+    end
+end
+return Yujiro
+]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX_ItachiServer"><Properties><string name="Name">ItachiServer</string><ProtectedString name="Source"><![CDATA[-- Uchiha Itachi: server-side judgement for the Crow Clone passive, Tsukuyomi (Q), Amaterasu (E) and Susanoo (R).
 -- Required by Combat.server.luau, which owns the shared player state (cooldowns, busy time, generation) and passes
 -- its helpers in through Itachi.init. Clients send only the key and their camera ray; the dodge roll, targets, line
@@ -8450,7 +10469,7 @@ local function setUntil(m,attribute,untilTime)
     if m and m.Parent then m:SetAttribute(attribute,untilTime) end
 end
 local function heldByOthers(m,n)
-    return (m:GetAttribute("PainHeldUntil") or 0)>n or (m:GetAttribute("AllMightHeldUntil") or 0)>n
+    return (m:GetAttribute("PainHeldUntil") or 0)>n or (m:GetAttribute("AllMightHeldUntil") or 0)>n or (m:GetAttribute("YujiroHeldUntil") or 0)>n
 end
 local function isSealed(m,n) return (m:GetAttribute("ItachiSealedUntil") or 0)>n end
 local function headOf(t) local head=t.m:FindFirstChild("Head");return head and head.Position or t.r.Position+Vector3.yAxis*1.5 end
@@ -9049,6 +11068,7 @@ local function startMover(t,owner,spec)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
     if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
     if (t.m:GetAttribute("ItachiGuardUntil") or 0)>ctx.clock() then return end -- and Susanoo, or a crow clone mid-dodge
+    if (t.m:GetAttribute("YujiroGuardUntil") or 0)>ctx.clock() or (t.m:GetAttribute("YujiroHeldUntil") or 0)>ctx.clock() then return end -- Ogre's Judgment / Yujiro's grip
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end
@@ -9808,6 +11828,20 @@ local function outfit(character,kind,fresh)
             local hand=character:FindFirstChild(side.."Hand")
             if hand then attach(hand,"ItachiNails",hand.Size*Vector3.new(1.02,.2,1.02),CFrame.new(0,-hand.Size.Y*.42,0),Color3.fromRGB(96,70,128)) end
         end
+    elseif kind=="Yujiro" then
+        -- Third-person symbol only: Yujiro's wild red hair, a cap with spikes swept up and back. The rest of the
+        -- avatar is the player's own; the Demon Back is drawn by YujiroVFX on the torso only during Ogre's Judgment.
+        local red,deep=Color3.fromRGB(196,22,24),Color3.fromRGB(120,10,14)
+        local hy=head.Size.Y/2
+        attach(head,"YujiroHair",Vector3.new(head.Size.X*1.1,.46,head.Size.Z*1.12),CFrame.new(0,hy-.1,.05),red,nil,Enum.PartType.Ball)
+        attach(head,"YujiroHairBack",Vector3.new(head.Size.X*1.04,.7,.34),CFrame.new(0,hy-.42,head.Size.Z/2-.02),deep)
+        -- Spikes: {x, z, length, tilt back, tilt out}
+        for _,spike in {{0,-.3,.9,.35,0},{-.32,-.2,.8,.3,-.45},{.32,-.2,.8,.3,.45},{-.18,.05,.95,.75,-.25},{.18,.05,.95,.75,.25},
+            {0,.2,1,1.05,0},{-.42,.15,.75,.85,-.7},{.42,.15,.75,.85,.7},{-.25,.38,.8,1.3,-.35},{.25,.38,.8,1.3,.35}} do
+            local base=CFrame.new(spike[1],hy+.02,spike[2])*CFrame.Angles(spike[4],0,-spike[5])
+            attach(head,"YujiroHairSpike",Vector3.new(.2,spike[3],.2),base*CFrame.new(0,spike[3]*.45,0),red,Enum.Material.SmoothPlastic)
+            attach(head,"YujiroHairTip",Vector3.new(.09,spike[3]*.4,.09),base*CFrame.new(0,spike[3]*.95,0),deep,Enum.Material.SmoothPlastic)
+        end
     else
         attach(head,"GojoBlindfold",Vector3.new(head.Size.X*1.04,.42,head.Size.Z*1.08),CFrame.new(0,.1,0),Color3.fromRGB(12,14,23))
     end
@@ -9862,6 +11896,7 @@ local Okkotsu=require(script.Parent:WaitForChild("OkkotsuServer"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
 local Itachi=require(script.Parent:WaitForChild("ItachiServer"))
+local Yujiro=require(script.Parent:WaitForChild("YujiroServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
@@ -9940,6 +11975,8 @@ local function damage(owner,t,amount,kind)
     end
     -- Itachi's Crow Clone: rolled here, before anything lands. A dodged hit deals nothing at all.
     if Itachi.tryDodge(owner,t,kind) then return end
+    -- Yujiro's counter stance: a counterable frontal hit in the window is cancelled and answered with an uppercut.
+    if Yujiro.tryCounter(owner,t,kind) then return end
     local dealt=amount
     -- Pain takes less damage while holding Chibaku Tensei.
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then dealt*=.7 end
@@ -9949,6 +11986,8 @@ local function damage(owner,t,amount,kind)
     dealt*=AllMight.damageFactor(attacker,t.m,kind)*Okkotsu.damageFactor(attacker)
     -- Susanoo's Yata Mirror takes 60% off frontal hits.
     dealt*=Itachi.damageFactor(attacker,t.m,kind)
+    -- Yujiro: +15% basic attacks after a counter, -70% frontal in the stance, -30% during Ogre's Judgment.
+    dealt*=Yujiro.damageFactor(attacker,t.m,kind)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -9970,16 +12009,17 @@ local function updateSpeed(m,h)
     if (m:GetAttribute("OkkotsuCastUntil") or 0)>n then speed*=m:GetAttribute("OkkotsuSpeed") or 1 end
     speed*=AllMight.speedFactor(m,n)
     speed*=Itachi.speedFactor(m,n)
+    speed*=Yujiro.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n or (m:GetAttribute("RushingUntil") or 0)>n then speed=0 end
     local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
     if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
-    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n)
+    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) or Yujiro.held(m,n)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n)
+    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n) or Yujiro.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -10033,7 +12073,7 @@ local function dashStrike(p,s,m,h,r,flat,distance,width,duration,completed,locom
         valid=function()
             local n=clock()
             return states[p]==s and s.generation==generation and (m:GetAttribute("PainHeldUntil") or 0)<=n
-                and (m:GetAttribute("DomainLockedUntil") or 0)<=n and not AllMight.held(m,n) and not Itachi.held(m,n)
+                and (m:GetAttribute("DomainLockedUntil") or 0)<=n and not AllMight.held(m,n) and not Itachi.held(m,n) and not Yujiro.held(m,n)
         end,
         step=function(from,to)
             if not width or width<=0 then return end
@@ -10057,6 +12097,7 @@ local function launch(t,velocity)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then return end -- Chibaku Tensei: strong stagger resistance
     velocity=AllMight.filterKnockback(t.m,velocity);if not velocity then return end -- Plus Ultra guard / One For All
     velocity=Itachi.filterKnockback(t.m,velocity);if not velocity then return end -- Susanoo / a crow clone's cancelled hit
+    velocity=Yujiro.filterKnockback(t.m,velocity);if not velocity then return end -- Ogre's Judgment
     local victim=Players:GetPlayerFromCharacter(t.m)
     if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
     elseif t.r.Anchored then
@@ -10528,8 +12569,8 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
     -- Held by Pain (pulled, thrown, sealed), All Might (smashed, carried, launched) or Itachi (Tsukuyomi, sealed):
     -- no attacks, dashes or skills. Susanoo locks its own caster too.
-    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
-    if (m:GetAttribute("ItachiLockUntil") or 0)>n then return end
+    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) or Yujiro.held(m,n) then return end
+    if (m:GetAttribute("ItachiLockUntil") or 0)>n or Yujiro.locked(m,n) then return end
     if skill=="MoveJump" then
         if (m:GetAttribute("RootedUntil") or 0)>n or (m:GetAttribute("BombRecoilUntil") or 0)>n then return end
         if s.slide then stopSlide(p,s,true);s.busyUntil=n end
@@ -10564,6 +12605,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     end
     if Itachi.handles(skill) then
         if kitOf(p)=="Itachi" then Itachi.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
+        return
+    end
+    if Yujiro.handles(skill) then
+        if kitOf(p)=="Yujiro" then Yujiro.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
     end
     if skill=="BasicAttack" or skill=="Slide" then
@@ -10669,7 +12714,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);Yujiro.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0;s.zenDrawUntil=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -10818,6 +12863,8 @@ AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targe
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
 Itachi.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf,launch=launch})
+Yujiro.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf,launch=launch})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
@@ -10825,7 +12872,7 @@ local function joined(p)
         clearPurpleHover(s);clearDoraFlight(s);Okkotsu.reset(p);Kizaru.reset(p)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);Yujiro.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

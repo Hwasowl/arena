@@ -23,6 +23,8 @@ return {
         AllMight = { "OneForAll", "UnitedStatesOfSmash", "PlusUltra", "Dash" },
         -- Uchiha Itachi: tuning and judgement live in ItachiConfig / ItachiServer. Crow Clone is a passive.
         Itachi = { "Tsukuyomi", "Amaterasu", "Susanoo", "Dash" },
+        -- Yujiro Hanma: tuning and judgement live in YujiroConfig / YujiroServer.
+        Yujiro = { "OgreCounter", "OgreRush", "OgreJudgment", "Dash" },
     },
     LightLaser = {Cost=15,Cooldown=5,Windup=.65,Duration=1.05,Damage=42,Range=90,Width=.8},
     LightKick = {DashTime=.24,Cost=24,Cooldown=8,Windup=.3,Duration=1.1,Damage=65,Range=48,Width=4.5},

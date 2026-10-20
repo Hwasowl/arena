@@ -34,6 +34,7 @@ local KizaruClient=require(script.Parent:WaitForChild("KizaruClient"))
 local OkkotsuClient=require(script.Parent:WaitForChild("OkkotsuClient"))
 local AllMightClient=require(script.Parent:WaitForChild("AllMightClient"))
 local ItachiClient=require(script.Parent:WaitForChild("ItachiClient"))
+local YujiroClient=require(script.Parent:WaitForChild("YujiroClient"))
 local camera=workspace.CurrentCamera
 local effects=Instance.new("Folder");effects.Name="LocalGojoFX";effects.Parent=workspace
 local viewmodel=Instance.new("Model");viewmodel.Name="GojoViewmodel";viewmodel.Parent=camera
@@ -173,14 +174,17 @@ local KITS={
         slots={{"OneForAll","Q","원 포 올: 풀 파워"},{"UnitedStatesOfSmash","E","UNITED STATES OF SMASH"},{"PlusUltra","R","PLUS ULTRA!"},{"Dash","SHIFT","대시"}}},
     Itachi={title="うちはイタチ  ·  우치하 이타치",energy="MANGEKYO SHARINGAN",hint="Q 츠쿠요미 · E 아마테라스 (바라본 바닥) · R 스사노오 · 패시브 까마귀 분신   /   SHIFT 대시   /   0 캐릭터",handScale=1,
         slots={{"Tsukuyomi","Q","츠쿠요미"},{"Amaterasu","E","아마테라스"},{"Susanoo","R","스사노오 · 토츠카의 검"},{"Dash","SHIFT","대시"}}},
+    Yujiro={title="範馬勇次郎  ·  한마 유지로",energy="OGRE",hint="Q 지상 최강의 생물 (정면 반격 자세) · E 오거 러시 · R 오거의 심판 (시야 중앙 25스터드 붙잡기)   /   SHIFT 대시   /   - 캐릭터",handScale=1,
+        slots={{"OgreCounter","Q","지상 최강의 생물"},{"OgreRush","E","오거 러시"},{"OgreJudgment","R","오거의 심판"},{"Dash","SHIFT","대시"}}},
 }
 local BOMB_KINDS={BombDevil=true,Rampage=true,Kick=true,Detonation=true}
 local DORA_KINDS={Pocket=true,BambooCopter=true,AnywhereDoor=true}
 local PAIN_KINDS={ShinraTensei=true,BanshoTenin=true,ChibakuTensei=true}
 local ALLMIGHT_KINDS={OneForAll=true,UnitedStatesOfSmash=true,PlusUltra=true}
 local ITACHI_KINDS={Tsukuyomi=true,Amaterasu=true,Susanoo=true}
+local YUJIRO_KINDS={OgreCounter=true,OgreRush=true,OgreJudgment=true}
 local function current() local name=player:GetAttribute("Character");return KITS[name] and name or "Gojo" end
-local function colorOf(kind) if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end if string.sub(kind,1,5)=="Light" then return Color3.fromRGB(255,220,119) end if kind=="ReverseCursed" then return Color3.fromRGB(112,255,203) end if kind=="RikaStrike" or kind=="PureLove" then return Color3.fromRGB(227,139,203) end if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Godspeed" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
+local function colorOf(kind) if ITACHI_KINDS[kind] then return Color3.fromRGB(255,48,40) end if YUJIRO_KINDS[kind] then return Color3.fromRGB(214,62,44) end if string.sub(kind,1,5)=="Light" then return Color3.fromRGB(255,220,119) end if kind=="ReverseCursed" then return Color3.fromRGB(112,255,203) end if kind=="RikaStrike" or kind=="PureLove" then return Color3.fromRGB(227,139,203) end if PAIN_KINDS[kind] then return Color3.fromRGB(176,132,255) end if ALLMIGHT_KINDS[kind] then return Color3.fromRGB(255,206,64) end return C.Colors[kind] or ((kind=="Haki" or kind=="EnGarde" or kind=="DivineDeparture") and C.Colors.Haki) or (BOMB_KINDS[kind] and C.Colors.Bomb) or (DORA_KINDS[kind] and C.Colors.Dora) or ((kind=="Thunderclap" or kind=="Godspeed" or kind=="FlameGod") and C.Colors.Thunder) or C.Colors.Purple end
 local function part(parent,name,size,color,cf,shape)
     local p=Instance.new("Part");p.Name=name;p.Size=size;p.Color=color;p.CFrame=cf or CFrame.identity
     p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false;p.CollisionGroup=visualCollisionGroup
@@ -822,12 +826,13 @@ comboLabel.Font=Enum.Font.GothamBold;comboLabel.TextStrokeTransparency=.35;combo
 local hint=label(gui,"",12,UDim2.new(.5,0,1,-26),UDim2.fromOffset(620,22),Color3.fromRGB(144,163,187));hint.AnchorPoint=Vector2.new(.5,0)
 local blackout=Instance.new("Frame");blackout.Size=UDim2.fromScale(1,1);blackout.BackgroundColor3=Color3.new(0,0,0)
 blackout.BackgroundTransparency=1;blackout.BorderSizePixel=0;blackout.ZIndex=10;blackout.Parent=gui
-local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(900,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
+local picker=Instance.new("Frame");picker.Size=UDim2.fromOffset(990,34);picker.Position=UDim2.new(1,-30,0,28);picker.AnchorPoint=Vector2.new(1,0);picker.BackgroundTransparency=1;picker.Parent=gui
 local pickButtons={}
-local PICK_NAMES={Kizaru="키자루",Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Okkotsu="옷코츠",Itachi="이타치"}
-for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Okkotsu","Kizaru","Itachi"} do
+local PICK_NAMES={Kizaru="키자루",Gojo="고죠",Zenitsu="젠이츠",Reze="레제",Shanks="샹크스",Doraemon="도라에몽",Pain="페인",AllMight="올마이트",Okkotsu="옷코츠",Itachi="이타치",Yujiro="유지로"}
+local PICK_KEYS={"1","2","3","4","5","6","7","8","9","0","-"}
+for i,name in {"Gojo","Zenitsu","Reze","Shanks","Doraemon","Pain","AllMight","Okkotsu","Kizaru","Itachi","Yujiro"} do
     local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(86,34);b.Position=UDim2.fromOffset((i-1)*90,0)
-    b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=i.."  "..PICK_NAMES[name];b.Parent=picker
+    b.Font=Enum.Font.GothamMedium;b.TextSize=13;b.Text=PICK_KEYS[i].."  "..PICK_NAMES[name];b.Parent=picker
     local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b
     b.Activated:Connect(function() selectRemote:FireServer(name) end)
     pickButtons[name]=b
@@ -841,13 +846,14 @@ AllMightClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=
 KizaruClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 OkkotsuClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 ItachiClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
+YujiroClient.init({viewmodel=viewmodel,gui=gui,commonLook=commonLook,announce=announce})
 local function applyKit()
     local name=current();local kit=KITS[name]
     comboLabel.TextColor3=name=="Okkotsu" and Color3.fromRGB(239,181,222) or Color3.fromRGB(255,224,176)
     dora.rotorUntil=0
     nameLabel.Text=kit.title;hint.Text="M1 기본공격 · CTRL 슬라이딩   /   "..kit.hint
-    energy.TextColor3=name=="Okkotsu" and colorOf("ReverseCursed") or name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or C.Colors.Blue
-    GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset()
+    energy.TextColor3=name=="Okkotsu" and colorOf("ReverseCursed") or name=="Zenitsu" and C.Colors.Thunder or name=="Reze" and C.Colors.Bomb or name=="Pain" and colorOf("ShinraTensei") or name=="AllMight" and colorOf("OneForAll") or name=="Itachi" and colorOf("Tsukuyomi") or name=="Yujiro" and colorOf("OgreJudgment") or C.Colors.Blue
+    GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset();YujiroClient.reset()
     for i,slot in kit.slots do
         local entry=buttons[i];entry.skill=slot[1];entry.key=slot[2];entry.name=slot[3]
         entry.stroke.Color=colorOf(slot[1]);if slot[1]=="Dash" then entry.stroke.Color=Color3.fromRGB(85,103,139) end
@@ -871,11 +877,11 @@ local function requestBasic()
         if melee.duration-(n-melee.start)<=.15 then attackQueued=true end
         return
     end
-    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
+    if cast or holdState or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) or (current()=="Yujiro" and YujiroClient.busy()) then return end
     action:FireServer("BasicAttack",camera.CFrame.LookVector,camera.CFrame.Position)
 end
 local function requestSlide()
-    if (cast and cast.kind~="Dash") or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) then return end
+    if (cast and cast.kind~="Dash") or holdState or melee or sliding or (current()=="Pain" and PainClient.busy()) or (current()=="AllMight" and AllMightClient.busy()) or (current()=="Okkotsu" and OkkotsuClient.busy()) or (current()=="Kizaru" and KizaruClient.busy()) or (current()=="Itachi" and ItachiClient.busy()) or (current()=="Yujiro" and YujiroClient.busy()) then return end
     local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if h and h.FloorMaterial==Enum.Material.Air then slideBufferedUntil=time()+.18;return end
     action:FireServer("Slide",camera.CFrame.LookVector,camera.CFrame.Position)
@@ -895,7 +901,7 @@ UIS.InputBegan:Connect(function(input,processed)
     if processed then return end
     if input.UserInputType==Enum.UserInputType.MouseButton1 or input.KeyCode==Enum.KeyCode.ButtonR2 then requestBasic();return end
     if input.KeyCode==Enum.KeyCode.LeftControl or input.KeyCode==Enum.KeyCode.RightControl or input.KeyCode==Enum.KeyCode.ButtonB then requestSlide();return end
-    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Nine]="Kizaru",[Enum.KeyCode.Eight]="Okkotsu",[Enum.KeyCode.Zero]="Itachi"})[input.KeyCode]
+    local pick=({[Enum.KeyCode.One]="Gojo",[Enum.KeyCode.Two]="Zenitsu",[Enum.KeyCode.Three]="Reze",[Enum.KeyCode.Four]="Shanks",[Enum.KeyCode.Five]="Doraemon",[Enum.KeyCode.Six]="Pain",[Enum.KeyCode.Seven]="AllMight",[Enum.KeyCode.Nine]="Kizaru",[Enum.KeyCode.Eight]="Okkotsu",[Enum.KeyCode.Zero]="Itachi",[Enum.KeyCode.Minus]="Yujiro"})[input.KeyCode]
     if pick then selectRemote:FireServer(pick);return end
     local slot=({[Enum.KeyCode.Q]=1,[Enum.KeyCode.E]=2,[Enum.KeyCode.R]=3,[Enum.KeyCode.LeftShift]=4})[input.KeyCode]
     if slot then
@@ -927,6 +933,7 @@ event.OnClientEvent:Connect(function(kind,data)
     if string.sub(kind,1,4)=="Pain" then PainClient.onEvent(kind,data);return end
     if string.sub(kind,1,8)=="AllMight" then AllMightClient.onEvent(kind,data);return end
     if string.sub(kind,1,6)=="Itachi" then ItachiClient.onEvent(kind,data);return end
+    if string.sub(kind,1,6)=="Yujiro" then YujiroClient.onEvent(kind,data);return end
     if kind=="Rush" then
         if data.owner==player.UserId then
             rushView={start=data.start,duration=data.duration,from=data.from,to=data.to,locomotion=data.locomotion}
@@ -1725,6 +1732,13 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
         if (isItachi and ItachiClient.busy()) or itachiOut.victim then desiredFov=itachiOut.fov end
         desiredFov+=itachiOut.fovAdd
     end
+    -- Yujiro: own techniques for the Yujiro kit; the view from his grip for anyone caught in it.
+    local isYujiro=current()=="Yujiro"
+    local yujiroOut=YujiroClient.render(dt,{isYujiro=isYujiro,melee=melee,moving=h~=nil and h.MoveDirection.Magnitude>.1,alive=h~=nil and h.Health>0,sliding=sliding~=nil})
+    if yujiroOut then
+        if (isYujiro and YujiroClient.busy()) or yujiroOut.victim then desiredFov=yujiroOut.fov end
+        desiredFov+=yujiroOut.fovAdd
+    end
     local kizaruOut=KizaruClient.render(dt,current()=="Kizaru",h~=nil and h.Health>0)
     if kizaruOut then l=kizaruOut.left;r=kizaruOut.right;desiredFov=kizaruOut.fov end
     local isOkkotsu=current()=="Okkotsu"
@@ -1845,8 +1859,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             if v:IsA("BasePart") and v:GetAttribute("Outfit") then v.LocalTransparencyModifier=firstPerson and 1 or 0 end
         end
     end
-    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isOkkotsu and not isItachi)
-    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isOkkotsu and not isItachi)
+    showAvatarArm(left,leftFrame,posed,alive and not shanks and not isPain and not isAllMight and not isOkkotsu and not isItachi and not isYujiro)
+    showAvatarArm(right,rightFrame,posed,alive and not isPain and not isAllMight and not isOkkotsu and not isItachi and not isYujiro)
     local pinVisible=pinShown and pinGrabbed and h and h.Health>0 and chinTilt>0
     for _,entry in pinRing do entry.p.CFrame=pinPart.CFrame*entry.offset;entry.p.Transparency=pinVisible and 0 or 1 end
     if kickSwing>=0 then
@@ -1915,6 +1929,8 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
             comboLabel.Text=mightOut.combo;comboLabel.TextTransparency=mightOut.rReady and .1+.25*math.abs(math.sin(n*9)) or .15
         elseif itachiOut and itachiOut.combo then
             comboLabel.Text=itachiOut.combo;comboLabel.TextTransparency=.1+.25*math.abs(math.sin(n*9))
+        elseif yujiroOut and yujiroOut.combo then
+            comboLabel.Text=yujiroOut.combo;comboLabel.TextTransparency=.15
         elseif isDora and dora.rotorUntil>n then
             comboLabel.Text=string.format("대나무 헬리콥터   %.1f초 · SPACE ↑ / CTRL ↓",dora.rotorUntil-n);comboLabel.TextTransparency=0
         else comboLabel.Text="" end
@@ -1933,7 +1949,7 @@ Run:BindToRenderStep("GojoView",Enum.RenderPriority.Camera.Value+1,function(dt)
     for _,entry in katana.hilt do entry.p.Transparency=(alive and (zen or shanks) and ((drawn and (not entry.drawnOnly or bladeFraction>.02)) or shanks or not entry.drawnOnly)) and 0 or 1 end
 end)
 player.CharacterAdded:Connect(function()
-    clearCastVFX();GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset()
+    clearCastVFX();GojoHands.reset();PainClient.reset();AllMightClient.reset();OkkotsuClient.reset();KizaruClient.reset();ItachiClient.reset();YujiroClient.reset()
     finishFlameTurn()
     dora.rotorUntil=0;cast=nil;melee=nil;sliding=nil;bombRecoil=nil;attackQueued=false;rezeAirUntil=0;rezeLookUntil=0;blur.Size=0;drawnUntil=0;zenBasicUntil=0;zenReadyPose=nil;zenSheathPlayed=true;blackout.BackgroundTransparency=1
 end)

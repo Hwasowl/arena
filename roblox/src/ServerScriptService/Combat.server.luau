@@ -9,6 +9,7 @@ local Okkotsu=require(script.Parent:WaitForChild("OkkotsuServer"))
 local Pain=require(script.Parent:WaitForChild("PainServer"))
 local AllMight=require(script.Parent:WaitForChild("AllMightServer"))
 local Itachi=require(script.Parent:WaitForChild("ItachiServer"))
+local Yujiro=require(script.Parent:WaitForChild("YujiroServer"))
 local remote=Instance.new("RemoteEvent");remote.Name="GojoAction";remote.Parent=RS
 local fx=Instance.new("RemoteEvent");fx.Name="GojoFX";fx.Parent=RS
 local selectRemote=Instance.new("RemoteEvent");selectRemote.Name="SelectCharacter";selectRemote.Parent=RS
@@ -87,6 +88,8 @@ local function damage(owner,t,amount,kind)
     end
     -- Itachi's Crow Clone: rolled here, before anything lands. A dodged hit deals nothing at all.
     if Itachi.tryDodge(owner,t,kind) then return end
+    -- Yujiro's counter stance: a counterable frontal hit in the window is cancelled and answered with an uppercut.
+    if Yujiro.tryCounter(owner,t,kind) then return end
     local dealt=amount
     -- Pain takes less damage while holding Chibaku Tensei.
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then dealt*=.7 end
@@ -96,6 +99,8 @@ local function damage(owner,t,amount,kind)
     dealt*=AllMight.damageFactor(attacker,t.m,kind)*Okkotsu.damageFactor(attacker)
     -- Susanoo's Yata Mirror takes 60% off frontal hits.
     dealt*=Itachi.damageFactor(attacker,t.m,kind)
+    -- Yujiro: +15% basic attacks after a counter, -70% frontal in the stance, -30% during Ogre's Judgment.
+    dealt*=Yujiro.damageFactor(attacker,t.m,kind)
     t.h:TakeDamage(dealt);fx:FireAllClients("Hit",{position=t.r.Position,damage=math.floor(dealt+.5),owner=owner.UserId})
 end
 local function cancelBlue(p,s)
@@ -117,16 +122,17 @@ local function updateSpeed(m,h)
     if (m:GetAttribute("OkkotsuCastUntil") or 0)>n then speed*=m:GetAttribute("OkkotsuSpeed") or 1 end
     speed*=AllMight.speedFactor(m,n)
     speed*=Itachi.speedFactor(m,n)
+    speed*=Yujiro.speedFactor(m,n)
     if (m:GetAttribute("RootedUntil") or 0)>n then speed=0 end
     if (m:GetAttribute("SlidingUntil") or 0)>n or (m:GetAttribute("RushingUntil") or 0)>n then speed=0 end
     local bombRecoil=(m:GetAttribute("BombRecoilUntil") or 0)>n
     if bombRecoil then speed=0 end
     -- Pain's victims are carried by the server (no walking, no jumping); Pain cannot jump while casting.
-    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n)
+    local held=(m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) or Yujiro.held(m,n)
     if held then speed=0 end
     h.WalkSpeed=speed
     if h:GetAttribute("BaseJumpPower")==nil then h:SetAttribute("BaseJumpPower",h.JumpPower);h:SetAttribute("BaseJumpHeight",h.JumpHeight) end
-    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n)
+    local noJump=(m:GetAttribute("KizaruCastUntil") or 0)>n or (m:GetAttribute("OkkotsuCastUntil") or 0)>n or held or bombRecoil or (m:GetAttribute("PainNoJumpUntil") or 0)>n or AllMight.noJump(m,n) or Itachi.noJump(m,n) or Yujiro.noJump(m,n)
     h.JumpPower=noJump and 0 or h:GetAttribute("BaseJumpPower");h.JumpHeight=noJump and 0 or h:GetAttribute("BaseJumpHeight")
 end
 local function setTimed(m,h,attribute,duration)
@@ -180,7 +186,7 @@ local function dashStrike(p,s,m,h,r,flat,distance,width,duration,completed,locom
         valid=function()
             local n=clock()
             return states[p]==s and s.generation==generation and (m:GetAttribute("PainHeldUntil") or 0)<=n
-                and (m:GetAttribute("DomainLockedUntil") or 0)<=n and not AllMight.held(m,n) and not Itachi.held(m,n)
+                and (m:GetAttribute("DomainLockedUntil") or 0)<=n and not AllMight.held(m,n) and not Itachi.held(m,n) and not Yujiro.held(m,n)
         end,
         step=function(from,to)
             if not width or width<=0 then return end
@@ -204,6 +210,7 @@ local function launch(t,velocity)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>clock() then return end -- Chibaku Tensei: strong stagger resistance
     velocity=AllMight.filterKnockback(t.m,velocity);if not velocity then return end -- Plus Ultra guard / One For All
     velocity=Itachi.filterKnockback(t.m,velocity);if not velocity then return end -- Susanoo / a crow clone's cancelled hit
+    velocity=Yujiro.filterKnockback(t.m,velocity);if not velocity then return end -- Ogre's Judgment
     local victim=Players:GetPlayerFromCharacter(t.m)
     if victim then fx:FireClient(victim,"Knockback",{velocity=velocity})
     elseif t.r.Anchored then
@@ -675,8 +682,8 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     if (m:GetAttribute("DomainLockedUntil") or 0)>n and not (skill=="Domain" and canCounterDomain(m,n)) then return end
     -- Held by Pain (pulled, thrown, sealed), All Might (smashed, carried, launched) or Itachi (Tsukuyomi, sealed):
     -- no attacks, dashes or skills. Susanoo locks its own caster too.
-    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) then return end
-    if (m:GetAttribute("ItachiLockUntil") or 0)>n then return end
+    if (m:GetAttribute("PainHeldUntil") or 0)>n or AllMight.held(m,n) or Itachi.held(m,n) or Yujiro.held(m,n) then return end
+    if (m:GetAttribute("ItachiLockUntil") or 0)>n or Yujiro.locked(m,n) then return end
     if skill=="MoveJump" then
         if (m:GetAttribute("RootedUntil") or 0)>n or (m:GetAttribute("BombRecoilUntil") or 0)>n then return end
         if s.slide then stopSlide(p,s,true);s.busyUntil=n end
@@ -711,6 +718,10 @@ remote.OnServerEvent:Connect(function(p,skill,aim,aimOrigin)
     end
     if Itachi.handles(skill) then
         if kitOf(p)=="Itachi" then Itachi.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
+        return
+    end
+    if Yujiro.handles(skill) then
+        if kitOf(p)=="Yujiro" then Yujiro.request(p,s,m,h,r,skill,aim.Unit,aimOrigin) end
         return
     end
     if skill=="BasicAttack" or skill=="Slide" then
@@ -816,7 +827,7 @@ end)
 selectRemote.OnServerEvent:Connect(function(p,name)
     local s=states[p]
     if not s or type(name)~="string" or not kits[name] or kitOf(p)==name or s.busyUntil>clock() then return end
-    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p)
+    clearPurpleHover(s);clearDoraFlight(s);Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);Yujiro.reset(p)
     stopSlide(p,s);clearBombRecoil(p,s);s.basicUntil=0;s.basicCombo=0;s.zenDrawUntil=0
     s.generation+=1;s.cooldowns={};s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;s.enGardeUntil=0;s.parryUntil=0;s.parryHit=false;cancelBlue(p,s)
     if p.Character then p.Character:SetAttribute("BombDevilUntil",0) end
@@ -965,6 +976,8 @@ AllMight.init({fx=fx,states=states,clock=clock,character=character,targets=targe
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,launch=launch,kitOf=kitOf})
 Itachi.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
     sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf,launch=launch})
+Yujiro.init({fx=fx,states=states,clock=clock,character=character,targets=targets,damage=damage,updateSpeed=updateSpeed,
+    sendState=sendState,flights=flights,doraKnockbacks=doraKnockbacks,kitOf=kitOf,launch=launch})
 local function joined(p)
     local s={energy=100,cooldowns={},blueUntil=0,busyUntil=0,lastRequest=0,generation=0,charges=0,chargesUntil=0,enGardeUntil=0,parryUntil=0,parryHit=false};states[p]=s
     local function reset()
@@ -972,7 +985,7 @@ local function joined(p)
         clearPurpleHover(s);clearDoraFlight(s);Okkotsu.reset(p);Kizaru.reset(p)
         s.generation+=1;s.energy=100;s.cooldowns={};s.busyUntil=0;s.charges=0;s.chargesUntil=0;s.hold=nil;s.thunderHold=nil;s.comboUntil=0;s.rezeAirUntil=0;cancelBlue(p,s)
         local m=p.Character;local h=m and m:WaitForChild("Humanoid")
-        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
+        if h then h.Died:Connect(function() stopSlide(p,s);clearBombRecoil(p,s);clearPurpleHover(s);clearDoraFlight(s);s.generation+=1;Pain.reset(p);AllMight.reset(p);Okkotsu.reset(p);Kizaru.reset(p);Itachi.reset(p);Yujiro.reset(p);s.hold=nil;s.comboUntil=0;s.basicUntil=0;cancelBlue(p,s) end) end
     end
     p.CharacterAdded:Connect(reset);if p.Character then task.spawn(reset) end
 end

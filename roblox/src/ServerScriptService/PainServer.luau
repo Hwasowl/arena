@@ -67,6 +67,7 @@ local function startMover(t,owner,spec)
     if (t.m:GetAttribute("PainGuardUntil") or 0)>ctx.clock() then return end -- Chibaku caster resists displacement
     if (t.m:GetAttribute("AllMightGuardUntil") or 0)>ctx.clock() then return end -- so does a Plus Ultra caster
     if (t.m:GetAttribute("ItachiGuardUntil") or 0)>ctx.clock() then return end -- and Susanoo, or a crow clone mid-dodge
+    if (t.m:GetAttribute("YujiroGuardUntil") or 0)>ctx.clock() or (t.m:GetAttribute("YujiroHeldUntil") or 0)>ctx.clock() then return end -- Ogre's Judgment / Yujiro's grip
     local old=movers[t.m]
     local rotation=old and old.rotation or t.r.CFrame.Rotation
     if old then releaseMover(t.m,true) end

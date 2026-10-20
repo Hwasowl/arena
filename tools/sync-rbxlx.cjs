@@ -30,10 +30,15 @@ const scripts = {
   ItachiVFX: 'roblox/src/ReplicatedStorage/ItachiVFX.luau',
   ItachiServer: 'roblox/src/ServerScriptService/ItachiServer.luau',
   ItachiClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/ItachiClient.luau',
+  YujiroConfig: 'roblox/src/ReplicatedStorage/YujiroConfig.luau',
+  YujiroVFX: 'roblox/src/ReplicatedStorage/YujiroVFX.luau',
+  YujiroServer: 'roblox/src/ServerScriptService/YujiroServer.luau',
+  YujiroClient: 'roblox/src/StarterPlayer/StarterPlayerScripts/YujiroClient.luau',
 };
 // Studio saves Source as ProtectedString, sometimes before Name; Rojo uses string.
-// New Okkotsu modules are inserted beside an existing module in the same service.
-const siblings={GojoHands:'PainClient',RushServer:'PainServer',KizaruServer:'PainServer',KizaruClient:'PainClient',OkkotsuConfig:'PainAbilityConfig',OkkotsuVFX:'OkkotsuConfig',OkkotsuServer:'PainServer',OkkotsuClient:'PainClient'};
+// New modules (Okkotsu, Yujiro, ...) are inserted beside an existing module in the same service.
+const siblings={GojoHands:'PainClient',RushServer:'PainServer',KizaruServer:'PainServer',KizaruClient:'PainClient',OkkotsuConfig:'PainAbilityConfig',OkkotsuVFX:'OkkotsuConfig',OkkotsuServer:'PainServer',OkkotsuClient:'PainClient',
+  YujiroConfig:'ItachiConfig',YujiroVFX:'ItachiVFX',YujiroServer:'ItachiServer',YujiroClient:'ItachiClient'};
 for(const [name,sibling] of Object.entries(siblings)){
   if(x.includes('<string name="Name">'+name+'</string>'))continue;
   const re=/<Item class="ModuleScript"[^>]*>\s*<Properties>[\s\S]*?<\/Properties>/g;

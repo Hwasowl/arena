@@ -124,6 +124,7 @@ end
 local function guarded(model)
     local n=ctx.clock()
     return (model:GetAttribute("AllMightGuardUntil") or 0)>n or (model:GetAttribute("PainGuardUntil") or 0)>n or (model:GetAttribute("ItachiGuardUntil") or 0)>n
+        or (model:GetAttribute("YujiroGuardUntil") or 0)>n or (model:GetAttribute("YujiroHeldUntil") or 0)>n -- Ogre's Judgment caster / Yujiro's grip
 end
 local function startMover(t,owner,spec)
     if not alive(t) or guarded(t.m) then return end
